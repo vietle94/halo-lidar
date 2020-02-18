@@ -17,8 +17,9 @@ def getdata(path, pattern=""):
     data_list = glob.glob(path + "*.nc")
     return (data for data in data_list)
 
-
-data = getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+ # %%
+data = getdata("C:/Users/VIETLE/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+data = getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 
 # %%
 df = netcdf.NetCDFFile(next(data), 'r')
@@ -48,12 +49,16 @@ beta_raw = data.get('beta_raw')
 # %%
 # Plot data
 # sns.heatmap(np.log10(data.get('beta_raw')))
-
+np.min(data.get('beta_raw'))
 temp = np.log10(data.get('beta_raw'))
-temp.shape
 
-data.get('time').reshape(-1).shape
+# %%
 
-data.get('range').shape
-fig, ax = plt.subplots(figsize=(10, 10))
-ax = plt.pcolormesh(data.get('time'), data.get('range'), temp.transpose())
+data_plots = ['beta_raw', 'v_raw']
+fig, ax = plt.subplots(1, 2, figsize=(15, 10))
+for i, dataa in enumerate(data_plots):
+    print(i)
+    p = ax[i].pcolormesh(data.get('time'), data.get('range'),
+                         np.log10(data.get(dataa)).transpose(), cmap='jet')
+    ax[i].set_title(dataa)
+    fig.colorbar(p, ax=ax[i])
