@@ -23,7 +23,7 @@ df.data_names
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal',
                      'depo_raw'], ref='co_signal', threshold=1.0035)
 # %%
-Plot data
+# Plot data
 halo_data.halo_data.plot(df,
                          variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
                          nrow=4, ncol=1, size=(12, 12))

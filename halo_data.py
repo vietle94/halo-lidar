@@ -21,7 +21,7 @@ class halo_data:
                 'cross_signal_averaged': [0.995, 1.005]}
 
     def __init__(self, path):
-        self.full_data = netcdf.NetCDFFile(path, 'r')
+        self.full_data = netcdf.NetCDFFile(path, 'r', mmap=False)
         self.full_data_names = list(self.full_data.variables.keys())
         self.info = {name: self.full_data.variables[name].getValue(
         ) for name in self.full_data_names if self.full_data.variables[name].shape == ()}
