@@ -14,18 +14,23 @@ def getdata(path, pattern=""):
 
 
 class halo_data:
+    cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-1, 1],
+                'cross_signal': [0.995, 1.005],
+                'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
+                'depo_averaged_raw': [0, 0.5], 'co_signal_averaged': [0.995, 1.005],
+                'cross_signal_averaged': [0.995, 1.005]}
 
     def __init__(self, path):
         self.full_data = netcdf.NetCDFFile(path, 'r')
-        self.names = list(self.full_data.variables.keys())
+        self.full_data_names = list(self.full_data.variables.keys())
         self.info = {name: self.full_data.variables[name].getValue(
-        ) for name in self.names if self.full_data.variables[name].shape == ()}
+        ) for name in self.full_data_names if self.full_data.variables[name].shape == ()}
         self.data = {name: self.full_data.variables[name][:]
-                     for name in self.names if self.full_data.variables[name].shape != ()}
+                     for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
 
     @staticmethod
-    def plot(data, variables=None, nrow=None, ncol=None, size=None, vmin_max=None):
+    def plot(data, variables=None, nrow=None, ncol=None, size=None):
         fig, ax = plt.subplots(nrow, ncol, figsize=size)
         for i, var in enumerate(variables):
             if var == 'beta_raw':
@@ -33,7 +38,7 @@ class halo_data:
             else:
                 val = data.data.get(var).transpose()
             p = ax[i].pcolormesh(data.data.get('time'), data.data.get(
-                'range'), val, cmap='jet', vmin=vmin_max.get(var)[0], vmax=vmin_max.get(var)[1])
+                'range'), val, cmap='jet', vmin=data.cbar_lim.get(var)[0], vmax=data.cbar_lim.get(var)[1])
             ax[i].set_title(var)
             fig.colorbar(p, ax=ax[i])
 
@@ -41,5 +46,21 @@ class halo_data:
         for var in variables:
             self.data[var] = np.where(self.data[ref] > threshold, self.data[var], float('nan'))
 
-    def summary(self, variables=None):
-        pass
+    def describe(self):
+        import pandas as pd
+        pd.set_option('display.float_format', lambda x: '%.5g' % x)
+        var_avg = {var: self.data[var].flatten().astype('f8')
+                   for var in self.data if self.data[var].ndim != 1 and 'average' in var}
+        varn = {var: self.data[var].flatten()
+                for var in self.data if self.data[var].ndim != 1 and 'average' not in var}
+
+        combined_data = pd.DataFrame.from_dict(varn)
+        describ = combined_data.describe()
+        na = combined_data.isna().sum()
+        summary = describ.append(na.rename('Missing values'))
+
+        combined_data_avg = pd.DataFrame.from_dict(var_avg)
+        describ_avg = combined_data_avg.describe()
+        na_avg = combined_data_avg.isna().sum()
+        summary_avg = describ_avg.append(na_avg.rename('Missing values'))
+        return summary.join(summary_avg)
