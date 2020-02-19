@@ -9,7 +9,7 @@ def getdata(path, pattern=""):
     I will add pattern later to filter file if needed
     '''
     import glob
-    data_list = glob.glob(path + "*.nc")
+    data_list = glob.glob(path + "/*.nc")
     return (data for data in data_list)
 
 
