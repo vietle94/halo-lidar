@@ -13,7 +13,8 @@ import halo_data as hd
 data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
-df = hd.halo_data(next(data))
+file_name = next(data)
+df = hd.halo_data(file_name)
 df.info
 df.full_data
 df.full_data_names
@@ -22,12 +23,12 @@ df.data_names
 
 
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal',
-                     'depo_raw'], ref='co_signal', threshold=1.0035)
+                     'depo_raw'], ref='co_signal', threshold=np.percentile(df.data['co_signal'], 99))
 # %%
 # Plot data
-hd.halo_data.plot(df,
-                  variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
-                  nrow=4, ncol=1, size=(12, 12))
+df.plot(
+    variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal'],
+    nrow=5, ncol=1, size=(12, 12))
 
 # %% Summary
 df.describe()

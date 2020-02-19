@@ -29,16 +29,15 @@ class halo_data:
                      for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
 
-    @staticmethod
-    def plot(data, variables=None, nrow=None, ncol=None, size=None):
+    def plot(self, variables=None, nrow=None, ncol=None, size=None):
         fig, ax = plt.subplots(nrow, ncol, figsize=size)
         for i, var in enumerate(variables):
             if var == 'beta_raw':
-                val = np.log10(data.data.get(var)).transpose()
+                val = np.log10(self.data.get(var)).transpose()
             else:
-                val = data.data.get(var).transpose()
-            p = ax[i].pcolormesh(data.data.get('time'), data.data.get(
-                'range'), val, cmap='jet', vmin=data.cbar_lim.get(var)[0], vmax=data.cbar_lim.get(var)[1])
+                val = self.data.get(var).transpose()
+            p = ax[i].pcolormesh(self.data.get('time'), self.data.get(
+                'range'), val, cmap='jet', vmin=self.cbar_lim.get(var)[0], vmax=self.cbar_lim.get(var)[1])
             ax[i].set_title(var)
             fig.colorbar(p, ax=ax[i])
 
@@ -55,12 +54,12 @@ class halo_data:
                 for var in self.data if self.data[var].ndim != 1 and 'average' not in var}
 
         combined_data = pd.DataFrame.from_dict(varn)
-        describ = combined_data.describe()
+        describ = combined_data.describe(percentiles=[.25, .5, .75, .95])
         na = combined_data.isna().sum()
         summary = describ.append(na.rename('Missing values'))
 
         combined_data_avg = pd.DataFrame.from_dict(var_avg)
-        describ_avg = combined_data_avg.describe()
+        describ_avg = combined_data_avg.describe(percentiles=[.25, .5, .75, .95])
         na_avg = combined_data_avg.isna().sum()
         summary_avg = describ_avg.append(na_avg.rename('Missing values'))
         return summary.join(summary_avg)
