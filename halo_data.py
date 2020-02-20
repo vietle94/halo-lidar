@@ -36,7 +36,8 @@ class halo_data:
         else:
             nrow = -(-len(variables)//ncol)  # Round up
         fig, ax = plt.subplots(nrow, ncol, figsize=size)
-        ax = ax.flatten()
+        if nrow != 1 and ncol != 1:
+            ax = ax.flatten()
         for i, var in enumerate(variables):
             if 'beta_raw' in var:
                 val = np.log10(self.data.get(var)).transpose()
@@ -54,11 +55,15 @@ class halo_data:
             else:
                 vmin = self.cbar_lim.get(var)[0]
                 vmax = self.cbar_lim.get(var)[1]
-            p = ax[i].pcolormesh(xvar, yvar, val, cmap='jet',
-                                 vmin=vmin,
-                                 vmax=vmax)
-            ax[i].set_title(var)
-            fig.colorbar(p, ax=ax[i])
+            if nrow == 1 and ncol == 1:
+                axi = ax
+            else:
+                axi = ax[i]
+            p = axi.pcolormesh(xvar, yvar, val, cmap='jet',
+                               vmin=vmin,
+                               vmax=vmax)
+            axi.set_title(var)
+            fig.colorbar(p, ax=axi)
 
     def filter(self, variables=None, ref=None, threshold=None):
         for var in variables:
