@@ -31,13 +31,21 @@ class halo_data:
 
     def plot(self, variables=None, nrow=None, ncol=None, size=None):
         fig, ax = plt.subplots(nrow, ncol, figsize=size)
+        ax = ax.flatten()
         for i, var in enumerate(variables):
-            if var == 'beta_raw':
+            if 'beta_raw' in var:
                 val = np.log10(self.data.get(var)).transpose()
             else:
                 val = self.data.get(var).transpose()
-            p = ax[i].pcolormesh(self.data.get('time'), self.data.get(
-                'range'), val, cmap='jet', vmin=self.cbar_lim.get(var)[0], vmax=self.cbar_lim.get(var)[1])
+
+            if 'average' in var:
+                xvar = self.data.get('time_averaged')
+            else:
+                xvar = self.data.get('time')
+            yvar = self.data.get('range')
+            p = ax[i].pcolormesh(xvar, yvar, val, cmap='jet',
+                                 vmin=self.cbar_lim.get(var)[0],
+                                 vmax=self.cbar_lim.get(var)[1])
             ax[i].set_title(var)
             fig.colorbar(p, ax=ax[i])
 
