@@ -29,7 +29,12 @@ class halo_data:
                      for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
 
-    def plot(self, variables=None, nrow=None, ncol=None, size=None):
+    def plot(self, variables=None, ncol=None, size=None):
+        if ncol is None:
+            ncol = 1
+            nrow = len(variables)
+        else:
+            nrow = -(-len(variables)//ncol)  # Round up
         fig, ax = plt.subplots(nrow, ncol, figsize=size)
         ax = ax.flatten()
         for i, var in enumerate(variables):
