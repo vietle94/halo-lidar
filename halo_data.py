@@ -43,9 +43,15 @@ class halo_data:
             else:
                 xvar = self.data.get('time')
             yvar = self.data.get('range')
+            if self.cbar_lim.get(var) is None:
+                vmin = None
+                vmax = None
+            else:
+                vmin = self.cbar_lim.get(var)[0]
+                vmax = self.cbar_lim.get(var)[1]
             p = ax[i].pcolormesh(xvar, yvar, val, cmap='jet',
-                                 vmin=self.cbar_lim.get(var)[0],
-                                 vmax=self.cbar_lim.get(var)[1])
+                                 vmin=vmin,
+                                 vmax=vmax)
             ax[i].set_title(var)
             fig.colorbar(p, ax=ax[i])
 
@@ -58,7 +64,7 @@ class halo_data:
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
         var_avg = {var: self.data[var].flatten().astype('f8')
                    for var in self.data if self.data[var].ndim != 1 and 'average' in var}
-        varn = {var: self.data[var].flatten()
+        varn = {var: self.data[var].flatten().astype('f8')
                 for var in self.data if self.data[var].ndim != 1 and 'average' not in var}
 
         combined_data = pd.DataFrame.from_dict(varn)
