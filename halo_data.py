@@ -25,7 +25,7 @@ class halo_data:
         self.full_data_names = list(self.full_data.variables.keys())
         self.info = {name: self.full_data.variables[name].getValue(
         ) for name in self.full_data_names if self.full_data.variables[name].shape == ()}
-        self.data = {name: self.full_data.variables[name][:]
+        self.data = {name: self.full_data.variables[name].data
                      for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
 
@@ -67,7 +67,10 @@ class halo_data:
 
     def filter(self, variables=None, ref=None, threshold=None):
         for var in variables:
-            self.data[var] = np.where(self.data[ref] > threshold, self.data[var], float('nan'))
+            self.data[var] = np.where(
+                self.data[ref] > threshold,
+                self.data[var],
+                float('nan'))
 
     def describe(self):
         import pandas as pd
