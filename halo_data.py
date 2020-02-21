@@ -28,6 +28,14 @@ class halo_data:
         self.data = {name: self.full_data.variables[name].data
                      for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
+        self.more_info = self.full_data._attributes
+
+    def meta_data(self, var=None):
+        if var is None or not isinstance(var, str):
+            print('Hannah, provide one variable as string')
+        else:
+            return {key: self.full_data.variables[var].__dict__[key]
+                    for key in self.full_data.variables[var].__dict__ if key != 'data'}
 
     def plot(self, variables=None, ncol=None, size=None):
         if ncol is None:
@@ -71,6 +79,15 @@ class halo_data:
                 self.data[ref] > threshold,
                 self.data[var],
                 float('nan'))
+
+    def unmask999(self):
+        '''
+        Unmasked -999 values to nan for all variables except 'co_signal'
+        and 'co_signal_averaged'
+        '''
+        for var in self.data_names:
+            if 'co_signal' not in var:
+                self.data[var][self.data[var] == -999] = float('nan')
 
     def describe(self):
         import pandas as pd
