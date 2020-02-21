@@ -72,6 +72,11 @@ class halo_data:
                                vmax=vmax)
             axi.set_title(var)
             fig.colorbar(p, ax=axi)
+        fig.suptitle(self.full_data.filename.split('\\')[1].split('_')[0] + ' - ' +
+                     self.more_info['location'].decode("utf-8") + ' - ' +
+                     str(self.more_info['systemID']),
+                     size=30,
+                     weight='bold')
 
     def filter(self, variables=None, ref=None, threshold=None):
         for var in variables:
