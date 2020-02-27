@@ -13,3 +13,10 @@ Data is in NetCDF format.
 # Understanding of instrument
 
 Instrument output is two variables, SNR and v. v_error is calculated from SNR and v
+
+# Plot
+
+Time array has the shape of (5328,)
+Range array has the shape of (320,)
+Data of each variable array has the shape of (320, 5328)
+The pcolormesh function require the data array to be transposed. No clue why as it does not make sense. I think that this function has a long history, and matplotlib just try to respect it
