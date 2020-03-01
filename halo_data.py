@@ -1,6 +1,8 @@
 from scipy.io import netcdf
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.widgets import RectangleSelector
+import seaborn as sns
 
 
 def getdata(path, pattern=""):
@@ -112,3 +114,41 @@ class halo_data:
         na_avg = combined_data_avg.isna().sum()
         summary_avg = describ_avg.append(na_avg.rename('Missing values'))
         return summary.join(summary_avg)
+
+
+class area_histogram(object):
+
+    def __init__(self, ax, fig, x, y, z, hist=False):
+        self.ax = ax
+        self.hist = hist
+        self.canvas = fig.canvas
+        self.x, self.y, self.z = x, y, z
+        self.mas = np.zeros((self.x.shape[0], self.y.shape[0]), dtype=bool)
+        self.selector = RectangleSelector(
+            ax[0],
+            self,
+            useblit=True,  # process much faster,
+            interactive=True)  # Keep the drawn box on screen
+
+    def __call__(self, event1, event2):
+        mask = self.inside(event1, event2)
+        self.area = self.z[mask]
+        print(f'Chosen {len(self.z[mask])} values')
+        self.ax[1].cla()
+        if self.hist:
+            self.ax[1].hist(self.area)
+        else:
+            sns.kdeplot(self.area, ax=self.ax[1])
+        self.canvas.draw()
+
+    def inside(self, event1, event2):
+        """Returns a boolean mask of the points inside the rectangle defined by
+        event1 and event2."""
+        x0, x1 = sorted([event1.xdata, event2.xdata])
+        y0, y1 = sorted([event1.ydata, event2.ydata])
+        maskx = ((self.x > x0) & (self.x < x1))
+        masky = ((self.y > y0) & (self.y < y1))
+        maskx = np.repeat(maskx.reshape(1, self.x.shape[0]), self.y.shape[0], axis=0)
+        masky = np.repeat(masky.reshape(self.y.shape[0], 1), self.x.shape[0], axis=1)
+
+        return maskx * masky
