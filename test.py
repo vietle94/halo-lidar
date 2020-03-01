@@ -13,11 +13,18 @@ data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarizati
 # %% get data
 file_name = next(data)
 df = hd.halo_data(file_name)
-df.info
-df.full_data
-df.full_data_names
-df.data
-df.data_names
+# df.info
+# df.full_data
+# df.full_data_names
+# df.data
+# df.data_names
+
+# %%
+# Plot data
+%matplotlib inline
+df.plot(
+    variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
+               'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'], ncol=2, size=(20, 15))
 
 # %% Histogram of an area in SNR plot
 %matplotlib qt
@@ -54,6 +61,7 @@ noise_averaged = area.area - 1
 threshold_averaged = 1 + np.nanmean(noise_averaged) + np.nanstd(noise_averaged) * 2
 
 threshold_averaged
+
 
 # %%
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
