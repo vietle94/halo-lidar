@@ -13,11 +13,28 @@ data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarizati
 # %% get data
 file_name = next(data)
 df = hd.halo_data(file_name)
-# df.info
-# df.full_data
-# df.full_data_names
-# df.data
-# df.data_names
+df.info
+df.full_data
+df.full_data_names
+df.data
+# Names of data
+df.data_names
+# More info
+df.more_info
+# Get meta data of each variable
+df.meta_data('co_signal')
+
+# Get meta data of all variables
+{'==>' + key: df.meta_data(key) for key in df.full_data_names}
+
+# Only crucial info
+{'==>' + key: df.meta_data(key)['_attributes'] for key in df.full_data_names}
+
+# %%
+# Change masking missing values from -999 to NaN
+df.unmask999()
+# Overview of data
+df.describe()
 
 # %%
 # Plot data
