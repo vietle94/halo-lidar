@@ -118,27 +118,27 @@ class halo_data:
 
 class area_histogram(object):
 
-    def __init__(self, ax, fig, x, y, z, hist=False):
-        self.ax = ax
+    def __init__(self, ax_in, ax_out, fig, x, y, z, hist=False):
+        self.ax_in = ax_in
+        self.ax_out = ax_out
         self.hist = hist
         self.canvas = fig.canvas
         self.x, self.y, self.z = x, y, z
-        self.mas = np.zeros((self.x.shape[0], self.y.shape[0]), dtype=bool)
         self.selector = RectangleSelector(
-            ax[0],
+            self.ax_in,
             self,
             useblit=True,  # process much faster,
             interactive=True)  # Keep the drawn box on screen
 
     def __call__(self, event1, event2):
-        mask = self.inside(event1, event2)
-        self.area = self.z[mask]
-        print(f'Chosen {len(self.z[mask])} values')
-        self.ax[1].cla()
+        self.mask = self.inside(event1, event2)
+        self.area = self.z[self.mask]
+        print(f'Chosen {len(self.z[self.mask])} values')
+        self.ax_out.cla()
         if self.hist:
-            self.ax[1].hist(self.area)
+            self.ax_out.hist(self.area)
         else:
-            sns.kdeplot(self.area, ax=self.ax[1])
+            sns.kdeplot(self.area, ax=self.ax_out)
         self.canvas.draw()
 
     def inside(self, event1, event2):
