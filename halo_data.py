@@ -139,6 +139,9 @@ class area_histogram(object):
             self.ax_out.hist(self.area)
         else:
             sns.kdeplot(self.area, ax=self.ax_out)
+        lab = np.nanmean(self.area)
+        self.ax_out.set_title(f'selected area mean is {lab}')
+        self.ax_out.axvline(lab, c='red')
         self.canvas.draw()
 
     def inside(self, event1, event2):

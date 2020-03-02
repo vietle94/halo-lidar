@@ -45,7 +45,7 @@ df.plot(
 
 # %% Histogram of an area in SNR plot
 %matplotlib qt
-fig, ax = plt.subplots(1, 2, figsize=(12, 24))
+fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
                      df.data['co_signal'].transpose(),
@@ -63,12 +63,12 @@ threshold
 
 # %% Histogram of an area in SNR plot
 %matplotlib qt
-fig, ax = plt.subplots(1, 2)
+fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
                      df.data['co_signal_averaged'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_histogram(ax, fig, df.data['time_averaged'],
+area = hd.area_histogram(ax[0], ax[1], fig, df.data['time_averaged'],
                          df.data['range'],
                          df.data['co_signal_averaged'].transpose(),
                          hist=False)
@@ -97,3 +97,20 @@ df.plot(
 
 # %% Summary
 df.describe()
+
+# %%
+%matplotlib qt
+fig, ax = plt.subplots(2, 2, figsize=(24, 12))
+ax = ax.flatten()
+for i, name in zip([0, 2, 3], ['depo_raw', 'beta_raw', 'co_signal']):
+    p = ax[i].pcolormesh(df.data['time'],
+                         df.data['range'],
+                         df.data[name].transpose() if name != 'beta_raw' else np.log10(
+                             df.data[name].transpose()),
+                         cmap='jet', vmin=df.cbar_lim[name][0], vmax=df.cbar_lim[name][1])
+    ax[i].set_title(name)
+    fig.colorbar(p, ax=ax[i])
+area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
+                         df.data['range'],
+                         df.data['depo_raw'].transpose(),
+                         hist=False)
