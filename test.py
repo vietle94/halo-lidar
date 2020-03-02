@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import halo_data as hd
 
 # %%
-# data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
-data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 # data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
@@ -45,12 +45,12 @@ df.plot(
 
 # %% Histogram of an area in SNR plot
 %matplotlib qt
-fig, ax = plt.subplots(1, 2)
+fig, ax = plt.subplots(1, 2, figsize=(12, 24))
 p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
                      df.data['co_signal'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_histogram(ax, fig, df.data['time'],
+area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
                          df.data['range'],
                          df.data['co_signal'].transpose(),
                          hist=False)
