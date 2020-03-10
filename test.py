@@ -57,8 +57,9 @@ area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
 fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise = area.area - 1
-threshold = 1 + np.nanmean(noise) + np.nanstd(noise) * 2
+threshold = 1 + np.nanstd(noise) * 3
 
+np.nanstd(noise)
 threshold
 
 # %% Histogram of an area in SNR plot
@@ -75,7 +76,7 @@ area = hd.area_histogram(ax[0], ax[1], fig, df.data['time_averaged'],
 fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise_averaged = area.area - 1
-threshold_averaged = 1 + np.nanmean(noise_averaged) + np.nanstd(noise_averaged) * 2
+threshold_averaged = 1 + np.nanstd(noise_averaged) * 2
 
 threshold_averaged
 
@@ -114,3 +115,10 @@ area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
                          df.data['range'],
                          df.data['depo_raw'].transpose(),
                          hist=False)
+
+# %%
+fig, ax = plt.subplots(figsize=(24, 12))
+ax.pcolormesh(df.data['time'],
+              df.data['range'],
+              np.log10(df.data['beta_raw'].transpose()),
+              cmap='jet', vmin=df.cbar_lim['beta_raw'][0], vmax=df.cbar_lim['beta_raw'][1])

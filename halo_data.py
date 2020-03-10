@@ -153,5 +153,6 @@ class area_histogram(object):
         masky = ((self.y > y0) & (self.y < y1))
         maskx = np.repeat(maskx.reshape(1, self.x.shape[0]), self.y.shape[0], axis=0)
         masky = np.repeat(masky.reshape(self.y.shape[0], 1), self.x.shape[0], axis=1)
-
+        self.xcord = [event1.xdata, event2.xdata]
+        self.ycord = [event1.ydata, event2.ydata]
         return maskx * masky
