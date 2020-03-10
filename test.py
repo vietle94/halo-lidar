@@ -117,7 +117,7 @@ area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
                          hist=True)
 # %%
 i = -1
-result = np.array([])
+final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
 # %%
 i += 1
 %matplotlib inline
@@ -133,9 +133,22 @@ fig.colorbar(p)
 
 # %%
 max_i = np.argmax(df.data['co_signal'].transpose()[area.mask][:, i])
-result = np.append(result, area.area[:, i][max_i])
-
+result = pd.Series({'time': df.data['time'][area.maskx][i],
+                    'range': df.data['range'][area.masky][max_i],
+                    'SNR': df.data['co_signal'].transpose()[area.mask][max_i, i],
+                    'depo': area.area[max_i, i]})
 result
+final_result = final_result.append(result, ignore_index=True)
+final_result
 
 # %%
-plt.plot(result)
+plt.plot(final_result['depo'], '-')
+
+# Location etc
+name = [int(df.more_info.get(key)) if key != 'location' else
+        df.more_info.get(key).decode("utf-8") for
+        key in ['location', 'year', 'month', 'day', 'systemID']]
+
+filename = '-'.join([str(elem) for elem in name])
+
+final_result.to_csv(filename)
