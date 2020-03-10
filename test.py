@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import halo_data as hd
 
 # %%
-data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
-# data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 # data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
@@ -115,10 +115,46 @@ area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
                          df.data['range'],
                          df.data['depo_raw'].transpose(),
                          hist=False)
-
 # %%
-fig, ax = plt.subplots(figsize=(24, 12))
-ax.pcolormesh(df.data['time'],
-              df.data['range'],
-              np.log10(df.data['beta_raw'].transpose()),
-              cmap='jet', vmin=df.cbar_lim['beta_raw'][0], vmax=df.cbar_lim['beta_raw'][1])
+%matplotlib qt
+fig, ax = plt.subplots(1, 2, figsize=(24, 12))
+ax = ax.flatten()
+for i, name in zip([0], ['depo_raw']):
+    p = ax[i].pcolormesh(df.data['time'],
+                         df.data['range'],
+                         df.data[name].transpose() if name != 'beta_raw' else np.log10(
+                             df.data[name].transpose()),
+                         cmap='jet', vmin=df.cbar_lim[name][0], vmax=df.cbar_lim[name][1])
+    ax[i].set_title(name)
+    fig.colorbar(p, ax=ax[i])
+area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
+                         df.data['range'],
+                         df.data['depo_raw'].transpose(),
+                         hist=False)
+# %%
+area.area.shape
+temp = df.data['depo_raw'].transpose()
+temp.shape
+temp = temp[np.ix_(area.masky, area.maskx)]
+temp
+# %%
+temp.shape[1]
+for i in np.arange(temp.shape[1]):
+    print(i)
+
+str(0)
+
+%matplotlib qt
+plt.cla()
+plt.show()
+
+x = np.linspace(0, 2*np.pi, 100)
+for amp in range(10):
+    plt.cla()
+    print(amp)
+    y = amp*np.cos(x)
+    plt.plot(x, y)
+    plt.pause(0.001)
+    aa = input("Press [enter] to continue.")
+    if aa == str(0):
+        break

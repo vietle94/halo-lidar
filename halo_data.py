@@ -133,13 +133,13 @@ class area_histogram(object):
     def __call__(self, event1, event2):
         self.mask = self.inside(event1, event2)
         self.area = self.z[self.mask]
-        print(f'Chosen {len(self.z[self.mask])} values')
+        print(f'Chosen {len(self.area.flatten())} values')
         self.ax_out.cla()
         if self.hist:
-            self.ax_out.hist(self.area)
+            self.ax_out.hist(self.area.flatten())
         else:
-            sns.kdeplot(self.area, ax=self.ax_out)
-        lab = np.nanmean(self.area)
+            sns.kdeplot(self.area.flatten(), ax=self.ax_out)
+        lab = np.nanmean(self.area.flatten())
         self.ax_out.set_title(f'selected area mean is {lab}')
         self.ax_out.axvline(lab, c='red')
         self.canvas.draw()
@@ -149,10 +149,8 @@ class area_histogram(object):
         event1 and event2."""
         x0, x1 = sorted([event1.xdata, event2.xdata])
         y0, y1 = sorted([event1.ydata, event2.ydata])
-        maskx = ((self.x > x0) & (self.x < x1))
-        masky = ((self.y > y0) & (self.y < y1))
-        maskx = np.repeat(maskx.reshape(1, self.x.shape[0]), self.y.shape[0], axis=0)
-        masky = np.repeat(masky.reshape(self.y.shape[0], 1), self.x.shape[0], axis=1)
         self.xcord = [event1.xdata, event2.xdata]
         self.ycord = [event1.ydata, event2.ydata]
-        return maskx * masky
+        self.maskx = ((self.x > x0) & (self.x < x1))
+        self.masky = ((self.y > y0) & (self.y < y1))
+        return np.ix_(self.masky, self.maskx)
