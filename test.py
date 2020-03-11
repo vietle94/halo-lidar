@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import halo_data as hd
 
 # %%
-# data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
-data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 # data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
@@ -33,6 +33,10 @@ df.meta_data('co_signal')
 # %%
 # Change masking missing values from -999 to NaN
 df.unmask999()
+# Remove first three columns of data matrix due to calibration,
+# they correspond to top 3 height data
+# ask Ville for more detail
+df.filter_height()
 # Overview of data
 df.describe()
 
@@ -50,10 +54,12 @@ p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
                      df.data['co_signal'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
-                         df.data['range'],
-                         df.data['co_signal'].transpose(),
-                         hist=False)
+area = hd.area_select(df.data['time'],
+                      df.data['range'],
+                      df.data['co_signal'].transpose(),
+                      ax[0],
+                      ax[1],
+                      type='kde')
 fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise = area.area - 1
@@ -69,10 +75,12 @@ p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
                      df.data['co_signal_averaged'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_histogram(ax[0], ax[1], fig, df.data['time_averaged'],
-                         df.data['range'],
-                         df.data['co_signal_averaged'].transpose(),
-                         hist=False)
+area = hd.area_select(df.data['time_averaged'],
+                      df.data['range'],
+                      df.data['co_signal_averaged'].transpose(),
+                      ax[0],
+                      ax[1],
+                      type='kde')
 fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise_averaged = area.area - 1
@@ -101,9 +109,9 @@ df.describe()
 
 # %%
 %matplotlib qt
-fig, ax = plt.subplots(2, 2, figsize=(24, 12))
+fig, ax = plt.subplots(3, 1, sharex=True, figsize=(24, 12))
 ax = ax.flatten()
-for i, name in zip([0, 2, 3], ['depo_raw', 'beta_raw', 'co_signal']):
+for i, name in enumerate(['depo_raw', 'beta_raw', 'v_raw']):
     p = ax[i].pcolormesh(df.data['time'],
                          df.data['range'],
                          df.data[name].transpose() if name != 'beta_raw' else np.log10(
@@ -111,10 +119,12 @@ for i, name in zip([0, 2, 3], ['depo_raw', 'beta_raw', 'co_signal']):
                          cmap='jet', vmin=df.cbar_lim[name][0], vmax=df.cbar_lim[name][1])
     ax[i].set_title(name)
     fig.colorbar(p, ax=ax[i])
-area = hd.area_histogram(ax[0], ax[1], fig, df.data['time'],
-                         df.data['range'],
-                         df.data['depo_raw'].transpose(),
-                         hist=True)
+area = hd.area_select(df.data['time'],
+                      df.data['range'],
+                      df.data['depo_raw'].transpose(),
+                      ax[0],
+                      type=None)
+plt.tight_layout()
 # %%
 i = -1
 final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
@@ -122,21 +132,24 @@ final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
 i += 1
 %matplotlib inline
 fig, ax = plt.subplots(figsize=(8, 5))
-p = ax.scatter(area.area[:, i], df.data['range'][area.masky],
-               c=df.data['co_signal'].transpose()[area.mask][:, i],
-               s=df.data['co_signal'].transpose()[area.mask][:, i] * 20)
-ax.set_title('Depo value colored by SNR')
+area_value = area.area[:, i]
+area_range = df.data['range'][area.maskrange]
+area_snr = df.data['co_signal'].transpose()[area.mask][:, i]
+p = ax.scatter(area_value, area_range,
+               c=area_snr,
+               s=area_snr * 20)
+ax.set_title(f"Depo value colored by SNR at time {df.data['time'][area.masktime][i]:.3f}")
 ax.set_xlabel('Depo value')
 ax.set_ylabel('Range')
 fig.colorbar(p)
 
 
 # %%
-max_i = np.argmax(df.data['co_signal'].transpose()[area.mask][:, i])
-result = pd.Series({'time': df.data['time'][area.maskx][i],
-                    'range': df.data['range'][area.masky][max_i],
-                    'SNR': df.data['co_signal'].transpose()[area.mask][max_i, i],
-                    'depo': area.area[max_i, i]})
+max_i = np.argmax(area_snr)
+result = pd.Series({'time': df.data['time'][area.masktime][i],
+                    'range': area_range[max_i],
+                    'SNR': area_snr[max_i],
+                    'depo': area_value[max_i]})
 result
 final_result = final_result.append(result, ignore_index=True)
 final_result
@@ -144,6 +157,7 @@ final_result
 # %%
 plt.plot(final_result['depo'], '-')
 
+# %%
 # Location etc
 name = [int(df.more_info.get(key)) if key != 'location' else
         df.more_info.get(key).decode("utf-8") for
@@ -151,4 +165,4 @@ name = [int(df.more_info.get(key)) if key != 'location' else
 
 filename = '-'.join([str(elem) for elem in name])
 
-final_result.to_csv(filename)
+final_result.to_csv(filename + '.csv')

@@ -45,7 +45,8 @@ class halo_data:
             nrow = len(variables)
         else:
             nrow = -(-len(variables)//ncol)  # Round up
-        fig, ax = plt.subplots(nrow, ncol, figsize=size)
+        fig, ax = plt.subplots(nrow, ncol, figsize=size,
+                               sharex=True, sharey=True)
         if nrow != 1 and ncol != 1:
             ax = ax.flatten()
         for i, var in enumerate(variables):
@@ -79,6 +80,7 @@ class halo_data:
                      str(self.more_info['systemID']),
                      size=30,
                      weight='bold')
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     def filter(self, variables=None, ref=None, threshold=None):
         for var in variables:
@@ -86,6 +88,17 @@ class halo_data:
                 self.data[ref] > threshold,
                 self.data[var],
                 float('nan'))
+
+    def filter_height(self):
+        '''
+        Remove first three columns of the matrix due to calibration,
+        ask Ville for more info
+        '''
+        for var in self.data_names:
+            if 'time' not in var and 'range' not in var:
+                self.data[var] = self.data[var][:, 3:]
+            if var == 'range':
+                self.data[var] = self.data[var][:-3]
 
     def unmask999(self):
         '''
@@ -116,13 +129,13 @@ class halo_data:
         return summary.join(summary_avg)
 
 
-class area_histogram(object):
+class area_select():
 
-    def __init__(self, ax_in, ax_out, fig, x, y, z, hist=False):
+    def __init__(self, x, y, z, ax_in, ax_out=None, type='hist'):
         self.ax_in = ax_in
         self.ax_out = ax_out
-        self.hist = hist
-        self.canvas = fig.canvas
+        self.type = type
+        self.canvas = plt.gcf().canvas
         self.x, self.y, self.z = x, y, z
         self.selector = RectangleSelector(
             self.ax_in,
@@ -133,11 +146,15 @@ class area_histogram(object):
     def __call__(self, event1, event2):
         self.mask = self.inside(event1, event2)
         self.area = self.z[self.mask]
+        self.range = self.y * self.maskrange
+        self.time = self.x * self.masktime
         print(f'Chosen {len(self.area.flatten())} values')
+        if self.type is None:
+            return
         self.ax_out.cla()
-        if self.hist:
+        if self.type == 'hist':
             self.ax_out.hist(self.area.flatten())
-        else:
+        elif self.type == 'kde':
             sns.kdeplot(self.area.flatten(), ax=self.ax_out)
         lab = np.nanmean(self.area.flatten())
         self.ax_out.set_title(f'selected area mean is {lab}')
@@ -151,6 +168,6 @@ class area_histogram(object):
         y0, y1 = sorted([event1.ydata, event2.ydata])
         self.xcord = [event1.xdata, event2.xdata]
         self.ycord = [event1.ydata, event2.ydata]
-        self.maskx = ((self.x > x0) & (self.x < x1))
-        self.masky = ((self.y > y0) & (self.y < y1))
-        return np.ix_(self.masky, self.maskx)
+        self.masktime = ((self.x > x0) & (self.x < x1))
+        self.maskrange = ((self.y > y0) & (self.y < y1))
+        return np.ix_(self.maskrange, self.masktime)
