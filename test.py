@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import halo_data as hd
 
 # %%
-data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
-# data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 # data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
@@ -145,6 +145,54 @@ fig.colorbar(p)
 
 
 # %%
+max_i = np.argmax(area_snr)
+result = pd.Series({'time': df.data['time'][area.masktime][i],
+                    'range': area_range[max_i],
+                    'SNR': area_snr[max_i],
+                    'depo': area_value[max_i]})
+result
+final_result = final_result.append(result, ignore_index=True)
+final_result
+
+# %%
+plt.plot(final_result['depo'], '-')
+
+# %%
+# Location etc
+name = [int(df.more_info.get(key)) if key != 'location' else
+        df.more_info.get(key).decode("utf-8") for
+        key in ['location', 'year', 'month', 'day', 'systemID']]
+
+filename = '-'.join([str(elem) for elem in name])
+
+final_result.to_csv(filename + '.csv')
+
+# %%
+
+%matplotlib qt
+fig, ax = plt.subplots(2, 1, sharex=False, figsize=(24, 12))
+p = ax[0].pcolormesh(df.data['time'],
+                     df.data['range'],
+                     df.data['depo_raw'].transpose(),
+                     cmap='jet', vmin=df.cbar_lim['depo_raw'][0],
+                     vmax=df.cbar_lim['depo_raw'][1])
+me = fig.colorbar(p, ax=ax[0])
+
+area = hd.area_select(df.data['time'],
+                      df.data['range'],
+                      df.data['depo_raw'].transpose(),
+                      ax[0],
+                      ax[1],
+                      type='time_point',
+                      ref=df.data['co_signal'])
+
+final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
+# %%
+i = area.i
+area_value = area.area[:, i]
+area_range = df.data['range'][area.maskrange]
+area_snr = df.data['co_signal'].transpose()[area.mask][:, i]
+
 max_i = np.argmax(area_snr)
 result = pd.Series({'time': df.data['time'][area.masktime][i],
                     'range': area_range[max_i],

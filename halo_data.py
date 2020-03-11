@@ -132,7 +132,9 @@ class halo_data:
 
 class area_select():
 
-    def __init__(self, x, y, z, ax_in, ax_out=None, type='hist'):
+    def __init__(self, x, y, z, ax_in, ax_out=None, type='hist', ref=None):
+        self.ref = ref
+        self.i = -1
         self.ax_in = ax_in
         self.ax_out = ax_out
         self.type = type
@@ -145,14 +147,19 @@ class area_select():
             interactive=True)  # Keep the drawn box on screen
 
     def __call__(self, event1, event2):
+        self.ax_out.cla()
         self.mask = self.inside(event1, event2)
         self.area = self.z[self.mask]
-        self.range = self.y * self.maskrange
-        self.time = self.x * self.masktime
+        self.range = self.y[self.maskrange]
+        self.time = self.x[self.masktime]
         print(f'Chosen {len(self.area.flatten())} values')
         if self.type is None:
             return
-        self.ax_out.cla()
+        if self.type == 'time_point':
+            self.p = self.ax_out.scatter([0], [0])
+            self.colorbar = plt.gcf().colorbar(self.p, ax=self.ax_out)
+            self.canvas.mpl_connect('key_press_event', self.key_interact)
+            return
         if self.type == 'hist':
             self.ax_out.hist(self.area.flatten())
         elif self.type == 'kde':
@@ -172,3 +179,16 @@ class area_select():
         self.masktime = ((self.x > x0) & (self.x < x1))
         self.maskrange = ((self.y > y0) & (self.y < y1))
         return np.ix_(self.maskrange, self.masktime)
+
+    def key_interact(self, event):
+        self.colorbar.remove()
+        self.ax_out.cla()
+        self.i += 1
+        self.p = self.ax_out.scatter(self.area[:, self.i],
+                                     self.range,
+                                     c=self.ref.transpose()[self.mask][:, self.i],
+                                     s=self.ref.transpose()[self.mask][:, self.i]*20)
+        # Add vmin, vmax to control color bar
+        self.ax_out.set_title(f"Depo value colored by SNR at time {self.time[self.i]:.3f}")
+        self.colorbar = plt.gcf().colorbar(self.p, ax=self.ax_out)
+        self.canvas.draw()
