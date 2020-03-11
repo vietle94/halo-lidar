@@ -73,6 +73,7 @@ class halo_data:
             p = axi.pcolormesh(xvar, yvar, val, cmap='jet',
                                vmin=vmin,
                                vmax=vmax)
+            axi.set_xlim([0, 24])
             axi.set_title(var)
             fig.colorbar(p, ax=axi)
         fig.suptitle(self.full_data.filename.split('\\')[-1].split('_')[0] + ' - ' +
