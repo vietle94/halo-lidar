@@ -81,3 +81,5 @@ take the mean and sd of depo values
 
 
 find how much co-signal leak to cross?? not related
+
+choose liquid cloud only
