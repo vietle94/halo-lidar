@@ -16,7 +16,7 @@ def getdata(path, pattern=""):
 
 
 class halo_data:
-    cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-1, 1],
+    cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-2, 2],
                 'cross_signal': [0.995, 1.005],
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
                 'depo_averaged_raw': [0, 0.5], 'co_signal_averaged': [0.995, 1.005],

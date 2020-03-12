@@ -118,13 +118,18 @@ final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
 fig = plt.figure(figsize=(24, 12))
 ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(223)
-ax3 = fig.add_subplot(224)
+ax3 = fig.add_subplot(224, sharey=ax2)
 p = ax1.pcolormesh(df.data['time'],
                    df.data['range'],
                    np.log10(df.data['beta_raw'].transpose()),
                    cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
                    vmax=df.cbar_lim['beta_raw'][1])
 me = fig.colorbar(p, ax=ax1)
+ax1.set_title(df.full_data.filename.split('\\')[-1].split('_')[0] + ' - ' +
+              df.more_info['location'].decode("utf-8") + ' - ' +
+              str(df.more_info['systemID']),
+              size=30,
+              weight='bold')
 
 area = hd.area_select(df.data['time'],
                       df.data['range'],
