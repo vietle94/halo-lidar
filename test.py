@@ -25,23 +25,26 @@ data = hd.getdata(data_folder)
 # pick day of data
 file_name = next(data)
 df = hd.halo_data(file_name)
-df.info
-df.full_data
-df.full_data_names
+
+# #
+# # Some useful attributes and methods
+# df.info
+# df.full_data
+# df.full_data_names
+# #
+# df.data
+# # Names of data
+# df.data_names
+# # More info
+# df.more_info
+# # Get meta data of each variable
+# df.meta_data('co_signal')
 #
-df.data
-# Names of data
-df.data_names
-# More info
-df.more_info
-# Get meta data of each variable
-df.meta_data('co_signal')
-
-# Get meta data of all variables
-{'==>' + key: df.meta_data(key) for key in df.full_data_names}
-
-# Only crucial info
-{'==>' + key: df.meta_data(key)['_attributes'] for key in df.full_data_names}
+# # Get meta data of all variables
+# {'==>' + key: df.meta_data(key) for key in df.full_data_names}
+#
+# # Only crucial info
+# {'==>' + key: df.meta_data(key)['_attributes'] for key in df.full_data_names}
 
 # %%
 # Change masking missing values from -999 to NaN
@@ -58,10 +61,12 @@ df.describe()
 
 image_raw = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
-               'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'], ncol=2, size=(20, 15))
+               'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
+    ncol=2, size=(20, 15))
 image_raw.savefig(image_folder + '/' + df.filename + '_raw.png')
 
-# %% Histogram of an area in SNR plot
+# %%
+# Histogram of an area in SNR plot
 
 fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time'],
@@ -75,12 +80,15 @@ area = hd.area_select(df.data['time'],
                       ax[1],
                       type='kde')
 fig.colorbar(p, ax=ax[0])
-# %% Calculate threshold
+
+# %%
+# Calculate threshold
 noise = area.area - 1
 threshold = 1 + np.nanstd(noise) * 3
 threshold
 
-# %% Histogram of an area in SNR plot
+# %%
+# Histogram of an area in SNR plot
 fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
@@ -96,21 +104,29 @@ fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise_averaged = area.area - 1
 threshold_averaged = 1 + np.nanstd(noise_averaged) * 2
-
 threshold_averaged
 
 # %%
 # Append to or create new csv file
 with open(snr_folder + '/' + df.filename + '.csv', 'a') as filedata:
     writer = csv.writer(filedata)
-    writer.writerow([df.more_info['year'],
-                     df.more_info['month'],
-                     df.more_info['day'],
-                     df.more_info['location'].decode('utf-8'),
-                     df.more_info['systemID'],
-                     threshold,
-                     threshold_averaged])
+    for value in noise.flatten():
+        writer.writerow([df.more_info['year'],
+                         df.more_info['month'],
+                         df.more_info['day'],
+                         df.more_info['location'].decode('utf-8'),
+                         df.more_info['systemID'],
+                         value])
 
+with open(snr_folder + '/' + df.filename + '_avg' + '.csv', 'a') as filedata:
+    writer = csv.writer(filedata)
+    for value in noise_averaged.flatten():
+        writer.writerow([df.more_info['year'],
+                         df.more_info['month'],
+                         df.more_info['day'],
+                         df.more_info['location'].decode('utf-8'),
+                         df.more_info['systemID'],
+                         value])
 
 # %%
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
@@ -121,12 +137,12 @@ df.filter(variables=['cross_signal_averaged', 'depo_averaged_raw'],
 
 # %%
 # Plot data
-
 image_filtered = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
-               'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'], ncol=2, size=(20, 15))
-
+               'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
+    ncol=2, size=(20, 15))
 image_filtered.savefig(image_folder + '/' + df.filename + '_filtered.png')
+
 # %% Summary
 df.describe()
 
@@ -156,6 +172,7 @@ area = hd.area_select(df.data['time'],
                       ref=df.data['co_signal'])
 
 # %%
+# Extract data from each time point
 i = area.i
 area_value = area.area[:, i]
 area_range = df.data['range'][area.maskrange]
@@ -163,6 +180,7 @@ area_snr = df.data['co_signal'].transpose()[area.mask][:, i]
 area_vraw = df.data['v_raw'].transpose()[area.mask][:, i]
 area_betaraw = df.data['beta_raw'].transpose()[area.mask][:, i]
 area_cross = df.data['cross_signal'].transpose()[area.mask][:, i]
+
 # Calculate indice of maximum snr value
 max_i = np.argmax(area_snr)
 
