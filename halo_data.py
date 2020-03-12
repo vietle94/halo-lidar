@@ -32,6 +32,13 @@ class halo_data:
         self.data_names = list(self.data.keys())
         self.more_info = self.full_data._attributes
 
+        name = [int(self.more_info.get(key)) if key != 'location' else
+                self.more_info.get(key).decode("utf-8") for
+                key in ['year', 'month', 'day', 'location', 'systemID']]
+
+        self.filename = '-'.join([str(elem).zfill(2) if name in ['month',
+                                                                 'day'] else str(elem).zfill(2) for elem in name])
+
     def meta_data(self, var=None):
         if var is None or not isinstance(var, str):
             print('Hannah, provide one variable as string')
@@ -76,12 +83,11 @@ class halo_data:
             axi.set_xlim([0, 24])
             axi.set_title(var)
             fig.colorbar(p, ax=axi)
-        fig.suptitle(self.full_data.filename.split('\\')[-1].split('_')[0] + ' - ' +
-                     self.more_info['location'].decode("utf-8") + ' - ' +
-                     str(self.more_info['systemID']),
+        fig.suptitle(self.filename,
                      size=30,
                      weight='bold')
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        return fig
 
     def filter(self, variables=None, ref=None, threshold=None):
         for var in variables:
