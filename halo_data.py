@@ -187,7 +187,6 @@ class area_select():
                             self.range,
                             c=self.ref.transpose()[self.mask][:, self.i],
                             s=self.ref.transpose()[self.mask][:, self.i]*20)
-        # Add vmin, vmax to control color bar
         self.ax_outSNR.scatter(self.ref.transpose()[self.mask][:, self.i],
                                self.range,
                                c=self.ref.transpose()[self.mask][:, self.i],

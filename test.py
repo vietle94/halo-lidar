@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import halo_data as hd
-
+%matplotlib qt
 # %%
 # load whole folder data
 data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
@@ -45,13 +45,13 @@ df.describe()
 
 # %%
 # Plot data
-%matplotlib inline
+
 df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'], ncol=2, size=(20, 15))
 
 # %% Histogram of an area in SNR plot
-%matplotlib qt
+
 fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
@@ -72,7 +72,7 @@ np.nanstd(noise)
 threshold
 
 # %% Histogram of an area in SNR plot
-%matplotlib qt
+
 fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
@@ -101,7 +101,7 @@ df.filter(variables=['cross_signal_averaged', 'depo_averaged_raw'],
 
 # %%
 # Plot data
-%matplotlib inline
+
 df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'], ncol=2, size=(20, 15))
@@ -114,7 +114,7 @@ df.describe()
 
 final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
 # %%
-%matplotlib qt
+
 fig = plt.figure(figsize=(24, 12))
 ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(223)
