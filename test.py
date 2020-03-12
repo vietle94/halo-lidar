@@ -35,7 +35,7 @@ df.meta_data('co_signal')
 
 # %%
 # Change masking missing values from -999 to NaN
-df.unmask999()
+# df.unmask999()
 # Remove first three columns of data matrix due to calibration,
 # they correspond to top 3 height data
 # ask Ville for more detail
