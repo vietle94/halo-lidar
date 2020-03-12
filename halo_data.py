@@ -132,11 +132,12 @@ class halo_data:
 
 class area_select():
 
-    def __init__(self, x, y, z, ax_in, ax_out=None, type='hist', ref=None):
+    def __init__(self, x, y, z, ax_in, ax_out=None, ax_outSNR=None, type='hist', ref=None):
         self.ref = ref
         self.i = -1
         self.ax_in = ax_in
         self.ax_out = ax_out
+        self.ax_outSNR = ax_outSNR
         self.type = type
         self.canvas = plt.gcf().canvas
         self.x, self.y, self.z = x, y, z
@@ -156,8 +157,6 @@ class area_select():
         if self.type is None:
             return
         if self.type == 'time_point':
-            self.p = self.ax_out.scatter([0], [0])
-            self.colorbar = plt.gcf().colorbar(self.p, ax=self.ax_out)
             self.canvas.mpl_connect('key_press_event', self.key_interact)
             return
         if self.type == 'hist':
@@ -181,14 +180,18 @@ class area_select():
         return np.ix_(self.maskrange, self.masktime)
 
     def key_interact(self, event):
-        self.colorbar.remove()
         self.ax_out.cla()
+        self.ax_outSNR.cla()
         self.i += 1
-        self.p = self.ax_out.scatter(self.area[:, self.i],
-                                     self.range,
-                                     c=self.ref.transpose()[self.mask][:, self.i],
-                                     s=self.ref.transpose()[self.mask][:, self.i]*20)
+        self.ax_out.scatter(self.area[:, self.i],
+                            self.range,
+                            c=self.ref.transpose()[self.mask][:, self.i],
+                            s=self.ref.transpose()[self.mask][:, self.i]*20)
         # Add vmin, vmax to control color bar
+        self.ax_outSNR.scatter(self.ref.transpose()[self.mask][:, self.i],
+                               self.range,
+                               c=self.ref.transpose()[self.mask][:, self.i],
+                               s=self.ref.transpose()[self.mask][:, self.i]*20)
         self.ax_out.set_title(f"Depo value colored by SNR at time {self.time[self.i]:.3f}")
-        self.colorbar = plt.gcf().colorbar(self.p, ax=self.ax_out)
+        self.ax_outSNR.set_title(f"SNR at time {self.time[self.i]:.3f}")
         self.canvas.draw()

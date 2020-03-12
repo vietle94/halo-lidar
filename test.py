@@ -6,16 +6,19 @@ import matplotlib.pyplot as plt
 import halo_data as hd
 
 # %%
-# data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
-data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# load whole folder data
+data = hd.getdata("C:/Users/LV/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
+# data = hd.getdata("G:/OneDrive - University of Helsinki/FMI/halo/53/depolarization/")
 # data = hd.getdata(r'G:\OneDrive - University of Helsinki\FMI\halo\53\depolarization')
 
 # %% get data
+# pick day of data
 file_name = next(data)
 df = hd.halo_data(file_name)
 df.info
 df.full_data
 df.full_data_names
+#
 df.data
 # Names of data
 df.data_names
@@ -108,85 +111,32 @@ df.plot(
 df.describe()
 
 # %%
-%matplotlib qt
-fig, ax = plt.subplots(3, 1, sharex=True, figsize=(24, 12))
-ax = ax.flatten()
-for i, name in enumerate(['depo_raw', 'beta_raw', 'v_raw']):
-    p = ax[i].pcolormesh(df.data['time'],
-                         df.data['range'],
-                         df.data[name].transpose() if name != 'beta_raw' else np.log10(
-                             df.data[name].transpose()),
-                         cmap='jet', vmin=df.cbar_lim[name][0], vmax=df.cbar_lim[name][1])
-    ax[i].set_title(name)
-    fig.colorbar(p, ax=ax[i])
-area = hd.area_select(df.data['time'],
-                      df.data['range'],
-                      df.data['depo_raw'].transpose(),
-                      ax[0],
-                      type=None)
-plt.tight_layout()
-# %%
-i = -1
+
 final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
 # %%
-i += 1
-%matplotlib inline
-fig, ax = plt.subplots(figsize=(8, 5))
-area_value = area.area[:, i]
-area_range = df.data['range'][area.maskrange]
-area_snr = df.data['co_signal'].transpose()[area.mask][:, i]
-p = ax.scatter(area_value, area_range,
-               c=area_snr,
-               s=area_snr * 20)
-ax.set_title(f"Depo value colored by SNR at time {df.data['time'][area.masktime][i]:.3f}")
-ax.set_xlabel('Depo value')
-ax.set_ylabel('Range')
-fig.colorbar(p)
-
-
-# %%
-max_i = np.argmax(area_snr)
-result = pd.Series({'time': df.data['time'][area.masktime][i],
-                    'range': area_range[max_i],
-                    'SNR': area_snr[max_i],
-                    'depo': area_value[max_i]})
-result
-final_result = final_result.append(result, ignore_index=True)
-final_result
-
-# %%
-plt.plot(final_result['depo'], '-')
-
-# %%
-# Location etc
-name = [int(df.more_info.get(key)) if key != 'location' else
-        df.more_info.get(key).decode("utf-8") for
-        key in ['location', 'year', 'month', 'day', 'systemID']]
-
-filename = '-'.join([str(elem) for elem in name])
-
-final_result.to_csv(filename + '.csv')
-
-# %%
-
 %matplotlib qt
-fig, ax = plt.subplots(2, 1, sharex=False, figsize=(24, 12))
-p = ax[0].pcolormesh(df.data['time'],
-                     df.data['range'],
-                     df.data['depo_raw'].transpose(),
-                     cmap='jet', vmin=df.cbar_lim['depo_raw'][0],
-                     vmax=df.cbar_lim['depo_raw'][1])
-me = fig.colorbar(p, ax=ax[0])
+fig = plt.figure(figsize=(24, 12))
+ax1 = fig.add_subplot(211)
+ax2 = fig.add_subplot(223)
+ax3 = fig.add_subplot(224)
+p = ax1.pcolormesh(df.data['time'],
+                   df.data['range'],
+                   np.log10(df.data['beta_raw'].transpose()),
+                   cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
+                   vmax=df.cbar_lim['beta_raw'][1])
+me = fig.colorbar(p, ax=ax1)
 
 area = hd.area_select(df.data['time'],
                       df.data['range'],
                       df.data['depo_raw'].transpose(),
-                      ax[0],
-                      ax[1],
+                      ax1,
+                      ax2,
+                      ax3,
                       type='time_point',
                       ref=df.data['co_signal'])
 
 final_result = pd.DataFrame(columns=['time', 'range', 'SNR', 'depo'])
+
 # %%
 i = area.i
 area_value = area.area[:, i]
