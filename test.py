@@ -23,7 +23,7 @@ data = hd.getdata(data_folder)
 
 # %%
 # pick date of data
-pick_date = '20160101'
+pick_date = '20160103'
 data_indices = hd.getdata_date(data, pick_date)
 print(data[data_indices])
 data_indices = data_indices - 1
@@ -119,28 +119,27 @@ threshold_averaged
 
 # %%
 # Append to or create new csv file
-with open(snr_folder + '/' + df.filename + '_noise.csv', 'a') as f:
-    for value in noise.flatten():
-        noise_csv = pd.DataFrame.from_dict([{'year': df.more_info['year'],
-                                             'month': df.more_info['month'],
-                                             'day': df.more_info['day'],
-                                             'location': df.more_info['location'].decode('utf-8'),
-                                             'systemID': df.more_info['systemID'],
-                                             'noise': value}])
-        noise_csv.to_csv(f, header=f.tell() == 0, index=False)
+with open(snr_folder + '/' + df.filename + '_noise.csv', 'w') as f:
+    noise_shape = noise.flatten().shape
+    noise_csv = pd.DataFrame.from_dict({'year': np.repeat(df.more_info['year'], noise_shape),
+                                        'month': np.repeat(df.more_info['month'], noise_shape),
+                                        'day': np.repeat(df.more_info['day'], noise_shape),
+                                        'location': np.repeat(df.more_info['location'].decode('utf-8'), noise_shape),
+                                        'systemID': np.repeat(df.more_info['systemID'], noise_shape),
+                                        'noise': noise.flatten()})
+    noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
-with open(snr_folder + '/' + df.filename + '_noise_avg' + '.csv', 'a') as f:
-    for value in noise_averaged.flatten():
-        noise_avg_csv = pd.DataFrame.from_dict([{'year': df.more_info['year'],
-                                                 'month': df.more_info['month'],
-                                                 'day': df.more_info['day'],
-                                                 'location': df.more_info['location'].decode('utf-8'),
-                                                 'systemID': df.more_info['systemID'],
-                                                 'noise_avg': value}])
-        noise_avg_csv.to_csv(f, header=f.tell() == 0, index=False)
+with open(snr_folder + '/' + df.filename + '_noise_avg' + '.csv', 'w') as f:
+    noise_avg_shape = noise_averaged.flatten().shape
+    noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(df.more_info['year'], noise_avg_shape),
+                                            'month': np.repeat(df.more_info['month'], noise_avg_shape),
+                                            'day': np.repeat(df.more_info['day'], noise_avg_shape),
+                                            'location': np.repeat(df.more_info['location'].decode('utf-8'), noise_avg_shape),
+                                            'systemID': np.repeat(df.more_info['systemID'], noise_avg_shape),
+                                            'noise': noise_averaged.flatten()})
+    noise_avg_csv.to_csv(f, header=f.tell() == 0, index=False)
 # Remove unuse variables
-del noise_csv
-del noise_avg_csv
+del noise_csv, noise_shape, noise_avg_csv, noise_avg_shape
 
 # %%
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
