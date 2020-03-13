@@ -23,7 +23,7 @@ data = hd.getdata(data_folder)
 
 # %%
 # pick date of data
-pick_date = '20160103'
+pick_date = '20160104'
 data_indices = hd.getdata_date(data, pick_date)
 print(data[data_indices])
 data_indices = data_indices - 1
