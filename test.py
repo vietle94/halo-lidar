@@ -58,7 +58,7 @@ df.describe()
 
 # %%
 # Plot data
-
+%matplotlib qt
 image_raw = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
@@ -67,7 +67,6 @@ image_raw.savefig(image_folder + '/' + df.filename + '_raw.png')
 
 # %%
 # Histogram of an area in SNR plot
-
 fig, ax = plt.subplots(1, 2, figsize=(24, 12))
 p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
@@ -108,25 +107,28 @@ threshold_averaged
 
 # %%
 # Append to or create new csv file
-with open(snr_folder + '/' + df.filename + '.csv', 'a') as filedata:
-    writer = csv.writer(filedata)
+with open(snr_folder + '/' + df.filename + '_noise.csv', 'a') as f:
     for value in noise.flatten():
-        writer.writerow([df.more_info['year'],
-                         df.more_info['month'],
-                         df.more_info['day'],
-                         df.more_info['location'].decode('utf-8'),
-                         df.more_info['systemID'],
-                         value])
+        noise_csv = pd.DataFrame.from_dict([{'year': df.more_info['year'],
+                                             'month': df.more_info['month'],
+                                             'day': df.more_info['day'],
+                                             'location': df.more_info['location'].decode('utf-8'),
+                                             'systemID': df.more_info['systemID'],
+                                             'noise': value}])
+        noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
-with open(snr_folder + '/' + df.filename + '_avg' + '.csv', 'a') as filedata:
-    writer = csv.writer(filedata)
+with open(snr_folder + '/' + df.filename + '_noise_avg' + '.csv', 'a') as f:
     for value in noise_averaged.flatten():
-        writer.writerow([df.more_info['year'],
-                         df.more_info['month'],
-                         df.more_info['day'],
-                         df.more_info['location'].decode('utf-8'),
-                         df.more_info['systemID'],
-                         value])
+        noise_avg_csv = pd.DataFrame.from_dict([{'year': df.more_info['year'],
+                                                 'month': df.more_info['month'],
+                                                 'day': df.more_info['day'],
+                                                 'location': df.more_info['location'].decode('utf-8'),
+                                                 'systemID': df.more_info['systemID'],
+                                                 'noise_avg': value}])
+        noise_avg_csv.to_csv(f, header=f.tell() == 0, index=False)
+# Remove unuse variables
+del noise_csv
+del noise_avg_csv
 
 # %%
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
@@ -184,20 +186,28 @@ area_cross = df.data['cross_signal'].transpose()[area.mask][:, i]
 # Calculate indice of maximum snr value
 max_i = np.argmax(area_snr)
 
-result = [df.more_info['year'],
-          df.more_info['month'],
-          df.more_info['day'],
-          df.more_info['location'].decode('utf-8'),
-          df.more_info['systemID'],
-          df.data['time'][area.masktime][i],  # time as hour
-          area_range[max_i],  # range
-          area_value[max_i],  # depo value
-          area_snr[max_i],  # snr
-          area_vraw[max_i],  # v_raw
-          area_betaraw[max_i],  # beta_raw
-          area_cross[max_i]  # cross_signal
-          ]
+result = pd.DataFrame.from_dict([{
+    'year': df.more_info['year'],
+    'month': df.more_info['month'],
+    'day': df.more_info['day'],
+    'location': df.more_info['location'].decode('utf-8'),
+    'systemID': df.more_info['systemID'],
+    'time': df.data['time'][area.masktime][i],  # time as hour
+    'range': area_range[max_i],  # range
+    'depo': area_value[max_i],  # depo value
+    'co_signal': area_snr[max_i],  # snr
+    'vraw': area_vraw[max_i],  # v_raw
+    'beta_raw': area_betaraw[max_i],  # beta_raw
+    'cross_signal': area_cross[max_i]  # cross_signal
+}])
+
+# sub folder for each date
+depo_sub_folder = depo_folder + '/' + df.filename
+Path(depo_sub_folder).mkdir(parents=True, exist_ok=True)
+
 # Append to or create new csv file
-with open(depo_folder + '/' + df.filename + '.csv', 'a') as filedata:
-    writer = csv.writer(filedata)
-    writer.writerow(result)
+with open(depo_sub_folder + '/' + df.filename + '_depo.csv', 'a') as f:
+    result.to_csv(f, header=f.tell() == 0, index=False)
+# save fig
+fig.savefig(depo_sub_folder + '/' + df.filename + '_' +
+            str(int(df.data['time'][area.masktime][i]*1000)) + '.png')
