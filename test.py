@@ -21,10 +21,22 @@ for path in [image_folder, depo_folder, snr_folder]:
 # load whole folder data
 data = hd.getdata(data_folder)
 
-# %% get data
-# pick day of data
-file_name = next(data)
-df = hd.halo_data(file_name)
+# %%
+# pick date of data
+pick_date = '20160101'
+data_indices = hd.getdata_date(data, pick_date)
+print(data[data_indices])
+data_indices = data_indices - 1
+
+# %%
+##################################################
+#
+# START HERE
+#
+##################################################
+# Load data
+data_indices = data_indices + 1
+df = hd.halo_data(data[data_indices])
 
 # #
 # # Some useful attributes and methods

@@ -12,7 +12,14 @@ def getdata(path, pattern=""):
     '''
     import glob
     data_list = glob.glob(path + "/*.nc")
-    return (data for data in data_list)
+    # return (data for data in data_list)
+    return data_list
+
+
+def getdata_date(data, date):
+    data_indices = [i for i, s in enumerate(data) if date in s]
+    assert len(data_indices) == 1, 'There are more than 1 data have that date'
+    return data_indices[0]
 
 
 class halo_data:
