@@ -23,7 +23,7 @@ data = hd.getdata(data_folder)
 
 # %%
 # pick date of data
-pick_date = '20160104'
+pick_date = '20160106'
 data_indices = hd.getdata_date(data, pick_date)
 print(data[data_indices])
 data_indices = data_indices - 1
@@ -35,6 +35,8 @@ data_indices = data_indices - 1
 #
 ##################################################
 # Load data
+# %%
+plt.close(fig='all')
 data_indices = data_indices + 1
 df = hd.halo_data(data[data_indices])
 
@@ -74,12 +76,14 @@ df.describe()
 image_raw = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
-    ncol=2, size=(20, 15))
+    ncol=2, size=(18, 9))
 image_raw.savefig(image_folder + '/' + df.filename + '_raw.png')
 
 # %%
+plt.close(fig=image_raw)
+# %%
 # Histogram of an area in SNR plot
-fig, ax = plt.subplots(1, 2, figsize=(24, 12))
+fig, ax = plt.subplots(1, 2, figsize=(18, 9))
 p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
                      df.data['co_signal'].transpose(),
@@ -99,8 +103,11 @@ threshold = 1 + np.nanstd(noise) * 3
 threshold
 
 # %%
+plt.close(fig=fig)
+
+# %%
 # Histogram of an area in SNR plot
-fig, ax = plt.subplots(1, 2, figsize=(24, 12))
+fig, ax = plt.subplots(1, 2, figsize=(18, 9))
 p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
                      df.data['co_signal_averaged'].transpose(),
@@ -116,6 +123,9 @@ fig.colorbar(p, ax=ax[0])
 noise_averaged = area.area - 1
 threshold_averaged = 1 + np.nanstd(noise_averaged) * 2
 threshold_averaged
+
+# %%
+plt.close(fig=fig)
 
 # %%
 # Append to or create new csv file
@@ -153,15 +163,18 @@ df.filter(variables=['cross_signal_averaged', 'depo_averaged_raw'],
 image_filtered = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
-    ncol=2, size=(20, 15))
+    ncol=2, size=(18, 9))
 image_filtered.savefig(image_folder + '/' + df.filename + '_filtered.png')
+
+# %%
+plt.close(fig=image_filtered)
 
 # %% Summary
 df.describe()
 
 # %%
 # Area selection for depo cloud
-fig = plt.figure(figsize=(24, 12))
+fig = plt.figure(figsize=(18, 9))
 ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(223)
 ax3 = fig.add_subplot(224, sharey=ax2)
@@ -171,7 +184,8 @@ p = ax1.pcolormesh(df.data['time'],
                    cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
                    vmax=df.cbar_lim['beta_raw'][1])
 me = fig.colorbar(p, ax=ax1)
-ax1.set_title('depo')
+ax1.set_title('beta_raw')
+ax1.set_xlim([0, 24])
 fig.suptitle(df.filename,
              size=30,
              weight='bold')
