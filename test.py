@@ -31,7 +31,8 @@ data_indices = data_indices - 1
 # %%
 ##################################################
 #
-# START HERE
+# START HERE to go to next data, if you started a new session,
+# start from previous cell to pick the date
 #
 ##################################################
 # Load data
@@ -206,6 +207,8 @@ result = pd.DataFrame.from_dict([{
     'time': df.data['time'][area.masktime][i],  # time as hour
     'range': area_range[max_i],  # range
     'depo': area_value[max_i],  # depo value
+    'depo_1': area_value[max_i - 1],
+    'depo_2': area_value[max_i - 2],
     'co_signal': area_snr[max_i],  # snr
     'vraw': area_vraw[max_i],  # v_raw
     'beta_raw': area_betaraw[max_i],  # beta_raw
