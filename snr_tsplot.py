@@ -28,7 +28,7 @@ fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
 noise.groupby('time')['noise'].std().plot(ax=ax[0])
 # sns.boxplot('time', 'noise_sd', data=noise, ax=ax[0])
 ax[0].set_title('SNR time series', fontweight='bold')
-ax[0].set_xlabel('')
+ax[0].set_xlabel('time')
 ax[0].set_ylabel('SNR')
 
 noise_avg.groupby('time')['noise'].std().plot(ax=ax[1])

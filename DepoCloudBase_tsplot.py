@@ -23,37 +23,35 @@ depo = depo.astype({'year': int, 'month': int, 'day': int})
 depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']]).dt.date
 
 # %%
+
+depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
+               value_vars=[x for x in depo.columns if 'depo' in x],
+               var_name='depo_type')
+
+# %%
+# Boxplot for all depo types
+fig, ax = plt.subplots(2, 2, figsize=(18, 9))
+sns.boxplot('date', 'value', data=depo, ax=ax[0, 0])
+ax[0, 0].set_title('Depo at cloud base time series', fontweight='bold')
+ax[0, 0].set_xlabel('date')
+ax[0, 0].set_ylabel('Depo')
+
+sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo'], ax=ax[0, 1])
+ax[0, 1].set_title('Depo at cloud base time series at max SNR', fontweight='bold')
+ax[0, 1].set_xlabel('date')
+ax[0, 1].set_ylabel('Depo')
+
+sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[1, 0])
+ax[1, 0].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
+ax[1, 0].set_xlabel('date')
+ax[1, 0].set_ylabel('Depo')
+
+sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_2'], ax=ax[1, 1])
+ax[1, 1].set_title('Depo at cloud base time series at 2 levels below max SNR', fontweight='bold')
+ax[1, 1].set_xlabel('date')
+ax[1, 1].set_ylabel('Depo')
+
+# %%
 fig, ax = plt.subplots(figsize=(18, 9))
-sns.boxplot('date', 'depo', data=depo, ax=ax)
+sns.lineplot('time', 'value', hue='date', style='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
-ax.set_xlabel('date')
-ax.set_ylabel('Depo')
-
-# %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.boxplot('date', 'depo_1', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
-ax.set_xlabel('date')
-ax.set_ylabel('Depo')
-
-# %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.boxplot('date', 'depo_2', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series at 2 levels below max SNR', fontweight='bold')
-ax.set_xlabel('date')
-ax.set_ylabel('Depo')
-
-# %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.lineplot('time', 'depo', hue='date', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series', fontweight='bold')
-
-# %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.lineplot('time', 'depo_2', hue='date', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series 1 level below max SNR', fontweight='bold')
-
-# %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.lineplot('time', 'depo', hue='date', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series 2 level below max SNR', fontweight='bold')
