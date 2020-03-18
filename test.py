@@ -27,7 +27,7 @@ data = hd.getdata(data_folder)
 
 # %%
 # pick date of data
-pick_date = '20160106'
+pick_date = '20170609'
 data_indices = hd.getdata_date(data, pick_date)
 print(data[data_indices])
 data_indices = data_indices - 1
@@ -40,12 +40,10 @@ data_indices = data_indices - 1
 #
 ##################################################
 # Load data
-# %%
 plt.close(fig='all')
 data_indices = data_indices + 1
 df = hd.halo_data(data[data_indices])
 
-# %%
 # Change masking missing values from -999 to NaN
 df.unmask999()
 # Remove first three columns of data matrix due to calibration,
@@ -157,6 +155,11 @@ image_filtered = df.plot(
 image_filtered.savefig(image_folder + '/' + df.filename + '_filtered.png')
 
 # %%
+##################################################
+#
+# STOP HERE if you don't like any clouds
+#
+##################################################
 # Close the plot
 plt.close(fig=image_filtered)
 
