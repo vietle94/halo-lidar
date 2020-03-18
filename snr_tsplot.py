@@ -24,14 +24,15 @@ noise_avg['time'] = pd.to_datetime(noise_avg[['year', 'month', 'day']]).dt.date
 
 # %%
 # pick only sd
-fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
-noise.groupby('time')['noise'].std().plot(ax=ax[0])
-# sns.boxplot('time', 'noise_sd', data=noise, ax=ax[0])
-ax[0].set_title('SNR time series', fontweight='bold')
-ax[0].set_xlabel('time')
-ax[0].set_ylabel('SNR')
+fig, ax = plt.subplots(figsize=(18, 9))
+noise.groupby('time')['noise'].std().plot(ax=ax)
+noise_avg.groupby('time')['noise'].std().plot(ax=ax, label='noise in avg data')
+ax.set_title('SNR time series', fontweight='bold')
+ax.set_xlabel('time')
+ax.set_ylabel('SNR')
+ax.legend()
 
-noise_avg.groupby('time')['noise'].std().plot(ax=ax[1])
-ax[1].set_title('SNR in averaged data time series', fontweight='bold')
-ax[1].set_xlabel('Time')
-ax[1].set_ylabel('SNR')
+# %%
+fig, ax = plt.subplots(figsize=(18, 9))
+sns.boxplot('time', 'noise', data=noise, ax=ax)
+ax.tick_params(axis='x', labelrotation=45)
