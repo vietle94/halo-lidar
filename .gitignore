@@ -1,3 +1,4 @@
 # byte code
 __pycache__/
 .ipynb_checkpoints/
+temp.py
