@@ -5,15 +5,13 @@ from matplotlib.widgets import RectangleSelector
 import seaborn as sns
 
 
-def getdata(path, pattern=""):
-    ''' Get .nc files from a path,
-    it will return a generator.
-    I will add pattern later to filter file if needed
+def getdata(path):
+    '''
+    Get .nc files from a path
     '''
     import glob
     data_list = glob.glob(path + "/*.nc")
-    # return (data for data in data_list)
-    return data_list
+    return sorted(data_list)
 
 
 def getdata_date(data, date):
