@@ -9,16 +9,20 @@ import csv
 %matplotlib qt
 
 # %%
+# Specify data folder path
 data_folder = r'F:\halo\32\depolarization'
+# Specify output images folder path
 image_folder = r'F:\halo\32\depolarization\img'
+# Specify folder path for output depo analysis
 depo_folder = r'F:\halo\32\depolarization\depo'
+# Specify folder path for snr collection
 snr_folder = r'F:\halo\32\depolarization\snr'
-
+# Make those specified folders if they are not existed yet
 for path in [image_folder, depo_folder, snr_folder]:
     Path(path).mkdir(parents=True, exist_ok=True)
 
 # %%
-# load whole folder data
+# Get a list of all files in data folder
 data = hd.getdata(data_folder)
 
 # %%
@@ -31,8 +35,8 @@ data_indices = data_indices - 1
 # %%
 ##################################################
 #
-# START HERE to go to next data, if you started a new session,
-# start from previous cell to pick the date
+# START HERE to go to next data, if you start a new session,
+# start from the beginning and remember to to pick date of data
 #
 ##################################################
 # Load data
@@ -40,26 +44,6 @@ data_indices = data_indices - 1
 plt.close(fig='all')
 data_indices = data_indices + 1
 df = hd.halo_data(data[data_indices])
-
-# #
-# # Some useful attributes and methods
-# df.info
-# df.full_data
-# df.full_data_names
-# #
-# df.data
-# # Names of data
-# df.data_names
-# # More info
-# df.more_info
-# # Get meta data of each variable
-# df.meta_data('co_signal')
-#
-# # Get meta data of all variables
-# {'==>' + key: df.meta_data(key) for key in df.full_data_names}
-#
-# # Only crucial info
-# {'==>' + key: df.meta_data(key)['_attributes'] for key in df.full_data_names}
 
 # %%
 # Change masking missing values from -999 to NaN
@@ -81,7 +65,9 @@ image_raw = df.plot(
 image_raw.savefig(image_folder + '/' + df.filename + '_raw.png')
 
 # %%
+# Close the plot
 plt.close(fig=image_raw)
+
 # %%
 # Histogram of an area in SNR plot
 fig, ax = plt.subplots(1, 2, figsize=(18, 9))
@@ -104,6 +90,7 @@ threshold = 1 + np.nanstd(noise) * 3
 threshold
 
 # %%
+# Close the plot
 plt.close(fig=fig)
 
 # %%
@@ -126,6 +113,7 @@ threshold_averaged = 1 + np.nanstd(noise_averaged) * 2
 threshold_averaged
 
 # %%
+# Close the plot
 plt.close(fig=fig)
 
 # %%
@@ -153,6 +141,7 @@ with open(snr_folder + '/' + df.filename + '_noise_avg' + '.csv', 'w') as f:
 del noise_csv, noise_shape, noise_avg_csv, noise_avg_shape
 
 # %%
+# Use those obtained threshold to filter data, this will overwrite raw data
 df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
           ref='co_signal', threshold=threshold)
 
@@ -160,7 +149,7 @@ df.filter(variables=['cross_signal_averaged', 'depo_averaged_raw'],
           ref='co_signal_averaged', threshold=threshold_averaged)
 
 # %%
-# Plot data
+# Plot filtered data
 image_filtered = df.plot(
     variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
@@ -168,6 +157,7 @@ image_filtered = df.plot(
 image_filtered.savefig(image_folder + '/' + df.filename + '_filtered.png')
 
 # %%
+# Close the plot
 plt.close(fig=image_filtered)
 
 # %% Summary
