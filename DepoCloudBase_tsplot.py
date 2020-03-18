@@ -53,5 +53,17 @@ ax[1, 1].set_ylabel('Depo')
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
+sns.boxplot('date', 'value', hue='depo_type', data=depo, ax=ax)
+ax.set_title('Depo at cloud base time series', fontweight='bold')
+ax.set_xlabel('date')
+ax.set_ylabel('Depo')
+
+# %%
+fig, ax = plt.subplots(figsize=(18, 9))
 sns.lineplot('time', 'value', hue='date', style='depo_type', data=depo, ax=ax)
+ax.set_title('Depo at cloud base time series', fontweight='bold')
+
+# %%
+fig, ax = plt.subplots(figsize=(18, 9))
+sns.scatterplot('time', 'value', hue='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
