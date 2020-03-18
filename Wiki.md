@@ -1,4 +1,6 @@
-DOCUMENTATION FOR THIS REPOSITORY
+# DOCUMENTATION FOR THIS REPOSITORY
+
+# halo_data.py
 
 halo_data.py contains all functions and classes used to analyze data. Import it
 to use in your code.
@@ -46,3 +48,12 @@ df.meta_data('co_signal')
 # Only crucial info
 {'==>' + key: df.meta_data(key)['_attributes'] for key in df.full_data_names}
 ```
+# snr_tsplot.py
+
+Run this file to create SNR standard deviation time series plot
+Specified the csv_path of those snr files used to determine SNR threshold
+
+# DepoCloudBase_tsplot.py
+
+Run this file to create depo values at cloud base time series plot
+Specified the csv_path of those collected depo files. All csv files in subfolder will be collected
