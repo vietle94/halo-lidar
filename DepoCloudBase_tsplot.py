@@ -5,7 +5,7 @@ import os
 import glob
 import seaborn as sns
 
-# %%
+%matplotlib qt
 # %% Define csv directory path
 csv_path = r'F:\halo\32\depolarization\depo'
 

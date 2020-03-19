@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import glob
 import seaborn as sns
 import numpy as np
-
+%matplotlib qt
 # %% Define csv directory path
 csv_path = r'F:\halo\32\depolarization\snr'
 
