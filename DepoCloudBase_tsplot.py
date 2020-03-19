@@ -35,21 +35,26 @@ sns.boxplot('date', 'value', data=depo, ax=ax[0, 0])
 ax[0, 0].set_title('Depo at cloud base time series', fontweight='bold')
 ax[0, 0].set_xlabel('date')
 ax[0, 0].set_ylabel('Depo')
+ax[0, 0].tick_params(axis='x', labelrotation=45)
 
 sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo'], ax=ax[0, 1])
 ax[0, 1].set_title('Depo at cloud base time series at max SNR', fontweight='bold')
 ax[0, 1].set_xlabel('date')
 ax[0, 1].set_ylabel('Depo')
+ax[0, 1].tick_params(axis='x', labelrotation=45)
+
 
 sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[1, 0])
 ax[1, 0].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
 ax[1, 0].set_xlabel('date')
 ax[1, 0].set_ylabel('Depo')
+ax[1, 0].tick_params(axis='x', labelrotation=45)
 
 sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_2'], ax=ax[1, 1])
 ax[1, 1].set_title('Depo at cloud base time series at 2 levels below max SNR', fontweight='bold')
 ax[1, 1].set_xlabel('date')
 ax[1, 1].set_ylabel('Depo')
+ax[1, 1].tick_params(axis='x', labelrotation=45)
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
@@ -57,13 +62,16 @@ sns.boxplot('date', 'value', hue='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
 ax.set_xlabel('date')
 ax.set_ylabel('Depo')
+ax.tick_params(axis='x', labelrotation=45)
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
 sns.lineplot('time', 'value', hue='date', style='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
+ax.tick_params(axis='x', labelrotation=45)
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
 sns.scatterplot('time', 'value', hue='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
+ax.tick_params(axis='x', labelrotation=45)
