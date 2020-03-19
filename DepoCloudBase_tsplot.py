@@ -30,11 +30,7 @@ depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
 
 # %%
 # Boxplot for all depo types
-<<<<<<< HEAD
 fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
-=======
-fig, ax = plt.subplots(2, 2, figsize=(18, 9), sharex=True)
->>>>>>> 02e259e96dd80476c6536608e81c5fcd94211942
 sns.boxplot('date', 'value', data=depo, ax=ax[0])
 ax[0].set_title('Depo at cloud base time series', fontweight='bold')
 ax[0].set_xlabel('date')
@@ -48,11 +44,7 @@ ax[1].set_ylabel('Depo')
 ax[1].tick_params(axis='x', labelrotation=45)
 
 # %%
-<<<<<<< HEAD
 fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
-=======
-fig, ax = plt.subplots(2, 2, figsize=(18, 9), sharex=True)
->>>>>>> 02e259e96dd80476c6536608e81c5fcd94211942
 sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[0])
 ax[0].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
 ax[0].set_xlabel('date')
