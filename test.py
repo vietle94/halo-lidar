@@ -73,12 +73,16 @@ p = ax[0].pcolormesh(df.data['time'],
                      df.data['range'],
                      df.data['co_signal'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_select(df.data['time'],
-                      df.data['range'],
-                      df.data['co_signal'].transpose(),
-                      ax[0],
-                      ax[1],
-                      type='kde')
+ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
+ax[0].set_ylabel('Height (km)')
+ax[0].set_xlabel('Time (h)')
+ax[0].set_ylim(bottom=0)
+area = hd.area_snr(df.data['time'],
+                   df.data['range'],
+                   df.data['co_signal'].transpose(),
+                   ax[0],
+                   ax[1],
+                   type='kde')
 fig.colorbar(p, ax=ax[0])
 
 # %%
@@ -98,16 +102,20 @@ p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['range'],
                      df.data['co_signal_averaged'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
-area = hd.area_select(df.data['time_averaged'],
-                      df.data['range'],
-                      df.data['co_signal_averaged'].transpose(),
-                      ax[0],
-                      ax[1],
-                      type='kde')
+ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
+ax[0].set_ylabel('Height (km)')
+ax[0].set_xlabel('Time (h)')
+ax[0].set_ylim(bottom=0)
+area = hd.area_snr(df.data['time_averaged'],
+                   df.data['range'],
+                   df.data['co_signal_averaged'].transpose(),
+                   ax[0],
+                   ax[1],
+                   type='kde')
 fig.colorbar(p, ax=ax[0])
 # %% Calculate threshold
 noise_averaged = area.area - 1
-threshold_averaged = 1 + np.nanstd(noise_averaged) * 2
+threshold_averaged = 1 + np.nanstd(noise_averaged) * 3
 threshold_averaged
 
 # %%
@@ -177,20 +185,22 @@ p = ax1.pcolormesh(df.data['time'],
                    np.log10(df.data['beta_raw'].transpose()),
                    cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
                    vmax=df.cbar_lim['beta_raw'][1])
-me = fig.colorbar(p, ax=ax1)
+me = fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
 ax1.set_title('beta_raw')
+ax1.set_xlabel('Time (h)')
 ax1.set_xlim([0, 24])
+ax1.set_ylabel('Height (km)')
+ax1.yaxis.set_major_formatter(hd.m_km_ticks())
 fig.suptitle(df.filename,
              size=30,
              weight='bold')
-area = hd.area_select(df.data['time'],
-                      df.data['range'],
-                      df.data['depo_raw'].transpose(),
-                      ax1,
-                      ax2,
-                      ax3,
-                      type='time_point',
-                      ref=df.data['co_signal'])
+area = hd.area_timeprofile(df.data['time'],
+                           df.data['range'],
+                           df.data['depo_raw'].transpose(),
+                           ax1,
+                           ax_snr=ax3,
+                           ax_depo=ax2,
+                           ref=df.data['co_signal'])
 
 # %%
 # Extract data from each time point
@@ -217,6 +227,8 @@ result = pd.DataFrame.from_dict([{
     'depo_1': area_value[max_i - 1],
     'depo_2': area_value[max_i - 2],
     'co_signal': area_snr[max_i],  # snr
+    'co_signal1': area_snr[max_i-1],
+    'co_signal2': area_snr[max_i-2],  # snr
     'vraw': area_vraw[max_i],  # v_raw
     'beta_raw': area_betaraw[max_i],  # beta_raw
     'cross_signal': area_cross[max_i]  # cross_signal
