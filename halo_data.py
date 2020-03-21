@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import RectangleSelector
 import seaborn as sns
+from matplotlib.ticker import FuncFormatter
 
 
 def getdata(path):
@@ -26,6 +27,8 @@ class halo_data:
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
                 'depo_averaged_raw': [0, 0.5], 'co_signal_averaged': [0.995, 1.005],
                 'cross_signal_averaged': [0.995, 1.005]}
+    units = {'beta_raw': '$m^{-1} sr^{-1}$', 'v_raw': '$m s^{-1}$',
+             'v_error': '$m s^{-1}$'}
 
     def __init__(self, path):
         self.full_data = netcdf.NetCDFFile(path, 'r', mmap=False)
@@ -86,11 +89,18 @@ class halo_data:
                                vmin=vmin,
                                vmax=vmax)
             axi.set_xlim([0, 24])
+            axi.yaxis.set_major_formatter(m_km_ticks())
             axi.set_title(var)
-            fig.colorbar(p, ax=axi)
+            cbar = fig.colorbar(p, ax=axi, fraction=0.05)
+            cbar.ax.set_ylabel(self.units.get(var, None), rotation=90)
+            cbar.ax.yaxis.set_label_position('left')
         fig.suptitle(self.filename,
                      size=30,
                      weight='bold')
+        lab_ax = fig.add_subplot(111, frameon=False)
+        lab_ax.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+        lab_ax.set_xlabel('Time (h)', weight='bold')
+        lab_ax.set_ylabel('Height (km)', weight='bold')
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         return fig
 
@@ -143,65 +153,98 @@ class halo_data:
 
 class area_select():
 
-    def __init__(self, x, y, z, ax_in, ax_out=None, ax_outSNR=None, type='hist', ref=None):
-        self.ref = ref
-        self.i = -1
-        self.ax_in = ax_in
-        self.ax_out = ax_out
-        self.ax_outSNR = ax_outSNR
-        self.type = type
-        self.canvas = plt.gcf().canvas
+    def __init__(self, x, y, z, ax_in):
         self.x, self.y, self.z = x, y, z
+        self.ax_in = ax_in
+        self.canvas = plt.gcf().canvas
         self.selector = RectangleSelector(
             self.ax_in,
             self,
-            useblit=True,  # process much faster,
-            interactive=True)  # Keep the drawn box on screen
+            useblit=True,  # Process much faster,
+            interactive=True  # Keep the drawn box on screen
+        )
 
     def __call__(self, event1, event2):
-        self.ax_out.cla()
         self.mask = self.inside(event1, event2)
         self.area = self.z[self.mask]
         self.range = self.y[self.maskrange]
         self.time = self.x[self.masktime]
         print(f'Chosen {len(self.area.flatten())} values')
-        if self.type is None:
-            return
-        if self.type == 'time_point':
-            self.canvas.mpl_connect('key_press_event', self.key_interact)
-            return
-        if self.type == 'hist':
-            self.ax_out.hist(self.area.flatten())
-        elif self.type == 'kde':
-            sns.kdeplot(self.area.flatten(), ax=self.ax_out)
-        lab = np.nanmean(self.area.flatten())
-        self.ax_out.set_title(f'selected area mean is {lab}')
-        self.ax_out.axvline(lab, c='red')
-        self.canvas.draw()
 
     def inside(self, event1, event2):
-        """Returns a boolean mask of the points inside the rectangle defined by
-        event1 and event2."""
-        x0, x1 = sorted([event1.xdata, event2.xdata])
-        y0, y1 = sorted([event1.ydata, event2.ydata])
+        """
+        Returns a boolean mask of the points inside the rectangle defined by
+        event1 and event2
+        """
         self.xcord = [event1.xdata, event2.xdata]
         self.ycord = [event1.ydata, event2.ydata]
-        self.masktime = ((self.x > x0) & (self.x < x1))
-        self.maskrange = ((self.y > y0) & (self.y < y1))
+        x0, x1 = sorted(self.xcord)
+        y0, y1 = sorted(self.ycord)
+        self.masktime = (self.x > x0) & (self.x < x1)  # remove bracket ()
+        self.maskrange = (self.y > y0) & (self.y < y1)
         return np.ix_(self.maskrange, self.masktime)
 
-    def key_interact(self, event):
-        self.ax_out.cla()
-        self.ax_outSNR.cla()
-        self.i += 1
-        self.ax_out.scatter(self.area[:, self.i],
-                            self.range,
-                            c=self.ref.transpose()[self.mask][:, self.i],
-                            s=self.ref.transpose()[self.mask][:, self.i]*20)
-        self.ax_outSNR.scatter(self.ref.transpose()[self.mask][:, self.i],
-                               self.range,
-                               c=self.ref.transpose()[self.mask][:, self.i],
-                               s=self.ref.transpose()[self.mask][:, self.i]*20)
-        self.ax_out.set_title(f"Depo value colored by SNR at time {self.time[self.i]:.3f}")
-        self.ax_outSNR.set_title(f"SNR at time {self.time[self.i]:.3f}")
+
+class area_snr(area_select):
+
+    def __init__(self, x, y, z, ax_in, ax_snr, type='hist'):
+        super().__init__(x, y, z, ax_in)
+        self.ax_snr = ax_snr
+        self.type = type
+
+    def __call__(self, event1, event2):
+        super().__call__(event1, event2)
+        self.ax_snr.cla()
+        if self.type == 'hist':
+            self.ax_snr.hist(self.area.flatten())
+        elif self.type == 'kde':
+            sns.kdeplot(self.area.flatten(), ax=self.ax_snr)
+        area_mean = np.nanmean(self.area.flatten())
+        area_sd = np.nanstd(self.area.flatten())
+        self.ax_snr.set_title(
+            f'selected area mean is {area_mean:.7f} \n with standard deviation {area_sd:.7f}')
+        self.ax_snr.axvline(area_mean, c='red')
         self.canvas.draw()
+
+
+class area_timeprofile(area_select):
+
+    def __init__(self, x, y, z, ax_in, ax_snr, ax_depo, ref,
+                 ax_snr_label='SNR', ax_depo_label='Depo'):
+        super().__init__(x, y, z, ax_in)
+        self.ax_depo = ax_depo
+        self.ax_snr = ax_snr
+        self.i = -1
+        self.ref = ref
+        self.ax_snr_label = ax_snr_label
+        self.ax_depo_label = ax_depo_label
+
+    def __call__(self, event1, event2):
+        super().__call__(event1, event2)
+        self.canvas.mpl_connect('key_press_event', self.key_interact)
+
+    def key_interact(self, event):
+        self.ax_depo.cla()
+        self.ax_snr.cla()
+        self.i += 1
+        ref_profile = self.ref.transpose()[self.mask][:, self.i]
+        time_point = self.time[self.i]
+        self.ax_depo.scatter(self.area[:, self.i],
+                             self.range,
+                             c=ref_profile,
+                             s=ref_profile*20)
+        self.ax_snr.scatter(ref_profile,
+                            self.range,
+                            c=ref_profile,
+                            s=ref_profile*20)
+        self.ax_depo.set_xlabel(f"Depo value colored by SNR at time {time_point:.3f}")
+        self.ax_snr.set_xlabel(f"SNR at time {time_point:.3f}")
+        self.ax_depo.set_ylabel('Height (m)')
+        self.canvas.draw()
+
+
+def m_km_ticks():
+    '''
+    Modify ticks from m to km
+    '''
+    return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
