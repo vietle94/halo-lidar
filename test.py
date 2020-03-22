@@ -46,10 +46,8 @@ df = hd.halo_data(data[data_indices])
 
 # Change masking missing values from -999 to NaN
 df.unmask999()
-# Remove first three columns of data matrix due to calibration,
-# they correspond to top 3 height data
-# ask Ville for more detail
-# df.filter_height()
+# Remove bottom 3 height layers
+df.filter_height()
 # Overview of data
 df.describe()
 
@@ -187,7 +185,7 @@ p = ax1.pcolormesh(df.data['time'],
                    np.log10(df.data['beta_raw'].transpose()),
                    cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
                    vmax=df.cbar_lim['beta_raw'][1])
-me = fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
+fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
 ax1.set_title('beta_raw')
 ax1.set_xlabel('Time (h)')
 ax1.set_xlim([0, 24])
@@ -202,7 +200,7 @@ area = hd.area_timeprofile(df.data['time'],
                            ax1,
                            ax_snr=ax3,
                            ax_depo=ax2,
-                           snr=df.data['co_signal'])
+                           snr=df.data['co_signal'].transpose())
 
 # %%
 # Extract data from each time point
@@ -246,3 +244,34 @@ with open(depo_sub_folder + '/' + df.filename + '_depo.csv', 'a') as f:
 # save fig
 fig.savefig(depo_sub_folder + '/' + df.filename + '_' +
             str(int(df.data['time'][area.masktime][i]*1000)) + '.png')
+
+# %%
+fig = plt.figure(figsize=(18, 9))
+ax1 = fig.add_subplot(311)
+ax2 = fig.add_subplot(323)
+ax3 = fig.add_subplot(325, sharex=ax2)
+ax4 = fig.add_subplot(324)
+ax5 = fig.add_subplot(326)
+p = ax1.pcolormesh(df.data['time'],
+                   df.data['range'],
+                   np.log10(df.data['beta_raw'].transpose()),
+                   cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
+                   vmax=df.cbar_lim['beta_raw'][1])
+fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
+ax1.set_title('beta_raw')
+ax1.set_xlabel('Time (h)')
+ax1.set_xlim([0, 24])
+ax1.set_ylabel('Height (km)')
+ax1.yaxis.set_major_formatter(hd.m_km_ticks())
+fig.suptitle(df.filename,
+             size=30,
+             weight='bold')
+area = hd.area_wholecloud(df.data['time'],
+                          df.data['range'],
+                          df.data['depo_raw'].transpose(),
+                          ax1,
+                          ax_snr=ax3,
+                          ax_depo=ax2,
+                          ax_hist_depo=ax4,
+                          ax_hist_snr=ax5,
+                          snr=df.data['co_signal'].transpose())
