@@ -120,7 +120,7 @@ class halo_data:
             if 'time' not in var and 'range' not in var:
                 self.data[var] = self.data[var][:, 3:]
             if var == 'range':
-                self.data[var] = self.data[var][:-3]
+                self.data[var] = self.data[var][3:]
 
     def unmask999(self):
         '''
@@ -227,7 +227,7 @@ class area_timeprofile(area_select):
         self.ax_depo.cla()
         self.ax_snr.cla()
         self.i += 1
-        snr_profile = self.snr.transpose()[self.mask][:, self.i]
+        snr_profile = self.snr[self.mask][:, self.i]
         time_point = self.time[self.i]
         self.ax_depo.scatter(self.area[:, self.i],
                              self.range,
@@ -243,13 +243,62 @@ class area_timeprofile(area_select):
         self.canvas.draw()
 
 
-# class area_wholecloud(area_select):
-#
-#     def __init__(self, x, y, z, ax_in, ax_line, ax_hist)
+class area_wholecloud(area_select):
+
+    def __init__(self, x, y, z, ax_in,
+                 ax_depo, ax_snr,
+                 ax_hist_depo, ax_hist_snr,
+                 snr):
+        super().__init__(x, y, z, ax_in)
+        self.ax_depo = ax_depo
+        self.ax_snr = ax_snr
+        self.snr = snr
+        self.ax_hist_depo = ax_hist_depo
+        self.ax_hist_snr = ax_hist_snr
+
+    def __call__(self, event1, event2):
+        super().__call__(event1, event2)
+        self.ax_depo.cla()
+        self.ax_snr.cla()
+        self.ax_hist_depo.cla()
+        self.ax_hist_snr.cla()
+
+        self.area_snr = self.snr[self.mask]
+        self.max_snr_indx = np.expand_dims(np.nanargmax(self.area_snr, axis=0),
+                                           axis=0)
+        self.max_snr = np.take_along_axis(self.area_snr,
+                                          self.max_snr_indx,
+                                          axis=0)[0]
+        self.max_snr1 = np.take_along_axis(self.area_snr,
+                                           self.max_snr_indx - 1,
+                                           axis=0)[0]
+        self.depo_max_snr = np.take_along_axis(self.area,
+                                               self.max_snr_indx,
+                                               axis=0)[0]
+        self.depo_max_snr1 = np.take_along_axis(self.area,
+                                                self.max_snr_indx - 1,
+                                                axis=0)[0]
+
+        self.ax_depo.plot(self.time, self.depo_max_snr, '-', label='depo at maxSNR')
+        self.ax_depo.plot(self.time, self.depo_max_snr1, '--', label='depo at maxSNR-1')
+        self.ax_depo.legend()
+
+        self.ax_snr.plot(self.time, self.max_snr, '-', label='maxSNR')
+        self.ax_snr.plot(self.time, self.max_snr1, '--', label='maxSNR-1')
+        self.ax_snr.legend()
+
+        sns.kdeplot(self.max_snr, label='maxSNR', ax=self.ax_hist_snr)
+        sns.kdeplot(self.max_snr1, label='maxSNR-1',
+                    linestyle="--", ax=self.ax_hist_snr)
+
+        sns.kdeplot(self.depo_max_snr, label='depo at maxSNR', ax=self.ax_hist_depo)
+        sns.kdeplot(self.depo_max_snr1, label='depo at maxSNR-1',
+                    linestyle="--", ax=self.ax_hist_depo)
+        self.canvas.draw()
 
 
 def m_km_ticks():
     '''
     Modify ticks from m to km
     '''
-    return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
+    return FuncFormatter(lambda x, pos: f'{x/1000:.1f}')
