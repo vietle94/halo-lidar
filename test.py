@@ -175,7 +175,11 @@ plt.close(fig=image_filtered)
 df.describe()
 
 # %%
-# Area selection for depo cloud
+##################################################
+#
+# Area selection for depo cloud at each time point
+#
+##################################################
 fig = plt.figure(figsize=(18, 9))
 ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(223)
@@ -225,10 +229,8 @@ result = pd.DataFrame.from_dict([{
     'range': area_range[max_i],  # range
     'depo': area_value[max_i],  # depo value
     'depo_1': area_value[max_i - 1],
-    'depo_2': area_value[max_i - 2],
     'co_signal': area_snr[max_i],  # snr
     'co_signal1': area_snr[max_i-1],
-    'co_signal2': area_snr[max_i-2],  # snr
     'vraw': area_vraw[max_i],  # v_raw
     'beta_raw': area_betaraw[max_i],  # beta_raw
     'cross_signal': area_cross[max_i]  # cross_signal
@@ -246,6 +248,11 @@ fig.savefig(depo_sub_folder + '/' + df.filename + '_' +
             str(int(df.data['time'][area.masktime][i]*1000)) + '.png')
 
 # %%
+##################################################
+#
+# Area selection for whole cloud
+#
+##################################################
 fig = plt.figure(figsize=(18, 9))
 ax1 = fig.add_subplot(311)
 ax2 = fig.add_subplot(323)
@@ -275,3 +282,40 @@ area = hd.area_wholecloud(df.data['time'],
                           ax_hist_depo=ax4,
                           ax_hist_snr=ax5,
                           snr=df.data['co_signal'].transpose())
+
+# %%
+# Extract data from whole cloud
+n_values = area.time.shape[0]
+result = pd.DataFrame.from_dict({
+    'year': np.repeat(df.more_info['year'], n_values),
+    'month': np.repeat(df.more_info['month'], n_values),
+    'day': np.repeat(df.more_info['day'], n_values),
+    'location': np.repeat(df.more_info['location'].decode('utf-8'), n_values),
+    'systemID': np.repeat(df.more_info['systemID'], n_values),
+    'time': area.time,  # time as hour
+    'range': area.range[area.max_snr_indx][0],  # range
+    'depo': area.depo_max_snr,  # depo value
+    'depo_1': area.depo_max_snr1,
+    'co_signal': area.max_snr,  # snr
+    'co_signal1': area.max_snr1,
+    'vraw': np.take_along_axis(df.data['v_raw'].transpose()[area.mask],
+                               area.max_snr_indx,
+                               axis=0)[0],  # v_raw
+    'beta_raw': np.take_along_axis(df.data['beta_raw'].transpose()[area.mask],
+                                   area.max_snr_indx,
+                                   axis=0)[0],  # beta_raw
+    'cross_signal': np.take_along_axis(df.data['cross_signal'].transpose()[area.mask],
+                                       area.max_snr_indx,
+                                       axis=0)[0]  # cross_signal
+})
+
+# sub folder for each date
+depo_sub_folder = depo_folder + '/' + df.filename
+Path(depo_sub_folder).mkdir(parents=True, exist_ok=True)
+
+# Append to or create new csv file
+with open(depo_sub_folder + '/' + df.filename + '_depo.csv', 'a') as f:
+    result.to_csv(f, header=f.tell() == 0, index=False)
+# save fig
+fig.savefig(depo_sub_folder + '/' + df.filename + '_' +
+            f'{area.time.min()*100:.0f}' + '-' + f'{area.time.max()*100:.0f}' + '.png')
