@@ -74,6 +74,7 @@ p = ax[0].pcolormesh(df.data['time'],
                      df.data['co_signal'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
 ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
+ax[0].set_title('Choose background noise for SNR')
 ax[0].set_ylabel('Height (km)')
 ax[0].set_xlabel('Time (h)')
 ax[0].set_ylim(bottom=0)
@@ -103,6 +104,7 @@ p = ax[0].pcolormesh(df.data['time_averaged'],
                      df.data['co_signal_averaged'].transpose(),
                      cmap='jet', vmin=0.995, vmax=1.005)
 ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
+ax[0].set_title('Choose background noise for SNR averaged')
 ax[0].set_ylabel('Height (km)')
 ax[0].set_xlabel('Time (h)')
 ax[0].set_ylim(bottom=0)
@@ -200,7 +202,7 @@ area = hd.area_timeprofile(df.data['time'],
                            ax1,
                            ax_snr=ax3,
                            ax_depo=ax2,
-                           ref=df.data['co_signal'])
+                           snr=df.data['co_signal'])
 
 # %%
 # Extract data from each time point

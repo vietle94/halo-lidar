@@ -209,13 +209,13 @@ class area_snr(area_select):
 
 class area_timeprofile(area_select):
 
-    def __init__(self, x, y, z, ax_in, ax_snr, ax_depo, ref,
+    def __init__(self, x, y, z, ax_in, ax_snr, ax_depo, snr,
                  ax_snr_label='SNR', ax_depo_label='Depo'):
         super().__init__(x, y, z, ax_in)
         self.ax_depo = ax_depo
         self.ax_snr = ax_snr
         self.i = -1
-        self.ref = ref
+        self.snr = snr
         self.ax_snr_label = ax_snr_label
         self.ax_depo_label = ax_depo_label
 
@@ -227,20 +227,25 @@ class area_timeprofile(area_select):
         self.ax_depo.cla()
         self.ax_snr.cla()
         self.i += 1
-        ref_profile = self.ref.transpose()[self.mask][:, self.i]
+        snr_profile = self.snr.transpose()[self.mask][:, self.i]
         time_point = self.time[self.i]
         self.ax_depo.scatter(self.area[:, self.i],
                              self.range,
-                             c=ref_profile,
-                             s=ref_profile*20)
-        self.ax_snr.scatter(ref_profile,
+                             c=snr_profile,
+                             s=snr_profile*20)
+        self.ax_snr.scatter(snr_profile,
                             self.range,
-                            c=ref_profile,
-                            s=ref_profile*20)
+                            c=snr_profile,
+                            s=snr_profile*20)
         self.ax_depo.set_xlabel(f"Depo value colored by SNR at time {time_point:.3f}")
         self.ax_snr.set_xlabel(f"SNR at time {time_point:.3f}")
         self.ax_depo.set_ylabel('Height (m)')
         self.canvas.draw()
+
+
+# class area_wholecloud(area_select):
+#
+#     def __init__(self, x, y, z, ax_in, ax_line, ax_hist)
 
 
 def m_km_ticks():
