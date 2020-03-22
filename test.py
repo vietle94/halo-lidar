@@ -273,6 +273,7 @@ ax1.yaxis.set_major_formatter(hd.m_km_ticks())
 fig.suptitle(df.filename,
              size=30,
              weight='bold')
+fig.subplots_adjust(hspace=0.3)
 area = hd.area_wholecloud(df.data['time'],
                           df.data['range'],
                           df.data['depo_raw'].transpose(),

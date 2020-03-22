@@ -281,19 +281,27 @@ class area_wholecloud(area_select):
 
         self.ax_depo.plot(self.time, self.depo_max_snr, '-', label='depo at maxSNR')
         self.ax_depo.plot(self.time, self.depo_max_snr1, '--', label='depo at maxSNR-1')
+        self.ax_depo.set_ylabel('Depo value')
+        self.ax_depo.set_title('Depo time series in selected area', weight='bold')
         self.ax_depo.legend()
 
         self.ax_snr.plot(self.time, self.max_snr, '-', label='maxSNR')
         self.ax_snr.plot(self.time, self.max_snr1, '--', label='maxSNR-1')
         self.ax_snr.legend()
+        self.ax_snr.set_xlabel('Time (h)')
+        self.ax_snr.set_ylabel('SNR')
+        self.ax_snr.set_title('SNR time series in selected area', weight='bold')
 
         sns.kdeplot(self.max_snr, label='maxSNR', ax=self.ax_hist_snr)
         sns.kdeplot(self.max_snr1, label='maxSNR-1',
                     linestyle="--", ax=self.ax_hist_snr)
+        self.ax_hist_snr.set_title('SNR distribution', weight='bold')
 
         sns.kdeplot(self.depo_max_snr, label='depo at maxSNR', ax=self.ax_hist_depo)
         sns.kdeplot(self.depo_max_snr1, label='depo at maxSNR-1',
                     linestyle="--", ax=self.ax_hist_depo)
+        self.ax_hist_depo.set_title('Depo distribution', weight='bold')
+
         self.canvas.draw()
 
 
