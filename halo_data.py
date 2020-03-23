@@ -27,7 +27,7 @@ class halo_data:
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
                 'depo_averaged_raw': [0, 0.5], 'co_signal_averaged': [0.995, 1.005],
                 'cross_signal_averaged': [0.995, 1.005]}
-    units = {'beta_raw': '$m^{-1} sr^{-1}$', 'v_raw': '$m s^{-1}$',
+    units = {'beta_raw': '$\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
              'v_error': '$m s^{-1}$'}
 
     def __init__(self, path):
