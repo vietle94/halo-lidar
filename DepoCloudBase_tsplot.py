@@ -27,10 +27,10 @@ depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']]).dt.date
 depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
                value_vars=[x for x in depo.columns if 'depo' in x],
                var_name='depo_type')
-
+depo
 # %%
 # Boxplot for all depo types
-fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
+fig, ax = plt.subplots(3, 1, figsize=(18, 9), sharex=True, sharey=True)
 sns.boxplot('date', 'value', data=depo, ax=ax[0])
 ax[0].set_title('Depo at cloud base time series', fontweight='bold')
 ax[0].set_xlabel('date')
@@ -43,19 +43,11 @@ ax[1].set_xlabel('date')
 ax[1].set_ylabel('Depo')
 ax[1].tick_params(axis='x', labelrotation=45)
 
-# %%
-fig, ax = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
-sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[0])
-ax[0].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
-ax[0].set_xlabel('date')
-ax[0].set_ylabel('Depo')
-ax[0].tick_params(axis='x', labelrotation=45)
-
-sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_2'], ax=ax[1])
-ax[1].set_title('Depo at cloud base time series at 2 levels below max SNR', fontweight='bold')
-ax[1].set_xlabel('date')
-ax[1].set_ylabel('Depo')
-ax[1].tick_params(axis='x', labelrotation=45)
+sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[2])
+ax[2].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
+ax[2].set_xlabel('date')
+ax[2].set_ylabel('Depo')
+ax[2].tick_params(axis='x', labelrotation=45)
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
@@ -66,13 +58,38 @@ ax.set_ylabel('Depo')
 ax.tick_params(axis='x', labelrotation=45)
 
 # %%
-fig, ax = plt.subplots(figsize=(18, 9))
-sns.lineplot('time', 'value', hue='date', style='depo_type', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series', fontweight='bold')
-ax.tick_params(axis='x', labelrotation=45)
+fig, axes = plt.subplots(1, 2, figsize=(18, 9), sharey=True)
+for ax, val in zip(axes.flatten(), ['depo', 'depo_1']):
+    ax.plot(depo.loc[depo['depo_type'] == val, 'time'],
+            depo.loc[depo['depo_type'] == val, 'value'],
+            '.')
+    ax.set_title(val)
+    ax.set_xlabel('Time (h)')
+axes[0].set_ylabel('Depo value')
 
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
-sns.scatterplot('time', 'value', hue='depo_type', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series', fontweight='bold')
-ax.tick_params(axis='x', labelrotation=45)
+depo.groupby('depo_type')['value'].hist(bins=50, ax=ax, alpha=0.5)
+ax.legend(['depo', 'depo_1'])
+ax.set_title('Distribution of depo at max SNR and 1 level below')
+ax.set_xlabel('Depo')
+
+# %%
+fig, ax = plt.subplots(figsize=(18, 9))
+for name, group in depo.groupby('depo_type'):
+    ax.plot(group.groupby('date').value.mean(), '-', label=name)
+ax.legend()
+ax.set_title('Mean value of depo at max SNR and 1 level below')
+ax.set_xlabel('Date')
+ax.set_ylabel('Depo')
+
+# %%
+fig, axes = plt.subplots(3, 2, figsize=(18, 9), sharex=True)
+for val, ax in zip(['co_signal', 'co_signal1', 'range',
+                    'vraw', 'beta_raw', 'cross_signal'],
+                   axes.flatten()):
+    ax.plot(depo.groupby('date')[val].mean() if val is not 'beta_raw' else np.log10(
+        depo.groupby('date')[val].mean()), '-')
+    ax.set_title(val)
+fig.suptitle('Mean values of various metrics at cloud base with max SNR',
+             size=22, weight='bold')
