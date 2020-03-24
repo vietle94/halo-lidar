@@ -27,7 +27,7 @@ depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']]).dt.date
 depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
                value_vars=[x for x in depo.columns if 'depo' in x],
                var_name='depo_type')
-depo
+
 # %%
 # Boxplot for all depo types
 fig, ax = plt.subplots(3, 1, figsize=(18, 9), sharex=True, sharey=True)
@@ -58,15 +58,9 @@ ax.set_ylabel('Depo')
 ax.tick_params(axis='x', labelrotation=45)
 
 # %%
-fig, axes = plt.subplots(1, 2, figsize=(18, 9), sharey=True)
-for ax, val in zip(axes.flatten(), ['depo', 'depo_1']):
-    ax.plot(depo.loc[depo['depo_type'] == val, 'time'],
-            depo.loc[depo['depo_type'] == val, 'value'],
-            '.')
-    ax.set_title(val)
-    ax.set_xlabel('Time (h)')
-axes[0].set_ylabel('Depo value')
-
+sns.relplot(x='time', y='value',
+            col='month', data=depo[depo['depo_type'] == 'depo'], alpha=0.5,
+            col_wrap=3)
 # %%
 fig, ax = plt.subplots(figsize=(18, 9))
 depo.groupby('depo_type')['value'].hist(bins=50, ax=ax, alpha=0.5)
