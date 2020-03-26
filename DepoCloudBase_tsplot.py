@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import os
 import glob
 import seaborn as sns
+import matplotlib.ticker as ticker
+import calendar
 
 %matplotlib qt
 # %% Define csv directory path
@@ -29,33 +31,16 @@ depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
                var_name='depo_type')
 
 # %%
-# Boxplot for all depo types
-fig, ax = plt.subplots(3, 1, figsize=(18, 9), sharex=True, sharey=True)
-sns.boxplot('date', 'value', data=depo, ax=ax[0])
-ax[0].set_title('Depo at cloud base time series', fontweight='bold')
-ax[0].set_xlabel('date')
-ax[0].set_ylabel('Depo')
-ax[0].tick_params(axis='x', labelrotation=45)
-
-sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo'], ax=ax[1])
-ax[1].set_title('Depo at cloud base time series at max SNR', fontweight='bold')
-ax[1].set_xlabel('date')
-ax[1].set_ylabel('Depo')
-ax[1].tick_params(axis='x', labelrotation=45)
-
-sns.boxplot('date', 'value', data=depo[depo['depo_type'] == 'depo_1'], ax=ax[2])
-ax[2].set_title('Depo at cloud base time series at 1 level below max SNR', fontweight='bold')
-ax[2].set_xlabel('date')
-ax[2].set_ylabel('Depo')
-ax[2].tick_params(axis='x', labelrotation=45)
-
-# %%
+datelabel = depo.date.unique()
 fig, ax = plt.subplots(figsize=(18, 9))
 sns.boxplot('date', 'value', hue='depo_type', data=depo, ax=ax)
 ax.set_title('Depo at cloud base time series', fontweight='bold')
-ax.set_xlabel('date')
+ax.set_xlabel('2016', weight='bold')
 ax.set_ylabel('Depo')
-ax.tick_params(axis='x', labelrotation=45)
+# ax.tick_params(axis='x', labelrotation=45)
+# Space out interval for xticks
+ax.xaxis.set_major_locator(ticker.FixedLocator(np.arange(0, len(datelabel), 5)))
+ax.xaxis.set_major_formatter(ticker.FixedFormatter([x.strftime("%b %d") for x in datelabel][0::5]))
 
 # %%
 sns.relplot(x='time', y='value',
@@ -69,13 +54,13 @@ ax.set_title('Distribution of depo at max SNR and 1 level below')
 ax.set_xlabel('Depo')
 
 # %%
-fig, ax = plt.subplots(figsize=(18, 9))
-for name, group in depo.groupby('depo_type'):
-    ax.plot(group.groupby('date').value.mean(), '-', label=name)
-ax.legend()
-ax.set_title('Mean value of depo at max SNR and 1 level below')
-ax.set_xlabel('Date')
-ax.set_ylabel('Depo')
+# fig, ax = plt.subplots(figsize=(18, 9))
+# for name, group in depo.groupby('depo_type'):
+#     ax.plot(group.groupby('date').value.mean(), '.', label=name)
+# ax.legend()
+# ax.set_title('Mean value of depo at max SNR and 1 level below')
+# ax.set_xlabel('Date')
+# ax.set_ylabel('Depo')
 
 # %%
 fig, axes = plt.subplots(3, 2, figsize=(18, 9), sharex=True)
@@ -83,7 +68,7 @@ for val, ax in zip(['co_signal', 'co_signal1', 'range',
                     'vraw', 'beta_raw', 'cross_signal'],
                    axes.flatten()):
     ax.plot(depo.groupby('date')[val].mean() if val is not 'beta_raw' else np.log10(
-        depo.groupby('date')[val].mean()), '-')
+        depo.groupby('date')[val].mean()), '.')
     ax.set_title(val)
 fig.suptitle('Mean values of various metrics at cloud base with max SNR',
              size=22, weight='bold')
