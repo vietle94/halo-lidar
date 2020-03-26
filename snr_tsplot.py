@@ -4,9 +4,14 @@ import matplotlib.dates as mdates
 import glob
 import seaborn as sns
 import numpy as np
+from pathlib import Path
 %matplotlib qt
+
 # %% Define csv directory path
 csv_path = r'F:\halo\32\depolarization\snr'
+# Create saving folder
+snr_result = csv_path + '/result'
+Path(snr_result).mkdir(parents=True, exist_ok=True)
 
 # Collect csv file in csv directory
 data_list = glob.glob(csv_path + '/*_noise.csv')
@@ -37,19 +42,21 @@ q25_avg, q75_avg = groupby_avg.quantile(0.25), groupby_avg.quantile(0.75)
 
 # %%
 # pick only sd
-fig, ax = plt.subplots(figsize=(18, 9))
+fig1, ax = plt.subplots(figsize=(18, 9))
 sd.plot(ax=ax, label='standard deviation of noise')
 sd_avg.plot(ax=ax, label='standard deviation of noise in avg data')
 ax.set_title('Standard deviation of noise time series', fontweight='bold')
 ax.set_xlabel('time')
 ax.set_ylabel('SNR')
 ax.legend()
+fig1.savefig(snr_result + '/noise_sd.png')
 
 # %%
-fig, ax = plt.subplots(figsize=(18, 9))
+fig2, ax = plt.subplots(figsize=(18, 9))
 ax.plot(mean, color='orange', label='noise mean')
 ax.fill_between(mean.index, q25, q75, alpha=.1, color='orange')
 ax.plot(mean_avg, color='#1f77b4', label='noise mean in avg data')
 ax.fill_between(mean_avg.index, q25_avg, q75_avg, alpha=.1, color='#1f77b4')
 ax.legend()
 ax.set_title('Noise mean level in 25 and 50 percentiles')
+fig2.savefig(snr_result + '/noise_ts.png')
