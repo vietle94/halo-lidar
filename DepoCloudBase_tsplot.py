@@ -5,7 +5,6 @@ import os
 import glob
 import seaborn as sns
 import matplotlib.ticker as ticker
-import calendar
 
 %matplotlib qt
 # %% Define csv directory path
