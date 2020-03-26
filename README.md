@@ -83,3 +83,7 @@ take the mean and sd of depo values
 find how much co-signal leak to cross?? not related
 
 choose liquid cloud only
+
+beta has some artifact, changes with temperature.
+
+devide num pulses by 15000 to get numpulses/second
