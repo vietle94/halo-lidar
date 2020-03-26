@@ -15,8 +15,8 @@ def getdata(path):
     return sorted(data_list)
 
 
-def getdata_date(data, date):
-    data_indices = [i for i, s in enumerate(data) if date in s]
+def getdata_date(data, date, data_folder):
+    data_indices = [i for i, s in enumerate(data) if date in s.replace(data_folder, '')]
     assert len(data_indices) == 1, 'There are more than 1 data have that date'
     return data_indices[0]
 
