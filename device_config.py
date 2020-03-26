@@ -5,6 +5,7 @@ import glob
 import seaborn as sns
 import numpy as np
 import halo_data as hd
+from pathlib import Path
 %matplotlib qt
 
 # %%
@@ -16,8 +17,8 @@ data_folder = r'F:\halo\32\depolarization'
 data = hd.getdata(data_folder)
 
 # %%
-# Choose a pattern that is in the file name
-pattern = '2016'
+# Choose a pattern that is in the file name, empty string means taking all files
+pattern = ''
 
 # %%
 device_config = pd.DataFrame()
@@ -31,20 +32,34 @@ for f in data:
                        'year': df.more_info['year']})
         device_config = device_config.append(pd.DataFrame.from_dict([result]),
                                              ignore_index=True)
-
 device_config = device_config.astype({'year': int, 'month': int, 'day': int})
 device_config['time'] = pd.to_datetime(device_config[['year', 'month', 'day']]).dt.date
 device_config = device_config.set_index('time')
+
+# Extract name for this location from the last file
+location_name = df.more_info['location'].decode("utf-8") + '-' + str(int(df.more_info['systemID']))
+
 # %%
 device_config.describe()
 
 # %%
+# Extract only non-constant variables
 device_config_varied = device_config.loc[:, (device_config != device_config.iloc[0]).any()]
 settings = [i for i in device_config_varied.columns if i not in ['day', 'month', 'year']]
+
+# %%
 fig, axes = plt.subplots(len(settings), 1, figsize=(18, 9), sharex=True)
 for ax, val in zip(axes.flatten(), settings):
     ax.plot(device_config_varied[val])
     ax.set_title(val)
-fig.suptitle('Changes in device config ' + pattern,
+fig.suptitle('Changes in device config ' + pattern + location_name,
              weight='bold',
              size=22)
+fig.subplots_adjust(hspace=0.4)
+
+# %%
+# Save figure and csv file
+device_config_folder = data_folder + '/device_config'
+Path(device_config_folder).mkdir(parents=True, exist_ok=True)
+fig.savefig(device_config_folder + '/device_config_' + location_name + '.png')
+device_config.to_csv(device_config_folder + '/device_config_' + location_name + '.csv')
