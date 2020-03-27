@@ -71,6 +71,15 @@ fig4.suptitle('Mean values of various metrics at cloud base with max SNR',
 fig4.savefig(depo_result + '/depo_other_vars.png')
 
 # %%
+fig5, ax = plt.subplots(1, 2, figsize=(18, 9), sharey=True, sharex=True)
+depo[depo['depo_type'] == 'depo'].plot('value', 'range', ax=ax[0], alpha=0.3,
+                                       kind='scatter', title='depo')
+depo[depo['depo_type'] == 'depo_1'].plot('value', 'range', ax=ax[1], alpha=0.3,
+                                         kind='scatter', title='depo_1')
+fig5.suptitle('Depo vs range', weight='bold', size=22)
+fig5.savefig(depo_result + '/depo_range.png')
+
+# %%
 # fig, ax = plt.subplots(figsize=(18, 9))
 # for name, group in depo.groupby('depo_type'):
 #     ax.plot(group.groupby('date').value.mean(), '.', label=name)
