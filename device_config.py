@@ -10,8 +10,9 @@ from pathlib import Path
 
 # %%
 # Specify data folder path
-data_folder = r'F:\halo\32\depolarization'
-
+data_folder = r'F:\halo\146\depolarization'
+# Folder to save
+save_folder = r'F:\halo\146'
 # %%
 # Get a list of all files in data folder
 data = hd.getdata(data_folder)
@@ -49,9 +50,13 @@ settings = [i for i in device_config_varied.columns if i not in ['day', 'month',
 
 # %%
 fig, axes = plt.subplots(len(settings), 1, figsize=(18, 9), sharex=True)
-for ax, val in zip(axes.flatten(), settings):
-    ax.plot(device_config_varied[val])
-    ax.set_title(val)
+if len(settings) > 1:
+    for ax, val in zip(axes, settings):
+        ax.plot(device_config_varied[val])
+        ax.set_title(val)
+else:
+    axes.plot(device_config_varied[settings])
+    axes.set_title(settings)
 fig.suptitle('Changes in device config ' + pattern + location_name,
              weight='bold',
              size=22)
@@ -59,7 +64,7 @@ fig.subplots_adjust(hspace=0.4)
 
 # %%
 # Save figure and csv file
-device_config_folder = data_folder + '/device_config'
+device_config_folder = save_folder + '/device_config'
 Path(device_config_folder).mkdir(parents=True, exist_ok=True)
 fig.savefig(device_config_folder + '/device_config_' + location_name + '.png')
 device_config.to_csv(device_config_folder + '/device_config_' + location_name + '.csv')
