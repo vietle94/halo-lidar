@@ -63,7 +63,11 @@ df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
 plt.close()
 
 # %%
+<<<<<<< HEAD
 df.snr_filter(multiplier=3, multiplier_avg=3)
+=======
+df.snr_filter(multiplier=3)
+>>>>>>> 39e7ad83795173d560a5a66060a639ef6d11244c
 
 # %%
 # Close the plot
