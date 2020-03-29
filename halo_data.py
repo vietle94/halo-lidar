@@ -152,44 +152,52 @@ class halo_data:
         summary_avg = describ_avg.append(na_avg.rename('Missing values'))
         return summary.join(summary_avg)
 
-    def snr_filter(self, multiplier=3):
-        fig, ax = plt.subplots(1, 2, figsize=(18, 9))
-        p = ax[0].pcolormesh(self.data['time'],
-                             self.data['range'],
-                             self.data['co_signal'].transpose(),
-                             cmap='jet', vmin=0.995, vmax=1.005)
-        ax[0].yaxis.set_major_formatter(m_km_ticks())
-        ax[0].set_title('Choose background noise for SNR')
-        ax[0].set_ylabel('Height (km)')
-        ax[0].set_xlabel('Time (h)')
-        ax[0].set_ylim(bottom=0)
+    def snr_filter(self, multiplier=3, multiplier_avg=3):
+        fig = plt.figure(figsize=(18, 9))
+        spec = fig.add_gridspec(2, 2, width_ratios=[1, 1],
+                                height_ratios=[2, 1])
+        ax1 = fig.add_subplot(spec[0, 0])
+        ax2 = fig.add_subplot(spec[0, 1])
+        ax3 = fig.add_subplot(spec[1, 0])
+        ax4 = fig.add_subplot(spec[1, 1], sharex=ax3)
+
+        p1 = ax1.pcolormesh(self.data['time'],
+                            self.data['range'],
+                            self.data['co_signal'].transpose(),
+                            cmap='jet', vmin=0.995, vmax=1.005)
+        ax1.yaxis.set_major_formatter(m_km_ticks())
+        ax1.set_title('Choose background noise for co_signal')
+        ax1.set_ylabel('Height (km)')
+        ax1.set_xlabel('Time (h)')
+        ax1.set_ylim(bottom=0)
         self.area_snr = area_snr(self.data['time'],
                                  self.data['range'],
                                  self.data['co_signal'].transpose(),
-                                 ax[0],
-                                 ax[1],
+                                 ax1,
+                                 ax3,
                                  type='kde',
                                  multiplier=multiplier)
-        fig.colorbar(p, ax=ax[0])
+        fig.colorbar(p1, ax=ax1)
 
-    def snr_filter_avg(self, multiplier=3):
-        fig, ax = plt.subplots(1, 2, figsize=(18, 9))
-        p = ax[0].pcolormesh(self.data['time_averaged'],
-                             self.data['range'],
-                             self.data['co_signal_averaged'].transpose(),
-                             cmap='jet', vmin=0.995, vmax=1.005)
-        ax[0].yaxis.set_major_formatter(m_km_ticks())
-        ax[0].set_title('Choose background noise for SNR averaged')
-        ax[0].set_ylabel('Height (km)')
-        ax[0].set_xlabel('Time (h)')
-        ax[0].set_ylim(bottom=0)
+        p2 = ax2.pcolormesh(self.data['time_averaged'],
+                            self.data['range'],
+                            self.data['co_signal_averaged'].transpose(),
+                            cmap='jet', vmin=0.995, vmax=1.005)
+        ax2.yaxis.set_major_formatter(m_km_ticks())
+        ax2.set_title('Choose background noise for co_signal averaged')
+        ax2.set_ylabel('Height (km)')
+        ax2.set_xlabel('Time (h)')
+        ax2.set_ylim(bottom=0)
         self.area_snr_avg = area_snr(self.data['time_averaged'],
                                      self.data['range'],
                                      self.data['co_signal_averaged'].transpose(),
-                                     ax[0],
-                                     ax[1],
-                                     type='kde')
-        fig.colorbar(p, ax=ax[0])
+                                     ax2,
+                                     ax4,
+                                     type='kde',
+                                     multiplier=multiplier_avg)
+        fig.colorbar(p2, ax=ax2)
+        fig.suptitle(self.filename, size=22,
+                     weight='bold')
 
     def snr_save(self, snr_folder):
         with open(snr_folder + '/' + self.filename + '_noise.csv', 'w') as f:
@@ -401,7 +409,7 @@ class area_snr(area_select):
             sns.kdeplot(self.area.flatten(), ax=self.ax_snr)
         area_mean = np.nanmean(self.area)
         self.threshold = 1 + np.nanstd(self.area - 1) * self.multiplier
-        self.ax_snr.set_title(
+        self.ax_snr.set_xlabel(
             f'selected area mean is {area_mean:.7f} \n calculated threshold is {self.threshold:.7f}')
         print('Calculated threshold is: ', self.threshold)
         self.ax_snr.axvline(area_mean, c='red')

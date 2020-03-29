@@ -52,7 +52,7 @@ df.filter_height()
 df.describe()
 
 # %%
-# Plot data
+# Plot data and save it
 %matplotlib qt
 df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                    'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
@@ -63,14 +63,7 @@ df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
 plt.close()
 
 # %%
-df.snr_filter(multiplier=3)
-
-# %%
-# Close the plot
-plt.close()
-
-# %%
-df.snr_filter_avg(multiplier=3)
+df.snr_filter(multiplier=3, multiplier_avg=3)
 
 # %%
 # Close the plot
@@ -89,7 +82,7 @@ df.filter(variables=['cross_signal_averaged', 'depo_averaged_raw'],
           ref='co_signal_averaged', threshold=df.area_snr_avg.threshold)
 
 # %%
-# Plot filtered data
+# Plot filtered data and save it
 df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
                    'cross_signal_averaged', 'depo_averaged_raw', 'co_signal_averaged'],
         ncol=2, size=(18, 9)).savefig(image_folder + '/' + df.filename + '_filtered.png')
