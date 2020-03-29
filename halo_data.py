@@ -176,7 +176,8 @@ class halo_data:
                                  ax1,
                                  ax3,
                                  type='kde',
-                                 multiplier=multiplier)
+                                 multiplier=multiplier,
+                                 fig=fig)
         fig.colorbar(p1, ax=ax1)
 
         p2 = ax2.pcolormesh(self.data['time_averaged'],
@@ -194,7 +195,8 @@ class halo_data:
                                      ax2,
                                      ax4,
                                      type='kde',
-                                     multiplier=multiplier_avg)
+                                     multiplier=multiplier_avg,
+                                     fig=fig)
         fig.colorbar(p2, ax=ax2)
         fig.suptitle(self.filename, size=22,
                      weight='bold')
@@ -245,7 +247,8 @@ class halo_data:
                                         ax1,
                                         ax_snr=ax3,
                                         ax_depo=ax2,
-                                        snr=self.data['co_signal'].transpose())
+                                        snr=self.data['co_signal'].transpose(),
+                                        fig=fig)
         return fig
 
     def depo_timeprofile_save(self, fig, depo_folder):
@@ -318,7 +321,8 @@ class halo_data:
                                        ax_depo=ax2,
                                        ax_hist_depo=ax4,
                                        ax_hist_snr=ax5,
-                                       snr=self.data['co_signal'].transpose())
+                                       snr=self.data['co_signal'].transpose(),
+                                       fig=fig)
         return fig
 
     def depo_wholeprofile_save(self, fig, depo_folder):
@@ -360,10 +364,10 @@ class halo_data:
 
 class area_select():
 
-    def __init__(self, x, y, z, ax_in):
+    def __init__(self, x, y, z, ax_in, fig):
         self.x, self.y, self.z = x, y, z
         self.ax_in = ax_in
-        self.canvas = plt.gcf().canvas
+        self.canvas = fig.canvas
         self.selector = RectangleSelector(
             self.ax_in,
             self,
@@ -394,8 +398,8 @@ class area_select():
 
 class area_snr(area_select):
 
-    def __init__(self, x, y, z, ax_in, ax_snr, type='hist', multiplier=3):
-        super().__init__(x, y, z, ax_in)
+    def __init__(self, x, y, z, ax_in, ax_snr, fig, type='hist', multiplier=3):
+        super().__init__(x, y, z, ax_in, fig)
         self.ax_snr = ax_snr
         self.type = type
         self.multiplier = multiplier
@@ -418,9 +422,9 @@ class area_snr(area_select):
 
 class area_timeprofile(area_select):
 
-    def __init__(self, x, y, z, ax_in, ax_snr, ax_depo, snr,
+    def __init__(self, x, y, z, ax_in, ax_snr, ax_depo, snr, fig,
                  ax_snr_label='SNR', ax_depo_label='Depo'):
-        super().__init__(x, y, z, ax_in)
+        super().__init__(x, y, z, ax_in, fig)
         self.ax_depo = ax_depo
         self.ax_snr = ax_snr
         self.i = -1
@@ -455,10 +459,10 @@ class area_timeprofile(area_select):
 class area_wholecloud(area_select):
 
     def __init__(self, x, y, z, ax_in,
-                 ax_depo, ax_snr,
+                 ax_depo, ax_snr, fig,
                  ax_hist_depo, ax_hist_snr,
                  snr):
-        super().__init__(x, y, z, ax_in)
+        super().__init__(x, y, z, ax_in, fig)
         self.ax_depo = ax_depo
         self.ax_snr = ax_snr
         self.snr = snr
