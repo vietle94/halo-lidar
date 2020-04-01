@@ -39,7 +39,7 @@ class Main(QMainWindow, FROM_MAIN):
         self.mycanvas.setFocus()
         # self.mycanvas.draw()
         self.frame = QGridLayout(self.Plotframe)
-        self.frame.addWidget(self.mycanvas, 0, 0, 1, -5)
+        self.frame.addWidget(self.mycanvas, 0, 0, 1, -6)
         self.frame.setContentsMargins(10, 0, 0, 0)
         self.frame.setSpacing(5)
 
@@ -56,10 +56,12 @@ class Main(QMainWindow, FROM_MAIN):
         self.frame.addWidget(self.pre_status, 1, 2)
         self.snr_status = QLabel("", self)
         self.frame.addWidget(self.snr_status, 1, 3)
+        self.depo_save_status = QLabel("", self)
+        self.frame.addWidget(self.depo_save_status, 1, 4)
         self.fmi_label = QLabel(self)
         self.fmi_pix = QPixmap('icons/fmi.png')
         self.fmi_label.setPixmap(self.fmi_pix.scaledToHeight(40))
-        self.frame.addWidget(self.fmi_label, 1, 4)
+        self.frame.addWidget(self.fmi_label, 1, 5)
 
         self.nextbutton.clicked.connect(self.next_list)
 
@@ -200,9 +202,10 @@ class Main(QMainWindow, FROM_MAIN):
 
     def next_list(self):
         self.listWidget.setCurrentRow(self.listWidget.currentRow() + 1)
-        self.load_status.setText(f'Loaded {self.halodata.filename}')
+        self.load_status.setText(f'')
         self.pre_status.setText(f'')
         self.snr_status.setText(f'')
+        self.depo_save_status.setText(f'')
 
     def loaddata(self):
         self.halodata = hd.halo_data(self.listWidget.currentItem().text())
@@ -239,23 +242,25 @@ class Main(QMainWindow, FROM_MAIN):
 
     def noisefilter(self):
         with open(self.savePath_snr + '/' + self.halodata.filename + '_noise.csv', 'w') as f:
-            noise_shape = self.mycanvas.area_snr.area.flatten().shape
+            noise_area = self.mycanvas.area_snr.area.flatten()
+            noise_shape = noise_area.shape
             noise_csv = pd.DataFrame.from_dict({'year': np.repeat(self.halodata.more_info['year'], noise_shape),
                                                 'month': np.repeat(self.halodata.more_info['month'], noise_shape),
                                                 'day': np.repeat(self.halodata.more_info['day'], noise_shape),
                                                 'location': np.repeat(self.halodata.more_info['location'].decode('utf-8'), noise_shape),
                                                 'systemID': np.repeat(self.halodata.more_info['systemID'], noise_shape),
-                                                'noise': self.mycanvas.area_snr.area.flatten()})
+                                                'noise': noise_area - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
         with open(self.savePath_snr + '/' + self.halodata.filename + '_noise_avg' + '.csv', 'w') as ff:
-            noise_avg_shape = self.mycanvas.area_snr_avg.area.flatten().shape
+            noise_area_avg = self.mycanvas.area_snr_avg.area.flatten()
+            noise_avg_shape = noise_area_avg.shape
             noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(self.halodata.more_info['year'], noise_avg_shape),
                                                     'month': np.repeat(self.halodata.more_info['month'], noise_avg_shape),
                                                     'day': np.repeat(self.halodata.more_info['day'], noise_avg_shape),
                                                     'location': np.repeat(self.halodata.more_info['location'].decode('utf-8'), noise_avg_shape),
                                                     'systemID': np.repeat(self.halodata.more_info['systemID'], noise_avg_shape),
-                                                    'noise': self.mycanvas.area_snr_avg.area.flatten()})
+                                                    'noise': noise_area_avg - 1})
             noise_avg_csv.to_csv(ff, header=ff.tell() == 0, index=False)
         self.halodata.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
                              ref='co_signal',
@@ -307,10 +312,12 @@ class Main(QMainWindow, FROM_MAIN):
         with open(depo_sub_folder + '/' + self.halodata.filename + '_depo.csv', 'a') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
         # save fig
-        self.mycanvas.print_figure(depo_sub_folder + '/' + self.halodata.filename + '_' +
-                                   str(int(self.halodata.data['time']
-                                           [self.mycanvas.depo_tp.masktime][i]*1000)) + '.png',
+        name_png = self.halodata.filename + '_' + \
+            str(int(self.halodata.data['time']
+                    [self.mycanvas.depo_tp.masktime][i]*1000)) + '.png'
+        self.mycanvas.print_figure(depo_sub_folder + '/' + name_png,
                                    dpi=200)
+        self.depo_save_status.setText(f'Saved {name_png}')
 
     def depo_wholeprofile(self):
         self.depo_w = self.mycanvas.depo_whole(halo=self.halodata)
@@ -348,10 +355,12 @@ class Main(QMainWindow, FROM_MAIN):
         with open(depo_sub_folder + '/' + self.halodata.filename + '_depo.csv', 'a') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
         # save fig
-        self.mycanvas.print_figure(depo_sub_folder + '/' + self.halodata.filename + '_' +
-                                   f'{self.mycanvas.depo_wp.time.min()*100:.0f}' + '-' +
-                                   f'{self.mycanvas.depo_wp.time.max()*100:.0f}' + '.png',
+        name_png = self.halodata.filename + '_' + \
+            f'{self.mycanvas.depo_wp.time.min()*100:.0f}' + '-' + \
+            f'{self.mycanvas.depo_wp.time.max()*100:.0f}' + '.png'
+        self.mycanvas.print_figure(depo_sub_folder + '/' + name_png,
                                    dpi=200)
+        self.depo_save_status.setText(f'Saved {name_png}')
 
     def info(self):
         self.infoView = QTableView()
@@ -486,6 +495,7 @@ class myCanvas(FigureCanvas):
         self.fig.suptitle(halo.filename,
                           size=30,
                           weight='bold')
+        self.fig.subplots_adjust(hspace=0.3, wspace=0.2)
         self.depo_tp = hd.area_timeprofile(halo.data['time'],
                                            halo.data['range'],
                                            halo.data['depo_raw'].transpose(),
@@ -520,7 +530,7 @@ class myCanvas(FigureCanvas):
         self.fig.suptitle(halo.filename,
                           size=30,
                           weight='bold')
-        self.fig.subplots_adjust(hspace=0.3)
+        self.fig.subplots_adjust(hspace=0.3, wspace=0.2)
         self.depo_wp = hd.area_wholecloud(halo.data['time'],
                                           halo.data['range'],
                                           halo.data['depo_raw'].transpose(),
