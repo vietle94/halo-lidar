@@ -203,23 +203,25 @@ class halo_data:
 
     def snr_save(self, snr_folder):
         with open(snr_folder + '/' + self.filename + '_noise.csv', 'w') as f:
-            noise_shape = self.area_snr.area.flatten().shape
+            noise_area = self.area_snr.area.flatten()
+            noise_shape = noise_area.shape
             noise_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_shape),
                                                 'month': np.repeat(self.more_info['month'], noise_shape),
                                                 'day': np.repeat(self.more_info['day'], noise_shape),
                                                 'location': np.repeat(self.more_info['location'].decode('utf-8'), noise_shape),
                                                 'systemID': np.repeat(self.more_info['systemID'], noise_shape),
-                                                'noise': self.area_snr.area.flatten()})
+                                                'noise': self.area_snr.area.flatten() - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
         with open(snr_folder + '/' + self.filename + '_noise_avg' + '.csv', 'w') as ff:
-            noise_avg_shape = self.area_snr_avg.area.flatten().shape
+            noise_area = self.area_snr_avg.area.flatten()
+            noise_avg_shape = noise_area.shape
             noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_avg_shape),
                                                     'month': np.repeat(self.more_info['month'], noise_avg_shape),
                                                     'day': np.repeat(self.more_info['day'], noise_avg_shape),
                                                     'location': np.repeat(self.more_info['location'].decode('utf-8'), noise_avg_shape),
                                                     'systemID': np.repeat(self.more_info['systemID'], noise_avg_shape),
-                                                    'noise': self.area_snr_avg.area.flatten()})
+                                                    'noise': noise_area - 1})
             noise_avg_csv.to_csv(ff, header=ff.tell() == 0, index=False)
 
     def depo_timeprofile(self):
