@@ -46,8 +46,8 @@ fig1.savefig(depo_result + '/depo_ts.png')
 
 # %%
 fig2 = sns.relplot(x='time', y='value',
-                   col='month', data=depo[depo['depo_type'] == 'depo'], alpha=0.5,
-                   col_wrap=3)
+                   col='month', data=depo[depo['depo_type'] == 'depo'], alpha=0.2,
+                   linewidth=0, col_wrap=3, height=4.5, aspect=4/3)
 fig2.fig.savefig(depo_result + '/depo_diurnal.png')
 
 # %%
@@ -73,9 +73,9 @@ fig4.savefig(depo_result + '/depo_other_vars.png')
 # %%
 fig5, ax = plt.subplots(1, 2, figsize=(18, 9), sharey=True, sharex=True)
 depo[depo['depo_type'] == 'depo'].plot('value', 'range', ax=ax[0], alpha=0.3,
-                                       kind='scatter', title='depo')
+                                       kind='scatter', title='depo', linewidth=0)
 depo[depo['depo_type'] == 'depo_1'].plot('value', 'range', ax=ax[1], alpha=0.3,
-                                         kind='scatter', title='depo_1')
+                                         kind='scatter', title='depo_1', linewidth=0)
 fig5.suptitle('Depo vs range', weight='bold', size=22)
 fig5.savefig(depo_result + '/depo_range.png')
 
