@@ -495,7 +495,8 @@ class area_wholecloud(area_select):
                                                 axis=0)[0]
 
         self.ax_depo.plot(self.time, self.depo_max_snr, '-', label='depo at maxSNR')
-        self.ax_depo.plot(self.time, self.depo_max_snr1, '--', label='depo at maxSNR-1')
+        self.ax_depo.plot(self.time, self.depo_max_snr1, '--',
+                          alpha=0.3, label='depo at maxSNR-1')
         self.ax_depo.set_ylabel('Depo value')
         self.ax_depo.set_title('Depo time series in selected area', weight='bold')
         self.ax_depo.legend()
