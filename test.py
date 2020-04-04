@@ -50,6 +50,8 @@ df.unmask999()
 df.filter_height()
 # Overview of data
 df.describe()
+# View meta data of all variables, uncomment following line and run to see
+# df.meta_data
 
 # %%
 # Plot data and save it
@@ -63,6 +65,7 @@ df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
 plt.close()
 
 # %%
+# Choose background noise and calculate thresholds
 df.snr_filter(multiplier=3, multiplier_avg=3)
 
 # %%
@@ -96,19 +99,20 @@ df.plot(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw', 'co_signal',
 # Close the plot
 plt.close()
 
-# %% Summary
+# %% Summary after filtering
 df.describe()
 
 # %%
 ##################################################
 #
-# Area selection for depo cloud at each time point
+# Area selection for depo cloud at each time point, press d to move forward
 #
 ##################################################
 fig_timeprofile = df.depo_timeprofile()
 
 # %%
-# Extract data from each time point
+# Extract data from each time point, run this line multiple time for each
+# time point that you want to save
 df.depo_timeprofile_save(fig_timeprofile, depo_folder)
 
 # %%
@@ -120,5 +124,6 @@ df.depo_timeprofile_save(fig_timeprofile, depo_folder)
 fig_wholeprofile = df.depo_wholeprofile()
 
 # %%
-# Extract data from whole cloud
+# Extract data from whole cloud, run this line multiple time for each
+# whole cloud that you want to save
 df.depo_wholeprofile_save(fig_wholeprofile, depo_folder)
