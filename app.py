@@ -2,7 +2,7 @@
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QMainWindow,
                              QSizePolicy, QGridLayout,
                              QAction, QFileDialog, QLabel, QWidget,
-                             QTableView, QAbstractScrollArea)
+                             QTableView, QAbstractScrollArea, QTreeWidget, QTreeWidgetItem)
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.uic import loadUiType
@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import halo_data as hd
 import pandas as pd
-
+import json
 from PyQt5 import QtCore
 
 scriptDir = dirname(realpath(__file__))
@@ -87,9 +87,16 @@ class Main(QMainWindow, FROM_MAIN):
         self.actionSettings.setStatusTip('Settings')
         self.actionSettings.triggered.connect(self.Settings)
 
-        self.actionAbout_as.setShortcut('Ctrl+T')
+        self.actionAbout_as.setShortcut('Ctrl+B')
         self.actionAbout_as.setStatusTip('Settings')
         self.actionAbout_as.triggered.connect(self.About)
+
+        self.actionMeta_data.setShortcut('Ctrl+M')
+        self.actionMeta_data.setStatusTip('View meta data')
+        self.actionMeta_data.triggered.connect(self.Metadata)
+
+        self.actionDevice_settings.setStatusTip('View device settings')
+        self.actionDevice_settings.triggered.connect(self.view_device_settings)
 
         self.actionExit.setShortcut('Ctrl+Q')
         self.actionExit.setStatusTip('Quit')
@@ -123,6 +130,23 @@ class Main(QMainWindow, FROM_MAIN):
 
     def help(self):
         QMessageBox.critical(self, 'Aide', "Hello This is_ PyQt5 Gui and Matplotlib ")
+
+    def Metadata(self):
+        self.metadata = ViewTree(self.halodata.meta_data)
+        self.metadata.setHeaderHidden(True)
+        self.metadata.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.metadata.setWindowTitle('Meta data')
+        self.metadata.show()
+
+    def view_device_settings(self):
+        self.device_settingsView = QTableView()
+        self.device_settingsContent = pandasModel(pd.DataFrame.from_dict(
+            [self.halodata.info]).transpose().rename(columns={0: 'value'}))
+        self.device_settingsView.setModel(self.device_settingsContent)
+        self.device_settingsView.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.device_settingsView.resizeColumnsToContents()
+        self.device_settingsView.setWindowTitle('Settings of device')
+        self.device_settingsView.show()
 
     def toolbar(self):
         self.loaddata_btn = QAction(QIcon('icons/download.PNG'), 'Load data', self)
@@ -368,6 +392,7 @@ class Main(QMainWindow, FROM_MAIN):
         self.infoView.setModel(self.infoContent)
         self.infoView.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
         self.infoView.resizeColumnsToContents()
+        self.infoView.setWindowTitle('Summary of data')
         self.infoView.show()
 
 
@@ -564,7 +589,8 @@ class pandasModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid():
             if role == QtCore.Qt.DisplayRole:
-                return str(self._data.iloc[index.row(), index.column()])
+                # return str(self._data.iloc[index.row(), index.column()])
+                return f"{self._data.iloc[index.row(), index.column()]:.4g}"
         return None
 
     # def headerData(self, col, orientation, role):
@@ -577,6 +603,32 @@ class pandasModel(QtCore.QAbstractTableModel):
         if orientation == QtCore.Qt.Vertical and role == QtCore.Qt.DisplayRole:
             return self._data.index[rowcol]
         return None
+
+
+class ViewTree(QTreeWidget):
+    def __init__(self, value):
+        super().__init__()
+
+        def fill_item(item, value):
+            def new_item(parent, text, val=None):
+                child = QTreeWidgetItem([text])
+                fill_item(child, val)
+                parent.addChild(child)
+                child.setExpanded(False)
+            if value is None:
+                return
+            elif isinstance(value, dict):
+                for key, val in sorted(value.items()):
+                    new_item(item, str(key), val)
+            elif isinstance(value, (list, tuple)):
+                for val in value:
+                    text = (str(val) if not isinstance(val, (dict, list, tuple))
+                            else '[%s]' % type(val).__name__)
+                    new_item(item, text, val)
+            else:
+                new_item(item, str(value))
+
+        fill_item(self.invisibleRootItem(), value)
 
 
 def main():
