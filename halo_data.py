@@ -8,20 +8,6 @@ import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
 
-def getdata(path):
-    '''
-    Get .nc files from a path
-    '''
-    import glob
-    data_list = glob.glob(path + "/*.nc")
-    return sorted(data_list)
-
-
-def getdata_date(data, date, data_folder):
-    data_indices = [i for i, s in enumerate(data) if date in s.replace(data_folder, '')]
-    assert len(data_indices) == 1, 'There are more than 1 data have that date'
-    return data_indices[0]
-
 
 class halo_data:
     cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-2, 2],
@@ -48,13 +34,9 @@ class halo_data:
 
         self.filename = '-'.join([str(elem).zfill(2) if name in ['month',
                                                                  'day'] else str(elem).zfill(2) for elem in name])
-
-    def meta_data(self, var=None):
-        if var is None or not isinstance(var, str):
-            print('Hannah, provide one variable as string')
-        else:
-            return {key: self.full_data.variables[var].__dict__[key]
-                    for key in self.full_data.variables[var].__dict__ if key != 'data'}
+        self.meta_data = {key1: {key: bytes_Odict_convert(self.full_data.variables[key1].__dict__[key])
+                                 for key in self.full_data.variables[key1].__dict__ if key != 'data'}
+                          for key1 in self.full_data_names}
 
     def plot(self, variables=None, ncol=None, size=None):
         if ncol is None:
@@ -521,11 +503,27 @@ class area_wholecloud(area_select):
         self.canvas.draw()
 
 
+def getdata(path):
+    '''
+    Get .nc files from a path
+    '''
+    import glob
+    data_list = glob.glob(path + "/*.nc")
+    return sorted(data_list)
+
+
+def getdata_date(data, date, data_folder):
+    data_indices = [i for i, s in enumerate(data) if date in s.replace(data_folder, '')]
+    assert len(data_indices) == 1, 'There are more than 1 data have that date'
+    return data_indices[0]
+
+
 def m_km_ticks():
     '''
     Modify ticks from m to km
     '''
     return FuncFormatter(lambda x, pos: f'{x/1000:.1f}')
+
 
 def bytes_Odict_convert(x):
     '''
