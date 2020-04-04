@@ -6,7 +6,7 @@ import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 import pandas as pd
 from pathlib import Path
-
+from collections import OrderedDict
 
 def getdata(path):
     '''
@@ -40,10 +40,10 @@ class halo_data:
         self.data = {name: self.full_data.variables[name].data
                      for name in self.full_data_names if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
-        self.more_info = self.full_data._attributes
+        self.more_info = bytes_Odict_convert(self.full_data._attributes)
 
         name = [int(self.more_info.get(key)) if key != 'location' else
-                self.more_info.get(key).decode("utf-8") for
+                self.more_info.get(key) for
                 key in ['year', 'month', 'day', 'location', 'systemID']]
 
         self.filename = '-'.join([str(elem).zfill(2) if name in ['month',
@@ -208,7 +208,7 @@ class halo_data:
             noise_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_shape),
                                                 'month': np.repeat(self.more_info['month'], noise_shape),
                                                 'day': np.repeat(self.more_info['day'], noise_shape),
-                                                'location': np.repeat(self.more_info['location'].decode('utf-8'), noise_shape),
+                                                'location': np.repeat(self.more_info['location'], noise_shape),
                                                 'systemID': np.repeat(self.more_info['systemID'], noise_shape),
                                                 'noise': self.area_snr.area.flatten() - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
@@ -219,7 +219,7 @@ class halo_data:
             noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_avg_shape),
                                                     'month': np.repeat(self.more_info['month'], noise_avg_shape),
                                                     'day': np.repeat(self.more_info['day'], noise_avg_shape),
-                                                    'location': np.repeat(self.more_info['location'].decode('utf-8'), noise_avg_shape),
+                                                    'location': np.repeat(self.more_info['location'], noise_avg_shape),
                                                     'systemID': np.repeat(self.more_info['systemID'], noise_avg_shape),
                                                     'noise': noise_area - 1})
             noise_avg_csv.to_csv(ff, header=ff.tell() == 0, index=False)
@@ -269,7 +269,7 @@ class halo_data:
             'year': self.more_info['year'],
             'month': self.more_info['month'],
             'day': self.more_info['day'],
-            'location': self.more_info['location'].decode('utf-8'),
+            'location': self.more_info['location'],
             'systemID': self.more_info['systemID'],
             'time': self.data['time'][self.depo_tp.masktime][i],  # time as hour
             'range': area_range[max_i],  # range
@@ -333,7 +333,7 @@ class halo_data:
             'year': np.repeat(self.more_info['year'], n_values),
             'month': np.repeat(self.more_info['month'], n_values),
             'day': np.repeat(self.more_info['day'], n_values),
-            'location': np.repeat(self.more_info['location'].decode('utf-8'), n_values),
+            'location': np.repeat(self.more_info['location'], n_values),
             'systemID': np.repeat(self.more_info['systemID'], n_values),
             'time': self.depo_wp.time,  # time as hour
             'range': self.depo_wp.range[self.depo_wp.max_snr_indx][0],  # range
@@ -526,3 +526,15 @@ def m_km_ticks():
     Modify ticks from m to km
     '''
     return FuncFormatter(lambda x, pos: f'{x/1000:.1f}')
+
+def bytes_Odict_convert(x):
+    '''
+    Convert order dict to dict, and bytes to normal string
+    '''
+    if type(x) is OrderedDict:
+        x = dict(x)
+        x = {key: bytes_Odict_convert(val) for key, val in x.items()}
+    if type(x) == bytes:
+        return x.decode('utf-8')
+    else:
+        return x
