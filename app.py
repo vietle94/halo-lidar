@@ -271,7 +271,7 @@ class Main(QMainWindow, FROM_MAIN):
             noise_csv = pd.DataFrame.from_dict({'year': np.repeat(self.halodata.more_info['year'], noise_shape),
                                                 'month': np.repeat(self.halodata.more_info['month'], noise_shape),
                                                 'day': np.repeat(self.halodata.more_info['day'], noise_shape),
-                                                'location': np.repeat(self.halodata.more_info['location'].decode('utf-8'), noise_shape),
+                                                'location': np.repeat(self.halodata.more_info['location'], noise_shape),
                                                 'systemID': np.repeat(self.halodata.more_info['systemID'], noise_shape),
                                                 'noise': noise_area - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
@@ -282,7 +282,7 @@ class Main(QMainWindow, FROM_MAIN):
             noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(self.halodata.more_info['year'], noise_avg_shape),
                                                     'month': np.repeat(self.halodata.more_info['month'], noise_avg_shape),
                                                     'day': np.repeat(self.halodata.more_info['day'], noise_avg_shape),
-                                                    'location': np.repeat(self.halodata.more_info['location'].decode('utf-8'), noise_avg_shape),
+                                                    'location': np.repeat(self.halodata.more_info['location'], noise_avg_shape),
                                                     'systemID': np.repeat(self.halodata.more_info['systemID'], noise_avg_shape),
                                                     'noise': noise_area_avg - 1})
             noise_avg_csv.to_csv(ff, header=ff.tell() == 0, index=False)
@@ -315,7 +315,7 @@ class Main(QMainWindow, FROM_MAIN):
             'year': self.halodata.more_info['year'],
             'month': self.halodata.more_info['month'],
             'day': self.halodata.more_info['day'],
-            'location': self.halodata.more_info['location'].decode('utf-8'),
+            'location': self.halodata.more_info['location'],
             'systemID': self.halodata.more_info['systemID'],
             'time': self.halodata.data['time'][self.mycanvas.depo_tp.masktime][i],  # time as hour
             'range': area_range[max_i],  # range
@@ -352,7 +352,7 @@ class Main(QMainWindow, FROM_MAIN):
             'year': np.repeat(self.halodata.more_info['year'], n_values),
             'month': np.repeat(self.halodata.more_info['month'], n_values),
             'day': np.repeat(self.halodata.more_info['day'], n_values),
-            'location': np.repeat(self.halodata.more_info['location'].decode('utf-8'), n_values),
+            'location': np.repeat(self.halodata.more_info['location'], n_values),
             'systemID': np.repeat(self.halodata.more_info['systemID'], n_values),
             'time': self.mycanvas.depo_wp.time,  # time as hour
             'range': self.mycanvas.depo_wp.range[self.mycanvas.depo_wp.max_snr_indx][0],  # range
