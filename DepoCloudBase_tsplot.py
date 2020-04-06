@@ -25,6 +25,7 @@ depo = depo.astype({'year': int, 'month': int, 'day': int})
 
 # For right now, just take the date, ignore hh:mm:ss
 depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']]).dt.date
+depo_original = depo
 
 # %%
 depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
@@ -32,29 +33,38 @@ depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
                var_name='depo_type')
 
 # %%
-datelabel = depo.date.unique()
-fig1, ax = plt.subplots(figsize=(18, 9))
-sns.boxplot('date', 'value', hue='depo_type', data=depo, ax=ax)
-ax.set_title('Depo at cloud base time series', fontweight='bold')
-ax.set_xlabel('2016', weight='bold')
-ax.set_ylabel('Depo')
-# ax.tick_params(axis='x', labelrotation=45)
-# Space out interval for xticks
-ax.xaxis.set_major_locator(ticker.FixedLocator(np.arange(0, len(datelabel), 5)))
-ax.xaxis.set_major_formatter(ticker.FixedFormatter([x.strftime("%b %d") for x in datelabel][0::5]))
-fig1.savefig(depo_result + '/depo_ts.png')
+for year in depo.year.unique():
+    datelabel = depo[depo['year'] == year].date.unique()
+    fig1, ax = plt.subplots(figsize=(18, 9))
+    sns.boxplot(
+        'date', 'value', hue='depo_type',
+        data=depo[(depo['year'] == year) & (depo['value'] < 0.2) & (depo['value'] > 0)],
+        ax=ax)
+    ax.set_title('Depo at cloud base time series filtered to values in [0, 0.2]',
+                 fontweight='bold')
+    ax.set_xlabel(year, weight='bold')
+    ax.set_ylabel('Depo')
+    # ax.set_ylim([0, 0.2])
+    # ax.tick_params(axis='x', labelrotation=45)
+    # Space out interval for xticks
+    ax.xaxis.set_major_locator(ticker.FixedLocator(np.arange(0, len(datelabel), 5)))
+    ax.xaxis.set_major_formatter(ticker.FixedFormatter(
+        [x.strftime("%b %d") for x in datelabel][0::5]))
+    fig1.savefig(depo_result + '/depo_ts' + str(year) + '.png')
 
 # %%
 fig2 = sns.relplot(x='time', y='value',
-                   col='month', data=depo[depo['depo_type'] == 'depo'], alpha=0.2,
+                   col='month', data=depo[(depo['depo_type'] == 'depo') & (depo['value'] > 0)],
+                   alpha=0.2,
                    linewidth=0, col_wrap=3, height=4.5, aspect=4/3)
 fig2.fig.savefig(depo_result + '/depo_diurnal.png')
 
 # %%
 fig3, ax = plt.subplots(figsize=(18, 9))
-depo.groupby('depo_type')['value'].hist(bins=50, ax=ax, alpha=0.5)
+depo[(depo['value'] < 0.2) & (depo['value'] > 0)].groupby('depo_type')['value'].hist(
+    bins=50, ax=ax, alpha=0.5)
 ax.legend(['depo', 'depo_1'])
-ax.set_title('Distribution of depo at max SNR and 1 level below')
+ax.set_title('Distribution of depo at max SNR and 1 level below filtered to values in [0, 0.2]')
 ax.set_xlabel('Depo')
 fig3.savefig(depo_result + '/depo_hist.png')
 
@@ -71,19 +81,17 @@ fig4.suptitle('Mean values of various metrics at cloud base with max SNR',
 fig4.savefig(depo_result + '/depo_other_vars.png')
 
 # %%
-fig5, ax = plt.subplots(1, 2, figsize=(18, 9), sharey=True, sharex=True)
-depo[depo['depo_type'] == 'depo'].plot('value', 'range', ax=ax[0], alpha=0.3,
-                                       kind='scatter', title='depo', linewidth=0)
-depo[depo['depo_type'] == 'depo_1'].plot('value', 'range', ax=ax[1], alpha=0.3,
-                                         kind='scatter', title='depo_1', linewidth=0)
-fig5.suptitle('Depo vs range', weight='bold', size=22)
-fig5.savefig(depo_result + '/depo_range.png')
+fig6, ax = plt.subplots(figsize=(18, 9))
+for name, group in depo.groupby('depo_type'):
+    ax.plot(group.groupby('date').value.mean(), '.', label=name)
+ax.legend()
+ax.set_title('Mean value of depo at max SNR and 1 level below')
+ax.set_xlabel('Date')
+ax.set_ylabel('Depo')
+fig6.savefig(depo_result + '/depo_scatter_ts.png')
 
 # %%
-# fig, ax = plt.subplots(figsize=(18, 9))
-# for name, group in depo.groupby('depo_type'):
-#     ax.plot(group.groupby('date').value.mean(), '.', label=name)
-# ax.legend()
-# ax.set_title('Mean value of depo at max SNR and 1 level below')
-# ax.set_xlabel('Date')
-# ax.set_ylabel('Depo')
+fig7 = sns.pairplot(depo_original, vars=['range', 'co_signal', 'cross_signal', 'vraw',
+                                         'beta_raw', 'depo'],
+                    height=4.5, aspect=4/3)
+fig7.savefig(depo_result + '/pairplot.png')
