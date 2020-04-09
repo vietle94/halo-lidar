@@ -6,7 +6,9 @@ import glob
 import seaborn as sns
 import matplotlib.ticker as ticker
 from pathlib import Path
+from matplotlib.colors import LogNorm
 %matplotlib qt
+
 # %%
 # Define csv directory path
 csv_path = r'F:\halo\32\depolarization\depo'
@@ -95,3 +97,20 @@ fig7 = sns.pairplot(depo_original, vars=['range', 'co_signal', 'cross_signal', '
                                          'beta_raw', 'depo'],
                     height=4.5, aspect=4/3)
 fig7.savefig(depo_result + '/pairplot.png')
+
+# %%
+co_cross_data = depo[['co_signal', 'cross_signal']]
+co_cross_data.dropna(inplace=True)
+H, co_edges, cross_edges = np.histogram2d(co_cross_data['co_signal'] - 1,
+                                          co_cross_data['cross_signal'] - 1,
+                                          bins=500)
+X, Y = np.meshgrid(co_edges, cross_edges)
+fig8, ax = plt.subplots(figsize=(18, 9))
+p = ax.pcolormesh(X, Y, H, norm=LogNorm())
+ax.set_xlabel('co_signal - 1')
+ax.set_ylabel('cross_signal - 1')
+colorbar = fig8.colorbar(p, ax=ax)
+colorbar.ax.set_ylabel('Number of observations')
+colorbar.ax.yaxis.set_label_position('left')
+ax.set_title('2D histogram of cross_signal vs co_signal', size=22, weight='bold')
+fig8.savefig(depo_result + '/cross_vs_co.png')
