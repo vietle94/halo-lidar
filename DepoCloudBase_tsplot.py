@@ -106,11 +106,18 @@ H, co_edges, cross_edges = np.histogram2d(co_cross_data['co_signal'] - 1,
                                           bins=500)
 X, Y = np.meshgrid(co_edges, cross_edges)
 fig8, ax = plt.subplots(figsize=(18, 9))
-p = ax.pcolormesh(X, Y, H, norm=LogNorm())
+p = ax.pcolormesh(X, Y, H.T, norm=LogNorm())
 ax.set_xlabel('co_signal - 1')
 ax.set_ylabel('cross_signal - 1')
 colorbar = fig8.colorbar(p, ax=ax)
 colorbar.ax.set_ylabel('Number of observations')
 colorbar.ax.yaxis.set_label_position('left')
 ax.set_title('2D histogram of cross_signal vs co_signal', size=22, weight='bold')
+ax.plot(co_cross_data['co_signal'] - 1,
+        (co_cross_data['co_signal'] - 1) * 0.01, label='depo 0.01 fit',
+        linewidth=0.5)
+ax.plot(co_cross_data['co_signal'] - 1,
+        (co_cross_data['co_signal'] - 1) * 0.07, label='depo 0.07 fit',
+        linewidth=0.5)
+ax.legend(loc='upper left')
 fig8.savefig(depo_result + '/cross_vs_co.png')
