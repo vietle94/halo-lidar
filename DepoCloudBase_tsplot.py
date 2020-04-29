@@ -63,10 +63,10 @@ fig2.fig.savefig(depo_result + '/depo_diurnal.png')
 
 # %%
 fig3, ax = plt.subplots(figsize=(18, 9))
-depo[(depo['value'] < 0.2) & (depo['value'] > 0)].groupby('depo_type')['value'].hist(
+depo[(depo['value'] < 0.2) & (depo['value'] > -0.05)].groupby('depo_type')['value'].hist(
     bins=50, ax=ax, alpha=0.5)
 ax.legend(['depo', 'depo_1'])
-ax.set_title('Distribution of depo at max SNR and 1 level below filtered to values in [0, 0.2]')
+ax.set_title('Distribution of depo at max SNR and 1 level below filtered to values in [-0.05, 0.2]')
 ax.set_xlabel('Depo')
 fig3.savefig(depo_result + '/depo_hist.png')
 
