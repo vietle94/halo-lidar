@@ -128,6 +128,11 @@ fig_wholeprofile = df.depo_wholeprofile()
 df.depo_wholeprofile_save(fig_wholeprofile, depo_folder)
 
 # %%
+##################################################
+#
+# Aerosol selection
+#
+##################################################
 fig = plt.figure(figsize=(18, 9))
 ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(234)
