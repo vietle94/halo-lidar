@@ -196,6 +196,11 @@ class Main(QMainWindow, FROM_MAIN):
         self.depo_wholesave_btn.setEnabled(1)
         self.depo_wholesave_btn.triggered.connect(self.depo_wholesave)
 
+        self.depo_aerosol_btn = QAction(
+            QIcon('icons/aerosol_depo.PNG'), 'Aerosol depo', self)
+        self.depo_aerosol_btn.setEnabled(1)
+        self.depo_aerosol_btn.triggered.connect(self.aerosol_depo)
+
         spacer = QWidget(self)
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -214,6 +219,7 @@ class Main(QMainWindow, FROM_MAIN):
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.info_btn)
         self.toolbar.addWidget(spacer2)
+        self.toolbar.addAction(self.depo_aerosol_btn)
         self.toolbar.addAction(self.depo_timeprofile_btn)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.depo_timesave_btn)
@@ -385,6 +391,9 @@ class Main(QMainWindow, FROM_MAIN):
         self.mycanvas.print_figure(depo_sub_folder + '/' + name_png,
                                    dpi=200)
         self.depo_save_status.setText(f'Saved {name_png}')
+
+    def aerosol_depo(self):
+        self.aerosol = self.mycanvas.aerosol_depo(halo=self.halodata)
 
     def info(self):
         self.infoView = QTableView()
@@ -567,6 +576,42 @@ class myCanvas(FigureCanvas):
                                           snr=halo.data['co_signal'].transpose(),
                                           fig=self.fig)
 
+        self.draw()
+        return self.fig
+
+    def aerosol_depo(self, halo):
+        self.fig.clear()
+        ax1 = self.fig.add_subplot(211)
+        ax2 = self.fig.add_subplot(234)
+        ax3 = self.fig.add_subplot(235)
+        ax4 = self.fig.add_subplot(236)
+        p = ax1.pcolormesh(halo.data['time'],
+                           halo.data['range'],
+                           np.log10(halo.data['beta_raw'].transpose()),
+                           cmap='jet', vmin=halo.cbar_lim['beta_raw'][0],
+                           vmax=halo.cbar_lim['beta_raw'][1])
+        self.fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
+        ax1.set_title('beta_raw')
+        ax1.set_xlabel('Time (h)')
+        ax1.set_xlim([0, 24])
+        ax1.set_ylim(bottom=0)
+        ax1.set_ylabel('Height (km)')
+        ax1.yaxis.set_major_formatter(hd.m_km_ticks())
+        self.fig.suptitle(halo.filename,
+                          size=30,
+                          weight='bold')
+        self.fig.subplots_adjust(hspace=0.3, wspace=0.2)
+
+        self.aerosol = hd.area_aerosol(halo.data['time'],
+                                       halo.data['range'],
+                                       halo.data['depo_raw'].transpose(),
+                                       snr=halo.data['co_signal'].transpose(),
+                                       ax_in=ax1,
+                                       fig=self.fig,
+                                       ax_out=ax3,
+                                       ax_out_selected=ax4,
+                                       ax_out_not_selected=ax2,
+                                       threshold=self.area_snr.threshold)
         self.draw()
         return self.fig
 

@@ -1,7 +1,7 @@
 from scipy.io import netcdf
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import RectangleSelector
+from matplotlib.widgets import RectangleSelector, SpanSelector
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 import pandas as pd
@@ -345,6 +345,25 @@ class halo_data:
         fig.savefig(depo_sub_folder + '/' + self.filename + '_' +
                     f'{self.depo_wp.time.min()*100:.0f}' + '-' + f'{self.depo_wp.time.max()*100:.0f}' + '.png')
 
+    # def depo_aerosol(self):
+    #     fig, ax = plt.subplots(5, 1, figsize=(18, 9))
+    #     p = ax[0].pcolormesh(self.data['time'],
+    #                          self.data['range'],
+    #                          np.log10(self.data['beta_raw'].transpose()),
+    #                          cmap='jet', vmin=self.cbar_lim['beta_raw'][0],
+    #                          vmax=self.cbar_lim['beta_raw'][1])
+    #     fig.colorbar(p, ax=ax[0], fraction=0.05, pad=0.02)
+    #     ax[0].set_title('beta_raw')
+    #     ax[0].set_xlabel('Time (h)')
+    #     ax[0].set_xlim([0, 24])
+    #     ax[0].set_ylabel('Height (km)')
+    #     ax[0].yaxis.set_major_formatter(m_km_ticks())
+    #     fig.suptitle(self.filename,
+    #                  size=30,
+    #                  weight='bold')
+    #     fig.subplots_adjust(hspace=0.3)
+    #     self.aerosol = area_select
+
 
 class area_select():
 
@@ -378,6 +397,76 @@ class area_select():
         self.masktime = (self.x > x0) & (self.x < x1)  # remove bracket ()
         self.maskrange = (self.y > y0) & (self.y < y1)
         return np.ix_(self.maskrange, self.masktime)
+
+
+class span_select():
+
+    def __init__(self, x, y, ax_in, canvas):
+        self.x, self.y = x, y
+        self.ax_in = ax_in
+        self.canvas = canvas
+        self.selector = SpanSelector(
+            self.ax_in, self, 'horizontal', span_stays=True, useblit=True
+        )
+
+    def __call__(self, min, max):
+        self.maskx = (self.x > min) & (self.x < max)
+        self.selected_x = self.x[self.maskx]
+        self.selected_y = self.y[self.maskx]
+        self.not_selected_y = self.y[np.invert(self.maskx)]
+
+
+class span_aerosol(span_select):
+
+    def __init__(self, x, y, ax_in, canvas,
+                 ax_out_selected, ax_out_not_selected):
+        super().__init__(x, y, ax_in, canvas)
+        self.ax_out_selected = ax_out_selected
+        self.ax_out_not_selected = ax_out_not_selected
+
+    def __call__(self, min, max):
+        super().__call__(min, max)
+        for ax in [self.ax_out_selected, self.ax_out_not_selected]:
+            ax.cla()
+        self.ax_out_selected.hist(self.selected_y.flatten())
+        self.ax_out_not_selected.hist(self.not_selected_y.flatten())
+        self.ax_out_not_selected.set_title('Depo of unchosen area')
+        self.ax_out_selected.set_title('Depo of chosen area')
+        self.ax_out_selected.set_xlabel('Depo')
+        self.ax_out_not_selected.set_xlabel('Depo')
+        self.canvas.draw()
+
+
+class area_aerosol(area_select):
+
+    def __init__(self, x, y, z, ax_in, fig,
+                 snr, ax_out,
+                 ax_out_selected, ax_out_not_selected, threshold):
+        super().__init__(x, y, z, ax_in, fig)
+        self.ax_out = ax_out
+        self.ax_out_selected = ax_out_selected
+        self.ax_out_not_selected = ax_out_not_selected
+        self.snr = snr
+        self.threshold = threshold
+
+    def __call__(self, event1, event2):
+        super().__call__(event1, event2)
+        self.ax_out_selected.cla()
+        self.ax_out_not_selected.cla()
+        self.ax_out.cla()
+        self.ax_out.set_title('co_signal vs depo')
+        self.ax_out.set_xlabel('co_signal')
+        self.ax_out.set_ylabel('depo')
+        self.selected_depo = self.area.flatten()
+        self.selected_snr = self.snr[self.mask].flatten()
+        self.ax_out.plot(self.selected_snr, self.selected_depo, '.')
+        if self.threshold is not None:
+            self.ax_out.axvline(self.threshold)
+        self.area_aerosol = span_aerosol(
+            self.selected_snr, self.selected_depo, self.ax_out, self.canvas,
+            self.ax_out_selected, self.ax_out_not_selected
+        )
+        self.canvas.draw()
 
 
 class area_snr(area_select):

@@ -126,3 +126,27 @@ fig_wholeprofile = df.depo_wholeprofile()
 # Extract data from whole cloud, run this line multiple time for each
 # whole cloud that you want to save
 df.depo_wholeprofile_save(fig_wholeprofile, depo_folder)
+
+# %%
+fig = plt.figure(figsize=(18, 9))
+ax1 = fig.add_subplot(211)
+ax2 = fig.add_subplot(234)
+ax3 = fig.add_subplot(235)
+ax4 = fig.add_subplot(236)
+ax1.pcolormesh(df.data['time'], df.data['range'],
+               np.log10(df.data['beta_raw']).transpose(),
+               cmap='jet', vmin=df.cbar_lim['beta_raw'][0],
+               vmax=df.cbar_lim['beta_raw'][1])
+ax1.set_title(df.filename,
+              size=30,
+              weight='bold')
+aerosol = hd.area_aerosol(df.data['time'],
+                          df.data['range'],
+                          df.data['depo_raw'].transpose(),
+                          snr=df.data['co_signal'].transpose(),
+                          ax_in=ax1,
+                          fig=fig,
+                          ax_out=ax3,
+                          ax_out_selected=ax4,
+                          ax_out_not_selected=ax2,
+                          threshold=df.area_snr.threshold)
