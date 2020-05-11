@@ -95,6 +95,16 @@ class halo_data:
                 self.data[var],
                 float('nan'))
 
+    def filter_attenuation(self, variables=None,
+                           ref=None, threshold=None, buffer=2):
+        mask = self.data[ref] > threshold
+        mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
+        mask_col = np.argmax(self.data[ref][mask_row, :] > threshold,
+                             axis=1)
+        for row, col in zip(mask_row, mask_col):
+            for var in variables:
+                self.data[var][row, col+buffer:] = np.nan
+
     def filter_height(self):
         '''
         Remove first three columns of the matrix due to calibration,
