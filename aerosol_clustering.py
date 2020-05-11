@@ -41,6 +41,8 @@ for month in np.arange(6, 7):
         noise_threshold = 1 + 3 * np.std(noise['noise'])
         df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
                   ref='co_signal', threshold=noise_threshold)
+        df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
+                              ref='beta_raw', threshold=10**-4.5, buffer=2)
         depo_raw = np.concatenate([depo_raw,
                                    df.data['depo_raw'][:, :100].flatten()])
         v_raw = np.concatenate([v_raw,
