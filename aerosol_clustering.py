@@ -23,6 +23,7 @@ noise_list = glob.glob(snr_folder + '/*_noise.csv')
 # %%
 for month in np.arange(1, 13):
     month_pattern = '2016' + str(month).zfill(2)
+    print(month_pattern)
     days_month = [file for file in file_list if month_pattern in file]
 
     depo_raw = np.array([])
@@ -47,8 +48,6 @@ for month in np.arange(1, 13):
                                 df.data['v_raw'][:, :100].flatten()])
         beta_raw = np.concatenate([beta_raw,
                                    df.data['beta_raw'][:, :100].flatten()])
-
-    # %%
     X = np.vstack([depo_raw, v_raw, beta_raw])
     X = X.T
     X = X[~np.isnan(X).any(axis=1)]
@@ -61,8 +60,11 @@ for month in np.arange(1, 13):
         data = hd.halo_data(file)
         data.unmask999()
         data.filter_height()
+        noise = pd.read_csv(noise_list[df.filename in noise_list],
+                            usecols=['noise'])
+        noise_threshold = 1 + 3 * np.std(noise['noise'])
         data.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                    ref='co_signal', threshold=1+0.0005*3)
+                    ref='co_signal', threshold=noise_threshold)
         fig, axes = plt.subplots(4, 1, figsize=(18, 9))
         for ax, var, name in zip(axes[:3],
                                  [np.log10(data.data['beta_raw'][:, :100].T),
