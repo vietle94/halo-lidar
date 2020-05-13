@@ -89,8 +89,7 @@ for month in np.arange(1, 13):
 
         X_data = np.vstack([depo_raw, v_raw, beta_raw])
         X_data = X_data.T
-        scaler = StandardScaler()
-        X_data_scaled = scaler.fit_transform(X_data)
+        X_data_scaled = scaler.transform(X_data)
         label = np.full([X_data.shape[0], ], np.nan)
         for i, val in enumerate(X_data_scaled):
             if not np.isnan(val).any():
@@ -118,3 +117,11 @@ for month in np.arange(1, 13):
     ax.set_xlabel('Cluster label')
     ax.set_yscale('log')
     fig.savefig(image_folder + '/' + str(month) + '.png')
+
+    # Save centroid coordinate
+    centroid = scaler.inverse_transform(kmeans.cluster_centers_)
+    centroid_lab = kmeans.predict(kmeans.cluster_centers_)
+    centroid_df = pd.DataFrame(centroid, columns=['depo', 'v_raw', 'beta'])
+    centroid_df['label'] = centroid_lab
+    centroid_df['month'] = month
+    centroid_df.to_csv(image_folder + '/' + str(month) + '.csv', index=False)
