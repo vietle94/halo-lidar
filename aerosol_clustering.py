@@ -21,15 +21,13 @@ file_list = glob.glob(data_folder + '/*.nc')
 noise_list = glob.glob(snr_folder + '/*_noise.csv')
 
 # %%
-for month in np.arange(6, 7):
+for month in np.arange(1, 13):
     month_pattern = '2016' + str(month).zfill(2)
     days_month = [file for file in file_list if month_pattern in file]
 
     depo_raw = np.array([])
     v_raw = np.array([])
     beta_raw = np.array([])
-    co_signal = np.array([])
-    cross_signal = np.array([])
 
     for file in days_month:
         df = hd.halo_data(file)
@@ -39,7 +37,7 @@ for month in np.arange(6, 7):
         noise = pd.read_csv(noise_list[df.filename in noise_list],
                             usecols=['noise'])
         noise_threshold = 1 + 3 * np.std(noise['noise'])
-        df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
+        df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
                   ref='co_signal', threshold=noise_threshold)
         df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
                               ref='beta_raw', threshold=10**-4.5, buffer=2)
@@ -49,46 +47,22 @@ for month in np.arange(6, 7):
                                 df.data['v_raw'][:, :100].flatten()])
         beta_raw = np.concatenate([beta_raw,
                                    df.data['beta_raw'][:, :100].flatten()])
-        co_signal = np.concatenate([co_signal,
-                                    df.data['co_signal'][:, :100].flatten()])
-        cross_signal = np.concatenate([cross_signal,
-                                       df.data['cross_signal'][:, :100].flatten()])
 
     # %%
-    X = np.vstack([depo_raw, v_raw, beta_raw, co_signal, cross_signal])
+    X = np.vstack([depo_raw, v_raw, beta_raw])
     X = X.T
     X = X[~np.isnan(X).any(axis=1)]
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     kmeans = KMeans(n_clusters=5, max_iter=3000).fit(X_scaled)
+
     for file in days_month:
         data = hd.halo_data(file)
         data.unmask999()
         data.filter_height()
-        data.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
+        data.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
                     ref='co_signal', threshold=1+0.0005*3)
-        depo_raw = data.data['depo_raw'][:, :100].flatten()
-        v_raw = data.data['v_raw'][:, :100].flatten()
-        beta_raw = data.data['beta_raw'][:, :100].flatten()
-        co_signal = data.data['co_signal'][:, :100].flatten()
-        cross_signal = data.data['cross_signal'][:, :100].flatten()
-
-        X_data = np.vstack([depo_raw, v_raw, beta_raw, co_signal, cross_signal])
-        X_data = X_data.T
-        scaler = StandardScaler()
-        X_data_scaled = scaler.fit_transform(X_data)
-        label = np.full([X_data.shape[0], ], np.nan)
-        for i, val in enumerate(X_data_scaled):
-            if not np.isnan(val).any():
-                label[i] = kmeans.predict(val.reshape(1, -1))
-
-        shape1 = data.data['time'].shape[0]
-        shape2 = 100
-
-        label_reshaped = label.reshape([shape1, shape2])
-        beta_reshaped = beta_raw.reshape([shape1, shape2])
-
         fig, axes = plt.subplots(4, 1, figsize=(18, 9))
         for ax, var, name in zip(axes[:3],
                                  [np.log10(data.data['beta_raw'][:, :100].T),
@@ -103,6 +77,28 @@ for month in np.arange(6, 7):
                                vmax=data.cbar_lim[name][1])
             fig.colorbar(pp, ax=ax)
             ax.set_title(name)
+
+        data.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
+                                ref='beta_raw', threshold=10**-4.5, buffer=2)
+
+        depo_raw = data.data['depo_raw'][:, :100].flatten()
+        v_raw = data.data['v_raw'][:, :100].flatten()
+        beta_raw = data.data['beta_raw'][:, :100].flatten()
+
+        X_data = np.vstack([depo_raw, v_raw, beta_raw])
+        X_data = X_data.T
+        scaler = StandardScaler()
+        X_data_scaled = scaler.fit_transform(X_data)
+        label = np.full([X_data.shape[0], ], np.nan)
+        for i, val in enumerate(X_data_scaled):
+            if not np.isnan(val).any():
+                label[i] = kmeans.predict(val.reshape(1, -1))
+
+        shape1 = data.data['time'].shape[0]
+        shape2 = 100
+
+        label_reshaped = label.reshape([shape1, shape2])
+        beta_reshaped = beta_raw.reshape([shape1, shape2])
 
         p = axes[3].pcolormesh(data.data['time'].data,
                                data.data['range'][:100],
