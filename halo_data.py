@@ -202,7 +202,7 @@ class halo_data:
                                                 'day': np.repeat(self.more_info['day'], noise_shape),
                                                 'location': np.repeat(self.more_info['location'], noise_shape),
                                                 'systemID': np.repeat(self.more_info['systemID'], noise_shape),
-                                                'noise': self.area_snr.area.flatten() - 1})
+                                                'noise': noise_area - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
         with open(snr_folder + '/' + self.filename + '_noise_avg' + '.csv', 'w') as ff:
