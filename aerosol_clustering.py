@@ -21,7 +21,7 @@ file_list = glob.glob(data_folder + '/*.nc')
 noise_list = glob.glob(snr_folder + '/*_noise.csv')
 
 # %%
-for month in np.arange(1, 13):
+for month in np.arange(7, 8):
     month_pattern = '2016' + str(month).zfill(2)
     print(month_pattern)
     days_month = [file for file in file_list if month_pattern in file]
@@ -35,7 +35,7 @@ for month in np.arange(1, 13):
 
         df.unmask999()
         df.filter_height()
-        noise = pd.read_csv(noise_list[df.filename in noise_list],
+        noise = pd.read_csv([noise_file for noise_file in noise_list if df.filename in noise_file][0],
                             usecols=['noise'])
         noise_threshold = 1 + 3 * np.std(noise['noise'])
         df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
@@ -60,7 +60,7 @@ for month in np.arange(1, 13):
         data = hd.halo_data(file)
         data.unmask999()
         data.filter_height()
-        noise = pd.read_csv(noise_list[df.filename in noise_list],
+        noise = pd.read_csv([noise_file for noise_file in noise_list if data.filename in noise_file][0],
                             usecols=['noise'])
         noise_threshold = 1 + 3 * np.std(noise['noise'])
         data.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
