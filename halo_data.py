@@ -7,6 +7,7 @@ from matplotlib.ticker import FuncFormatter
 import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
+from matplotlib.colors import LogNorm
 
 
 class halo_data:
@@ -411,8 +412,9 @@ class area_select():
 
 class span_select():
 
-    def __init__(self, x, y, ax_in, canvas):
+    def __init__(self, x, y, ax_in, canvas, velocity, beta):
         self.x, self.y = x, y
+        self.v, self.b = velocity, beta
         self.ax_in = ax_in
         self.canvas = canvas
         self.selector = SpanSelector(
@@ -421,29 +423,53 @@ class span_select():
 
     def __call__(self, min, max):
         self.maskx = (self.x > min) & (self.x < max)
-        self.selected_x = self.x[self.maskx]
+        # self.selected_x = self.x[self.maskx]
         self.selected_y = self.y[self.maskx]
-        self.not_selected_y = self.y[np.invert(self.maskx)]
+        self.selected_v = self.v[self.maskx]
+        self.selected_b = self.b[self.maskx]
+        # self.not_selected_y = self.y[np.invert(self.maskx)]
 
 
 class span_aerosol(span_select):
 
     def __init__(self, x, y, ax_in, canvas,
-                 ax_out_selected, ax_out_not_selected):
-        super().__init__(x, y, ax_in, canvas)
-        self.ax_out_selected = ax_out_selected
-        self.ax_out_not_selected = ax_out_not_selected
+                 ax10, ax12, velocity, beta):
+        super().__init__(x, y, ax_in, canvas, velocity, beta)
+        self.ax10 = ax10
+        self.ax12 = ax12
 
     def __call__(self, min, max):
         super().__call__(min, max)
-        for ax in [self.ax_out_selected, self.ax_out_not_selected]:
+        for ax in [self.ax10, self.ax12]:
             ax.cla()
-        self.ax_out_selected.hist(self.selected_y.flatten())
-        self.ax_out_not_selected.hist(self.not_selected_y.flatten())
-        self.ax_out_not_selected.set_title('Depo of unchosen area')
-        self.ax_out_selected.set_title('Depo of chosen area')
-        self.ax_out_selected.set_xlabel('Depo')
-        self.ax_out_not_selected.set_xlabel('Depo')
+
+        self.df = pd.DataFrame({'depo': self.selected_y,
+                                'velocity': self.selected_v,
+                                'beta': self.selected_b})
+        self.df.dropna(inplace=True)
+        self.df.beta = np.log10(self.df.beta)
+        H, x_edges, y_edges = np.histogram2d(self.df['depo'],
+                                             self.df['velocity'],
+                                             bins=20)
+        X, Y = np.meshgrid(x_edges, y_edges)
+        p = self.ax10.pcolormesh(X, Y, H.T, norm=LogNorm())
+        self.ax10.set_xlabel('depo')
+        self.ax10.set_ylabel('velocity')
+
+        # self.ax10.hist(self.selected_y.flatten())
+        # self.ax10.set_title('Depo of chosen area')
+        # self.ax10.set_xlabel('Depo')
+
+        self.ax12.scatter(self.df['depo'], self.df['velocity'],
+                          self.df['beta'])
+        self.ax12.set_xlabel('Depo')
+        self.ax12.set_ylabel('Velocity')
+        self.ax12.set_zlabel('Beta')
+        self.canvas.fig.colorbar(p, ax=self.ax10)
+
+        # self.ax12.hist(self.not_selected_y.flatten())
+        # self.ax12.set_title('Depo of unchosen area')
+        # self.ax12.set_xlabel('Depo')
         self.canvas.draw()
 
 
@@ -451,30 +477,34 @@ class area_aerosol(area_select):
 
     def __init__(self, x, y, z, ax_in, fig,
                  snr, ax_out,
-                 ax_out_selected, ax_out_not_selected, threshold):
+                 ax10, ax12, threshold,
+                 velocity, beta):
         super().__init__(x, y, z, ax_in, fig)
         self.ax_out = ax_out
-        self.ax_out_selected = ax_out_selected
-        self.ax_out_not_selected = ax_out_not_selected
+        self.ax10 = ax10
+        self.ax12 = ax12
         self.snr = snr
         self.threshold = threshold
+        self.v, self.b = velocity, beta
 
     def __call__(self, event1, event2):
         super().__call__(event1, event2)
-        self.ax_out_selected.cla()
-        self.ax_out_not_selected.cla()
+        self.ax10.cla()
+        self.ax12.cla()
         self.ax_out.cla()
         self.ax_out.set_title('co_signal vs depo')
         self.ax_out.set_xlabel('co_signal')
         self.ax_out.set_ylabel('depo')
         self.selected_depo = self.area.flatten()
         self.selected_snr = self.snr[self.mask].flatten()
+        self.selected_v = self.v[self.mask].flatten()
+        self.selected_b = self.b[self.mask].flatten()
         self.ax_out.plot(self.selected_snr, self.selected_depo, '.')
         if self.threshold is not None:
             self.ax_out.axvline(self.threshold)
         self.area_aerosol = span_aerosol(
             self.selected_snr, self.selected_depo, self.ax_out, self.canvas,
-            self.ax_out_selected, self.ax_out_not_selected
+            self.ax10, self.ax12, self.selected_v, self.selected_b
         )
         self.canvas.draw()
 

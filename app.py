@@ -16,8 +16,8 @@ from pathlib import Path
 import numpy as np
 import halo_data as hd
 import pandas as pd
-import json
 from PyQt5 import QtCore
+from mpl_toolkits.mplot3d import Axes3D
 
 scriptDir = dirname(realpath(__file__))
 FROM_MAIN, _ = loadUiType(join(dirname(__file__), "mainwindow.ui"))
@@ -575,7 +575,6 @@ class myCanvas(FigureCanvas):
                                           ax_hist_snr=ax5,
                                           snr=halo.data['co_signal'].transpose(),
                                           fig=self.fig)
-
         self.draw()
         return self.fig
 
@@ -584,7 +583,7 @@ class myCanvas(FigureCanvas):
         ax1 = self.fig.add_subplot(211)
         ax2 = self.fig.add_subplot(234)
         ax3 = self.fig.add_subplot(235)
-        ax4 = self.fig.add_subplot(236)
+        ax4 = self.fig.add_subplot(236, projection='3d')
         p = ax1.pcolormesh(halo.data['time'],
                            halo.data['range'],
                            np.log10(halo.data['beta_raw'].transpose()),
@@ -609,9 +608,11 @@ class myCanvas(FigureCanvas):
                                        ax_in=ax1,
                                        fig=self.fig,
                                        ax_out=ax3,
-                                       ax_out_selected=ax4,
-                                       ax_out_not_selected=ax2,
-                                       threshold=self.area_snr.threshold)
+                                       ax10=ax2,
+                                       ax12=ax4,
+                                       threshold=self.area_snr.threshold,
+                                       velocity=halo.data['v_raw'].transpose(),
+                                       beta=halo.data['beta_raw'].transpose())
         self.draw()
         return self.fig
 
