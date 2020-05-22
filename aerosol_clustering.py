@@ -6,6 +6,9 @@ from sklearn.cluster import KMeans
 import halo_data as hd
 from pathlib import Path
 import pandas as pd
+from matplotlib.colors import LogNorm
+from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 
 # %%
 # Specify data folder path
@@ -21,107 +24,98 @@ file_list = glob.glob(data_folder + '/*.nc')
 noise_list = glob.glob(snr_folder + '/*_noise.csv')
 
 # %%
-for month in np.arange(7, 8):
-    month_pattern = '2016' + str(month).zfill(2)
-    print(month_pattern)
-    days_month = [file for file in file_list if month_pattern in file]
+date_range = pd.date_range(start='2016-01-01', end='2016-02-01').strftime('%Y%m%d')
 
-    depo_raw = np.array([])
-    v_raw = np.array([])
-    beta_raw = np.array([])
+# %%
 
-    for file in days_month:
-        df = hd.halo_data(file)
+depo_raw = np.array([])
+v_raw = np.array([])
+beta_raw = np.array([])
+date_raw = np.array([])
+range_raw = {}
+time_raw = {}
 
-        df.unmask999()
-        df.filter_height()
-        noise = pd.read_csv([noise_file for noise_file in noise_list if df.filename in noise_file][0],
-                            usecols=['noise'])
-        noise_threshold = 1 + 3 * np.std(noise['noise'])
-        df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                  ref='co_signal', threshold=noise_threshold)
-        df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                              ref='beta_raw', threshold=10**-4.5, buffer=2)
-        depo_raw = np.concatenate([depo_raw,
-                                   df.data['depo_raw'][:, :100].flatten()])
-        v_raw = np.concatenate([v_raw,
-                                df.data['v_raw'][:, :100].flatten()])
-        beta_raw = np.concatenate([beta_raw,
-                                   df.data['beta_raw'][:, :100].flatten()])
-    X = np.vstack([depo_raw, v_raw, beta_raw])
-    X = X.T
-    X = X[~np.isnan(X).any(axis=1)]
+for date in date_range:
+    file = [file for file in file_list if date in file]
+    if len(file) == 0:
+        print(f'{date} is missing')
+        continue
+    elif len(file) > 1:
+        print(f'There are two {date}')
+        break
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    kmeans = KMeans(n_clusters=5, max_iter=3000).fit(X_scaled)
+    file = file[0]
 
-    for file in days_month:
-        data = hd.halo_data(file)
-        data.unmask999()
-        data.filter_height()
-        noise = pd.read_csv([noise_file for noise_file in noise_list if data.filename in noise_file][0],
-                            usecols=['noise'])
-        noise_threshold = 1 + 3 * np.std(noise['noise'])
-        data.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                    ref='co_signal', threshold=noise_threshold)
-        fig, axes = plt.subplots(4, 1, figsize=(18, 9))
-        for ax, var, name in zip(axes[:3],
-                                 [np.log10(data.data['beta_raw'][:, :100].T),
-                                  data.data['v_raw'][:, :100].T,
-                                  data.data['depo_raw'][:, :100].T],
-                                 ['beta_raw', 'v_raw', 'depo_raw']):
-            pp = ax.pcolormesh(data.data['time'].data,
-                               data.data['range'][:100],
-                               var,
-                               cmap='jet',
-                               vmin=data.cbar_lim[name][0],
-                               vmax=data.cbar_lim[name][1])
-            fig.colorbar(pp, ax=ax)
-            ax.set_title(name)
+    df = hd.halo_data(file)
+    df.unmask999()
+    df.filter_height()
 
-        data.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                                ref='beta_raw', threshold=10**-4.5, buffer=2)
+    noise = pd.read_csv([noise_file for noise_file in noise_list
+                         if df.filename in noise_file][0],
+                        usecols=['noise'])
+    noise_threshold = 1 + 3 * np.std(noise['noise'])
+    df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
+              ref='co_signal', threshold=noise_threshold)
+    df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
+                          ref='beta_raw', threshold=10**-4.5, buffer=2)
+    depo_raw = np.concatenate([depo_raw,
+                               df.data['depo_raw'][:, :100].flatten()])
+    v_raw = np.concatenate([v_raw,
+                            df.data['v_raw'][:, :100].flatten()])
 
-        depo_raw = data.data['depo_raw'][:, :100].flatten()
-        v_raw = data.data['v_raw'][:, :100].flatten()
-        beta_raw = data.data['beta_raw'][:, :100].flatten()
+    b = df.data['beta_raw'][:, :100].flatten()
+    beta_raw = np.concatenate([beta_raw,
+                               b])
+    date_raw = np.concatenate([date_raw,
+                               np.repeat(date, len(b))])
+    date_raw = date_raw.astype('int')
+    range_raw[date] = df.data['range'][:100]
+    time_raw[date] = df.data['time']
 
-        X_data = np.vstack([depo_raw, v_raw, beta_raw])
-        X_data = X_data.T
-        X_data_scaled = scaler.transform(X_data)
-        label = np.full([X_data.shape[0], ], np.nan)
-        for i, val in enumerate(X_data_scaled):
-            if not np.isnan(val).any():
-                label[i] = kmeans.predict(val.reshape(1, -1))
+X_full = np.vstack([depo_raw, v_raw, beta_raw, date_raw])
+X_full = X_full.T
+X_full[X_full[:, 0] < 0, 0] = np.nan
+X = X_full[~np.isnan(X_full).any(axis=1)]
 
-        shape1 = data.data['time'].shape[0]
-        shape2 = 100
+# %%
+X[X[:, 0] > 1, 0] = 1
+X[:, 2] = np.log10(X[:, 2])
+X[X[:, 1] > 2, 1] = 2
+X[X[:, 1] < -2, 1] = -2
 
-        label_reshaped = label.reshape([shape1, shape2])
-        beta_reshaped = beta_raw.reshape([shape1, shape2])
+# %%
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X[:, :3])
+kmeans = KMeans(n_clusters=5, max_iter=3000).fit(X_scaled)
 
-        p = axes[3].pcolormesh(data.data['time'].data,
-                               data.data['range'][:100],
-                               label_reshaped.T, vmin=0, vmax=5,
-                               cmap=plt.cm.get_cmap('jet', 5))
-        axes[3].set_title('resulted clutering')
-        fig.colorbar(p, ax=axes[3])
-        fig.suptitle(data.filename, size=22, weight='bold')
-        fig.savefig(image_folder + '/' + data.filename + '.png')
+# %%
+label = np.repeat(np.nan, X_full.shape[0])
+label[~np.isnan(X_full).any(axis=1)] = kmeans.labels_
 
-    full_label = kmeans.predict(X)
-    fig, ax = plt.subplots(figsize=(16, 9))
-    ax.hist(full_label)
-    ax.set_title(f'Number of observations per cluster in month {month}')
-    ax.set_xlabel('Cluster label')
-    ax.set_yscale('log')
-    fig.savefig(image_folder + '/' + str(month) + '.png')
+# %%
+scaler.inverse_transform(kmeans.cluster_centers_)
 
-    # Save centroid coordinate
-    centroid = scaler.inverse_transform(kmeans.cluster_centers_)
-    centroid_lab = kmeans.predict(kmeans.cluster_centers_)
-    centroid_df = pd.DataFrame(centroid, columns=['depo', 'v_raw', 'beta'])
-    centroid_df['label'] = centroid_lab
-    centroid_df['month'] = month
-    centroid_df.to_csv(image_folder + '/' + str(month) + '.csv', index=False)
+# %%
+date = '20160102'
+fig, ax = plt.subplots(4, 1, figsize=(12, 9))
+p = ax[0].pcolormesh(time_raw[date], range_raw[date],
+                     np.log10(X_full[X_full[:, 3] == int(date), 2].reshape(int(len(time_raw[date])),
+                                                                           int(len(range_raw[date]))).T),
+                     cmap='jet', vmin=-8, vmax=-4)
+fig.colorbar(p, ax=ax[0])
+p = ax[1].pcolormesh(time_raw[date], range_raw[date],
+                     X_full[X_full[:, 3] == int(date), 1].reshape(int(len(time_raw[date])),
+                                                                  int(len(range_raw[date]))).T,
+                     cmap='jet', vmin=-2, vmax=2)
+fig.colorbar(p, ax=ax[1])
+p = ax[2].pcolormesh(time_raw[date], range_raw[date],
+                     X_full[X_full[:, 3] == int(date), 0].reshape(int(len(time_raw[date])),
+                                                                  int(len(range_raw[date]))).T,
+                     cmap='jet', vmin=0, vmax=0.5)
+fig.colorbar(p, ax=ax[2])
+p = ax[3].pcolormesh(time_raw[date], range_raw[date],
+                     label[X_full[:, 3] == int(date)].reshape(int(len(time_raw[date])),
+                                                              int(len(range_raw[date]))).T,
+                     cmap=plt.cm.get_cmap('jet', 5))
+fig.colorbar(p, ax=ax[3])
+fig.tight_layout()
