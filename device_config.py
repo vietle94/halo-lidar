@@ -10,9 +10,9 @@ from pathlib import Path
 
 # %%
 # Specify data folder path
-data_folder = r'F:\halo\146\depolarization'
+data_folder = r'F:\halo\34\depolarization'
 # Folder to save
-save_folder = r'F:\halo\146'
+save_folder = r'F:\halo\34'
 # %%
 # Get a list of all files in data folder
 data = hd.getdata(data_folder)
@@ -38,7 +38,7 @@ device_config['time'] = pd.to_datetime(device_config[['year', 'month', 'day']]).
 device_config = device_config.set_index('time')
 
 # Extract name for this location from the last file
-location_name = df.more_info['location'].decode("utf-8") + '-' + str(int(df.more_info['systemID']))
+location_name = df.more_info['location'] + '-' + str(int(df.more_info['systemID']))
 
 # %%
 device_config.describe()
