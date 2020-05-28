@@ -9,6 +9,7 @@ import pandas as pd
 from matplotlib.colors import LogNorm
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
+from scipy.stats import binned_statistic
 
 # %%
 # Specify data folder path
@@ -24,7 +25,7 @@ file_list = glob.glob(data_folder + '/*.nc')
 noise_list = glob.glob(snr_folder + '/*_noise.csv')
 
 # %%
-date_range = pd.date_range(start='2016-01-01', end='2016-02-01').strftime('%Y%m%d')
+date_range = pd.date_range(start='2016-01-01', end='2016-03-31').strftime('%Y%m%d')
 
 # %%
 
@@ -96,7 +97,7 @@ label[~np.isnan(X_full).any(axis=1)] = kmeans.labels_
 scaler.inverse_transform(kmeans.cluster_centers_)
 
 # %%
-date = '20160102'
+date = '20160114'
 fig, ax = plt.subplots(4, 1, figsize=(12, 9))
 p = ax[0].pcolormesh(time_raw[date], range_raw[date],
                      np.log10(X_full[X_full[:, 3] == int(date), 2].reshape(int(len(time_raw[date])),
@@ -117,5 +118,8 @@ p = ax[3].pcolormesh(time_raw[date], range_raw[date],
                      label[X_full[:, 3] == int(date)].reshape(int(len(time_raw[date])),
                                                               int(len(range_raw[date]))).T,
                      cmap=plt.cm.get_cmap('jet', 5))
-fig.colorbar(p, ax=ax[3])
+cbar = fig.colorbar(p, ax=ax[3])
+cbar.set_ticks([0, 1, 2, 3, 4])
+cbar.set_ticklabels(['Heavy aerosol', 'Light aerosol', 'Snow fall',
+                     'Rain fall', 'Liquid cloud/Drizzle'])
 fig.tight_layout()
