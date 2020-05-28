@@ -68,3 +68,29 @@ device_config_folder = save_folder + '/device_config'
 Path(device_config_folder).mkdir(parents=True, exist_ok=True)
 fig.savefig(device_config_folder + '/device_config_' + location_name + '.png')
 device_config.to_csv(device_config_folder + '/device_config_' + location_name + '.csv')
+
+# %%
+
+csv = glob.glob(r'F:\halo\summary_device_config/*.csv')
+
+li = []
+for filename in csv:
+    df = pd.read_csv(filename)
+    df['location'] = filename.split('_')[-1].split('.')[0]
+    li.append(df)
+
+data = pd.concat(li, axis=0, ignore_index=True)
+data['time'] = pd.to_datetime(data['time'])
+data
+
+# %%
+data = data.set_index('time')
+group = data.groupby('location')
+
+# %%
+var = [var for var in data.columns if var not in ['day', 'month', 'year', 'location']]
+for var in var:
+    fig, ax = plt.subplots(figsize=(18, 9))
+    group[var].plot(legend=True, ax=ax)
+    ax.set_ylabel(var, size=18)
+    fig.savefig(r'F:\halo\summary_device_config/' + var + '.png', dpi=200, bbox_inches='tight')
