@@ -28,11 +28,10 @@ noise_list = glob.glob(snr_folder + '/*_noise.csv')
 date_range = pd.date_range(start='2016-01-01', end='2016-03-31').strftime('%Y%m%d')
 
 # %%
-
-depo_raw = np.array([])
-v_raw = np.array([])
-beta_raw = np.array([])
-date_raw = np.array([])
+depo_raw = []
+v_raw = []
+beta_raw = []
+date_raw = []
 range_raw = {}
 time_raw = {}
 
@@ -59,19 +58,26 @@ for date in date_range:
               ref='co_signal', threshold=noise_threshold)
     df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
                           ref='beta_raw', threshold=10**-4.5, buffer=2)
-    depo_raw = np.concatenate([depo_raw,
-                               df.data['depo_raw'][:, :100].flatten()])
-    v_raw = np.concatenate([v_raw,
-                            df.data['v_raw'][:, :100].flatten()])
 
+    for depo_value in df.data['depo_raw'][:, :100].flatten():
+        depo_raw.append(depo_value)
+    for v_value in df.data['v_raw'][:, :100].flatten():
+        v_raw.append(v_value)
     b = df.data['beta_raw'][:, :100].flatten()
-    beta_raw = np.concatenate([beta_raw,
-                               b])
-    date_raw = np.concatenate([date_raw,
-                               np.repeat(date, len(b))])
-    date_raw = date_raw.astype('int')
+    for beta_value in b:
+        beta_raw.append(beta_value)
+    for date_value in np.repeat(date, len(b)):
+        date_raw.append(date_value)
+
     range_raw[date] = df.data['range'][:100]
     time_raw[date] = df.data['time']
+
+depo_raw = np.array(depo_raw)
+v_raw = np.array(v_raw)
+beta_raw = np.array(beta_raw)
+date_raw = np.array(date_raw)
+
+date_raw = date_raw.astype('int')
 
 X_full = np.vstack([depo_raw, v_raw, beta_raw, date_raw])
 X_full = X_full.T
