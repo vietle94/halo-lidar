@@ -671,7 +671,8 @@ def aggregate_data(nc_path, noise_path,
                    start_date, end_date, height_lim=100,
                    snr_mul=3,
                    cloud_thres=10**-4.5, cloud_buffer=2,
-                   attenuation=True, positive_depo=True):
+                   attenuation=True, positive_depo=True,
+                   co_cross=False):
     '''
     Aggerate and preprocess data
     date format: '%Y-%m-%d'
@@ -689,6 +690,10 @@ def aggregate_data(nc_path, noise_path,
     date_raw = []
     range_raw = {}
     time_raw = {}
+
+    if co_cross:
+        co_raw = []
+        cross_raw = []
 
     for date in date_range:
         file = [file for file in data_list if date in file]
@@ -731,6 +736,11 @@ def aggregate_data(nc_path, noise_path,
             beta_raw.append(beta_value)
         for date_value in np.repeat(date, len(b)):
             date_raw.append(date_value)
+        if co_cross:
+            for co_value in df.data['co_signal'][:, :height_lim].ravel():
+                co_raw.append(co_value)
+            for cross_value in df.data['cross_signal'][:, :height_lim].ravel():
+                cross_raw.append(cross_value)
 
         range_raw[date] = df.data['range'][:height_lim]
         time_raw[date] = df.data['time']
@@ -740,8 +750,15 @@ def aggregate_data(nc_path, noise_path,
     beta_raw = np.array(beta_raw)
     date_raw = np.array(date_raw)
     date_raw = date_raw.astype('int')
-    result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
-                           'beta_raw': beta_raw, 'date': date_raw})
+    if co_cross:
+        co_raw = np.array(co_raw)
+        cross_raw = np.array(cross_raw)
+        result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
+                               'beta_raw': beta_raw, 'date': date_raw,
+                               'co_signal': co_raw, 'cross_signal': cross_raw})
+    else:
+        result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
+                               'beta_raw': beta_raw, 'date': date_raw})
     if positive_depo:
         result.loc[result['depo'] < 0, 'depo'] = np.nan
     return result, time_raw, range_raw
