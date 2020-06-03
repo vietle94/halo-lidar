@@ -745,14 +745,14 @@ def aggregate_data(nc_path, noise_path,
         range_raw[date] = df.data['range'][:height_lim]
         time_raw[date] = df.data['time']
 
-    depo_raw = np.array(depo_raw)
-    v_raw = np.array(v_raw)
-    beta_raw = np.array(beta_raw)
-    date_raw = np.array(date_raw)
-    date_raw = date_raw.astype('int')
+    # depo_raw = np.array(depo_raw)
+    # v_raw = np.array(v_raw)
+    # beta_raw = np.array(beta_raw)
+    # date_raw = np.array(date_raw)
+    # date_raw = date_raw.astype('int')
     if co_cross:
-        co_raw = np.array(co_raw)
-        cross_raw = np.array(cross_raw)
+        # co_raw = np.array(co_raw)
+        # cross_raw = np.array(cross_raw)
         result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
                                'beta_raw': beta_raw, 'date': date_raw,
                                'co_signal': co_raw, 'cross_signal': cross_raw})
