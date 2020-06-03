@@ -665,3 +665,83 @@ def bytes_Odict_convert(x):
         return x.decode('utf-8')
     else:
         return x
+
+
+def aggregate_data(nc_path, noise_path,
+                   start_date, end_date, height_lim=100,
+                   snr_mul=3,
+                   cloud_thres=10**-4.5, cloud_buffer=2,
+                   attenuation=True, positive_depo=True):
+    '''
+    Aggerate and preprocess data
+    date format: '%Y-%m-%d'
+    '''
+    import glob
+    date_range = pd.date_range(start=start_date,
+                               end=end_date).strftime('%Y%m%d')
+
+    data_list = glob.glob(nc_path + '/*.nc')
+    noise_list = glob.glob(noise_path + '/*_noise.csv')
+
+    depo_raw = []
+    v_raw = []
+    beta_raw = []
+    date_raw = []
+    range_raw = {}
+    time_raw = {}
+
+    for date in date_range:
+        file = [file for file in data_list if date in file]
+        if len(file) == 0:
+            print(f'{date} is missing')
+            continue
+        elif len(file) > 1:
+            print(f'There are two {date}')
+            break
+
+        file = file[0]
+
+        df = halo_data(file)
+        df.unmask999()
+        df.filter_height()
+
+        noise_csv = [noise_file for noise_file in noise_list
+                     if df.filename in noise_file]
+
+        assert noise_csv, "Missing noise csv for " + df.filename
+        noise_csv = noise_csv[0]
+        noise = pd.read_csv([noise_file for noise_file in noise_list
+                             if df.filename in noise_file][0],
+                            usecols=['noise'])
+        noise_threshold = 1 + snr_mul * np.std(noise['noise'])
+        df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
+                  ref='co_signal', threshold=noise_threshold)
+
+        if attenuation:
+            df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
+                                  ref='beta_raw',
+                                  threshold=cloud_thres, buffer=cloud_buffer)
+
+        for depo_value in df.data['depo_raw'][:, :height_lim].ravel():
+            depo_raw.append(depo_value)
+        for v_value in df.data['v_raw'][:, :height_lim].ravel():
+            v_raw.append(v_value)
+        b = df.data['beta_raw'][:, :height_lim].ravel()
+        for beta_value in b:
+            beta_raw.append(beta_value)
+        for date_value in np.repeat(date, len(b)):
+            date_raw.append(date_value)
+
+        range_raw[date] = df.data['range'][:height_lim]
+        time_raw[date] = df.data['time']
+
+    depo_raw = np.array(depo_raw)
+    v_raw = np.array(v_raw)
+    beta_raw = np.array(beta_raw)
+    date_raw = np.array(date_raw)
+    date_raw = date_raw.astype('int')
+    result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
+                           'beta_raw': beta_raw, 'date': date_raw})
+    if positive_depo:
+        result.loc[result['depo'] < 0, 'depo'] = np.nan
+    return result, time_raw, range_raw
