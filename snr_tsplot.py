@@ -67,9 +67,10 @@ mean = groupby.mean()
 # fig2.savefig(snr_result + '/noise_ts.png')
 
 # %%
-fig, ax = plt.subplots(figsize=(9, 6))
+fig, ax = plt.subplots(figsize=(12, 6))
 ax.plot(sd, '.')
 ax.set_title('Standard deviation of SNR time series', fontweight='bold')
 ax.set_ylabel('Standard deviation of SNR')
 ax.set_xlabel('Time')
-fig.savefig(snr_result + '/noise_sd_report.png', bbox_inches='tight')
+fig.savefig(snr_result + '/noise_sd_report.png',
+            bbox_inches='tight', dpi=150)
