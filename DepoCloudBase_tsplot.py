@@ -7,11 +7,13 @@ import seaborn as sns
 import matplotlib.ticker as ticker
 from pathlib import Path
 from matplotlib.colors import LogNorm
-%matplotlib qt
+import matplotlib.dates as mdates
+from sklearn.mixture import GaussianMixture
+import scipy.stats as stats
 
 # %%
 # Define csv directory path
-csv_path = r'F:\halo\32\depolarization\depo'
+csv_path = r'F:\halo\146\depolarization\depo'
 # Create saving folder
 depo_result = csv_path + '/result'
 Path(depo_result).mkdir(parents=True, exist_ok=True)
@@ -26,13 +28,8 @@ depo = pd.concat([pd.read_csv(f) for f in data_list],
 depo = depo.astype({'year': int, 'month': int, 'day': int})
 
 # For right now, just take the date, ignore hh:mm:ss
-depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']]).dt.date
-depo_original = depo
-
-# %%
-depo = pd.melt(depo, id_vars=[x for x in depo.columns if 'depo' not in x],
-               value_vars=[x for x in depo.columns if 'depo' in x],
-               var_name='depo_type')
+depo['date'] = pd.to_datetime(depo[['year', 'month', 'day']])
+depo.drop(['depo_1', 'co_signal1'], axis=1, inplace=True)
 
 # %%
 for year in depo.year.unique():
@@ -114,10 +111,62 @@ colorbar.ax.set_ylabel('Number of observations')
 colorbar.ax.yaxis.set_label_position('left')
 ax.set_title('2D histogram of cross_signal vs co_signal', size=22, weight='bold')
 ax.plot(co_cross_data['co_signal'] - 1,
-        (co_cross_data['co_signal'] - 1) * 0.01, label='depo 0.01 fit',
+        (co_cross_data['co_signal'] - 1) * 0.1, label='depo 0.1 fit',
         linewidth=0.5)
-ax.plot(co_cross_data['co_signal'] - 1,
-        (co_cross_data['co_signal'] - 1) * 0.07, label='depo 0.07 fit',
-        linewidth=0.5)
+# ax.plot(co_cross_data['co_signal'] - 1,
+#         (co_cross_data['co_signal'] - 1) * 0.07, label='depo 0.07 fit',
+#         linewidth=0.5)
 ax.legend(loc='upper left')
-fig8.savefig(depo_result + '/cross_vs_co.png')
+fig8.savefig(depo_result + '/cross_vs_co.png', bbox_inches='tight', dpi=200)
+
+# %%
+temp = depo.loc[depo['date'] < pd.to_datetime('2017-09-01'), 'depo']
+temp = depo['depo']
+mask = (temp < 0.2) & (temp > -0.05)
+fig0, ax = plt.subplots(figsize=(18, 9))
+temp.loc[mask].hist(bins=50)
+ax.set_xlabel('Depo')
+# fig0.savefig(depo_result + '/depo_hist.png')
+
+gmm = GaussianMixture(n_components=2, max_iter=1000)
+gmm.fit(temp[mask].values.reshape(-1, 1))
+smean = gmm.means_.ravel()
+sstd = np.sqrt(gmm.covariances_).ravel()
+ax.set_title(f'Distribution of depo at cloud base, \n\
+left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
+fig0.savefig(depo_result + '/depo_hist_report.png', bbox_inches='tight', dpi=200)
+
+# %%
+temp = depo.loc[depo['date'] > pd.to_datetime('2017-09-01'), 'depo']
+mask = (temp < 0.2) & (temp > -0.05)
+fig0, ax = plt.subplots(figsize=(18, 9))
+temp.loc[mask].hist(bins=50)
+ax.set_xlabel('Depo')
+mean = np.mean(temp)
+std = np.std(temp)
+ax.set_title(f'Distribution of depo at cloud base, \n\
+peak is {mean:.4f} $\pm$ {std:.4f}', weight='bold')
+fig0.savefig(depo_result + '/32XRdepo_hist_report.png', bbox_inches='tight')
+
+# %%
+temp = depo['depo']
+mask = (temp < 0.2) & (temp > -0.05)
+fig0, ax = plt.subplots(figsize=(18, 9))
+temp.loc[mask].hist(bins=50)
+ax.set_xlabel('Depo')
+mean = np.mean(temp)
+std = np.std(temp)
+ax.set_title(f'Distribution of depo at cloud base, \n\
+peak is {mean:.4f} $\pm$ {std:.4f}', weight='bold')
+fig0.savefig(depo_result + '/depo_hist_report.png', bbox_inches='tight', dpi=200)
+
+# %%
+fig, ax = plt.subplots(figsize=(12, 6))
+group = depo.groupby('date').depo
+ax.errorbar(depo['date'].unique(), group.mean(), yerr=group.std(),
+            ls='none', marker='.', linewidth=0.5, markersize=5)
+ax.set_title('Mean value of depo at cloud base', weight='bold')
+ax.set_xlabel('Date')
+ax.set_ylabel('Depo')
+fig.savefig(depo_result + '/depo_scatter_report.png',
+            bbox_inches='tight', dpi=200)
