@@ -126,8 +126,28 @@ class halo_data:
             if 'co_signal' not in var:
                 self.data[var][self.data[var] == -999] = float('nan')
 
+    def average(self, interval=15, thres_nan=0.5):
+        '''
+        Average data
+        '''
+        self.bin_time = np.arange(0, 24, interval/60)
+        self.bin_idx = np.digitize(self.bin_time, self.data['time'])
+        self.bin_length = np.diff(self.bin_idx)
+        for val in ['depo_raw', 'beta_raw', 'v_raw']:
+            z = self.data[val].copy()
+            bin_nan = np.add.reduceat(np.isnan(z),
+                                      self.bin_idx[:-1], axis=0)
+            prop_nan = bin_nan / self.bin_length  # proportion of nan each bin
+
+            # Number of values each bin, excluding nan
+            length_nan = (self.bin_length - bin_nan).astype('float')
+            length_nan[prop_nan > thres_nan] = np.nan
+
+            z[np.isnan(z)] = 0
+            sum = np.add.reduceat(z, self.bin_idx[:-1], axis=0)
+            setattr(self, val.replace('raw', 'binned'), sum/length_nan)
+
     def describe(self):
-        import pandas as pd
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
         var_avg = {var: self.data[var].flatten().astype('f8')
                    for var in self.data if self.data[var].ndim != 1 and 'average' in var}
