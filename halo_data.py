@@ -130,9 +130,10 @@ class halo_data:
         '''
         Average data
         '''
-        self.bin_time = np.arange(0, 24, interval/60)
+        self.bin_time = np.arange(0, 24 + interval/60, interval/60)
+        self.time_binned = self.bin_time[:-1] + interval/120
         self.bin_idx = np.digitize(self.bin_time, self.data['time'])
-        self.bin_length = np.diff(self.bin_idx)
+        self.bin_length = np.diff(self.bin_idx).reshape(-1, 1)
         for val in ['depo_raw', 'beta_raw', 'v_raw']:
             z = self.data[val].copy()
             bin_nan = np.add.reduceat(np.isnan(z),
