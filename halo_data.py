@@ -689,9 +689,10 @@ def bytes_Odict_convert(x):
 
 
 def aggregate_data(nc_path, noise_path,
-                   start_date, end_date, height_lim=100,
+                   start_date, end_date,
                    snr_mul=3,
                    cloud_thres=10**-4.5, cloud_buffer=2,
+                   interval=15, thres_nan=0.5,
                    attenuation=True, positive_depo=True,
                    co_cross=False):
     '''
@@ -705,12 +706,12 @@ def aggregate_data(nc_path, noise_path,
     data_list = glob.glob(nc_path + '/*.nc')
     noise_list = glob.glob(noise_path + '/*_noise.csv')
 
-    depo_raw = []
-    v_raw = []
-    beta_raw = []
-    date_raw = []
-    range_raw = {}
-    time_raw = {}
+    depo_list = []
+    v_list = []
+    beta_list = []
+    date_list = []
+    range_list = {}
+    time_list = {}
 
     if co_cross:
         co_raw = []
@@ -748,38 +749,40 @@ def aggregate_data(nc_path, noise_path,
                                   ref='beta_raw',
                                   threshold=cloud_thres, buffer=cloud_buffer)
 
-        for depo_value in df.data['depo_raw'][:, :height_lim].ravel():
-            depo_raw.append(depo_value)
-        for v_value in df.data['v_raw'][:, :height_lim].ravel():
-            v_raw.append(v_value)
-        b = df.data['beta_raw'][:, :height_lim].ravel()
+        df.average(interval=15, thres_nan=0.5)
+
+        for depo_value in df.depo_binned.ravel():
+            depo_list.append(depo_value)
+        for v_value in df.v_binned.ravel():
+            v_list.append(v_value)
+        b = df.beta_binned.ravel()
         for beta_value in b:
-            beta_raw.append(beta_value)
+            beta_list.append(beta_value)
         for date_value in np.repeat(date, len(b)):
-            date_raw.append(date_value)
+            date_list.append(date_value)
         if co_cross:
-            for co_value in df.data['co_signal'][:, :height_lim].ravel():
+            for co_value in df['co_signal'].ravel():
                 co_raw.append(co_value)
-            for cross_value in df.data['cross_signal'][:, :height_lim].ravel():
+            for cross_value in df['cross_signal'].ravel():
                 cross_raw.append(cross_value)
 
-        range_raw[date] = df.data['range'][:height_lim]
-        time_raw[date] = df.data['time']
+        range_list[date] = df.data['range']
+        time_list[date] = df.time_binned
 
-    # depo_raw = np.array(depo_raw)
-    # v_raw = np.array(v_raw)
-    # beta_raw = np.array(beta_raw)
-    # date_raw = np.array(date_raw)
-    # date_raw = date_raw.astype('int')
+    # depo_list = np.array(depo_list)
+    # v_list = np.array(v_list)
+    # beta_list = np.array(beta_list)
+    # date_list = np.array(date_list)
+    # date_list = date_list.astype('int')
     if co_cross:
         # co_raw = np.array(co_raw)
         # cross_raw = np.array(cross_raw)
-        result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
-                               'beta_raw': beta_raw, 'date': date_raw,
+        result = pd.DataFrame({'depo': depo_list, 'v_raw': v_list,
+                               'beta_raw': beta_list, 'date': date_list,
                                'co_signal': co_raw, 'cross_signal': cross_raw})
     else:
-        result = pd.DataFrame({'depo': depo_raw, 'v_raw': v_raw,
-                               'beta_raw': beta_raw, 'date': date_raw})
+        result = pd.DataFrame({'depo': depo_list, 'v_raw': v_list,
+                               'beta_raw': beta_list, 'date': date_list})
     if positive_depo:
         result.loc[result['depo'] < 0, 'depo'] = np.nan
-    return result, time_raw, range_raw
+    return result, time_list, range_list

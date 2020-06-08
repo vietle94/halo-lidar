@@ -18,17 +18,20 @@ data_folder = r'F:\halo\32\depolarization'
 # Specify folder path for snr collection
 snr_folder = data_folder + r'\snr'
 # Specify output images folder path
-# image_folder = data_folder + r'\aerosol_algorithm'
-# Path(image_folder).mkdir(parents=True, exist_ok=True)
+image_folder = data_folder + r'\aerosol_algorithm'
+Path(image_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
 X_full, time_full, range_full = hd.aggregate_data(data_folder, snr_folder,
-                                                  '2016-01-01', '2016-01-31',
-                                                  height_lim=100, snr_mul=3,
+                                                  '2018-06-01', '2018-08-01',
+                                                  snr_mul=3,
                                                   cloud_thres=10**-4.5,
                                                   cloud_buffer=2,
-                                                  attenuation=True,
+                                                  interval=15, thres_nan=0.5,
+                                                  attenuation=False,
                                                   positive_depo=True)
+
+X_full['date'] = X_full['date'].astype('int')
 
 # %%
 na_mask = ~np.isnan(X_full).any(axis=1)
@@ -39,10 +42,17 @@ X.loc[X['depo'] > 1, 'depo'] = 1
 X.loc[:, 'beta_raw'] = np.log10(X.loc[:, 'beta_raw'])
 
 X.loc[X['v_raw'] > 2, 'v_raw'] = 2
-X.loc[X['v_raw'] < -2, 'v_raw'] = -2
+X.loc[X['v_raw'] < -5, 'v_raw'] = -5
 
 # %%
-gmm = GaussianMixture(n_components=5, max_iter=1000)
+means_init = np.array([[0.2, -0.8, -5.5],
+                       [0.1, -0.05, -7],
+                       [0.05, -0.05, -4.5],
+                       [0.6, -0.3, -6]])
+
+
+# %%
+gmm = GaussianMixture(n_components=4, max_iter=1000, means_init=means_init)
 gmm.fit(X.iloc[:, :3])
 
 # %%
@@ -60,9 +70,6 @@ label[na_mask] = prob_lab
 gmm.means_
 gmm.covariances_
 
-
-gmm.predict(gmm.means_)
-
 # %%
 date = '20160115'
 beta_date = X_full.loc[X_full['date'] == int(date), 'beta_raw'].values
@@ -88,17 +95,18 @@ p = ax[2].pcolormesh(time_date, range_date,
 fig.colorbar(p, ax=ax[2])
 p = ax[3].pcolormesh(time_date, range_date,
                      label[X_full['date'] == int(date)].reshape(time_dim, range_dim).T,
-                     cmap=plt.cm.get_cmap('jet', 6))
+                     cmap=plt.cm.get_cmap('jet', 5))
 cbar = fig.colorbar(p, ax=ax[3])
-cbar.set_ticks([0, 1, 2, 3, 4, 5])
-cbar.set_ticklabels(['Heavy aerosol', 'Light aerosol', 'Snow fall',
-                     'Rain fall', 'Liquid cloud/Drizzle', 'None-defined'])
+cbar.set_ticks([0.5, 1.5, 2.5, 3.5, 4.5])
+cbar.set_ticklabels(['Rain fall', 'aerosol',
+                     'Liquid cloud/Drizzle', 'Snow fall', 'Undefined'])
 fig.tight_layout()
 
 # %%
 scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X[:, :3])
-kmeans = KMeans(n_clusters=5, max_iter=3000).fit(X_scaled)
+X_scaled = scaler.fit_transform(X.iloc[:, :3])
+kmeans = KMeans(n_clusters=4, max_iter=3000,
+                init=means_init).fit(X_scaled)
 
 # %%
 label = np.repeat(np.nan, X_full.shape[0])
@@ -108,36 +116,39 @@ label[~np.isnan(X_full).any(axis=1)] = kmeans.labels_
 scaler.inverse_transform(kmeans.cluster_centers_)
 
 # %%
-date = '20160115'
-beta_date = X_full.loc[X_full['date'] == int(date), 'beta_raw'].values
-depo_date = X_full.loc[X_full['date'] == int(date), 'depo'].values
-v_date = X_full.loc[X_full['date'] == int(date), 'v_raw'].values
+for date in time_full.keys():
+    beta_date = X_full.loc[X_full['date'] == int(date), 'beta_raw'].values
+    depo_date = X_full.loc[X_full['date'] == int(date), 'depo'].values
+    v_date = X_full.loc[X_full['date'] == int(date), 'v_raw'].values
 
-time_date = time_full[date]
-time_dim = int(len(time_date))
-range_date = range_full[date]
-range_dim = int(len(range_date))
-fig, ax = plt.subplots(4, 1, figsize=(12, 9))
-p = ax[0].pcolormesh(time_date, range_date,
-                     np.log10(beta_date.reshape(time_dim, range_dim).T),
-                     cmap='jet', vmin=-8, vmax=-4)
-fig.colorbar(p, ax=ax[0])
-p = ax[1].pcolormesh(time_date, range_date,
-                     v_date.reshape(time_dim, range_dim).T,
-                     cmap='jet', vmin=-2, vmax=2)
-fig.colorbar(p, ax=ax[1])
-p = ax[2].pcolormesh(time_date, range_date,
-                     depo_date.reshape(time_dim, range_dim).T,
-                     cmap='jet', vmin=0, vmax=0.5)
-fig.colorbar(p, ax=ax[2])
-p = ax[3].pcolormesh(time_date, range_date,
-                     label[X_full['date'] == int(date)].reshape(time_dim, range_dim).T,
-                     cmap=plt.cm.get_cmap('jet', 6))
-cbar = fig.colorbar(p, ax=ax[3])
-cbar.set_ticks([0, 1, 2, 3, 4, 5])
-cbar.set_ticklabels(['Heavy aerosol', 'Light aerosol', 'Snow fall',
-                     'Rain fall', 'Liquid cloud/Drizzle', 'None-defined'])
-fig.tight_layout()
+    time_date = time_full[date]
+    time_dim = int(len(time_date))
+    range_date = range_full[date]
+    range_dim = int(len(range_date))
+    fig, ax = plt.subplots(4, 1, figsize=(12, 9))
+    p = ax[0].pcolormesh(time_date, range_date,
+                         np.log10(beta_date.reshape(time_dim, range_dim).T),
+                         cmap='jet', vmin=-8, vmax=-4)
+    fig.colorbar(p, ax=ax[0])
+    p = ax[1].pcolormesh(time_date, range_date,
+                         v_date.reshape(time_dim, range_dim).T,
+                         cmap='jet', vmin=-2, vmax=2)
+    fig.colorbar(p, ax=ax[1])
+    p = ax[2].pcolormesh(time_date, range_date,
+                         depo_date.reshape(time_dim, range_dim).T,
+                         cmap='jet', vmin=0, vmax=0.5)
+    fig.colorbar(p, ax=ax[2])
+    p = ax[3].pcolormesh(time_date, range_date,
+                         label[X_full['date'] == int(date)].reshape(time_dim, range_dim).T,
+                         cmap=plt.cm.get_cmap('jet', 4), vmin=0, vmax=4)
+    cbar = fig.colorbar(p, ax=ax[3])
+    cbar.set_ticks([0.5, 1.5, 2.5, 3.5, 4.5])
+    cbar.set_ticklabels(['Liquid cloud/Drizzle', 'Big aerosol', 'Aerosol',
+                         'Precipitation'])
+    # fig.tight_layout()
+    fig.suptitle(date, size=22, weight='bold', y=0.93)
+    fig.savefig(image_folder + '/' + date+'.png',
+                bbox_inches='tight', dpi=200)
 
 # %%
 df = hd.halo_data(r'F:\halo\32\depolarization/20160117_fmi_halo-doppler-lidar-32-depolarization.nc')
