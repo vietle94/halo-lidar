@@ -8,7 +8,7 @@ from pathlib import Path
 %matplotlib qt
 
 # %% Define csv directory path
-csv_path = r'F:\halo\32\depolarization\snr'
+csv_path = r'F:\halo\146\depolarization\snr'
 # Create saving folder
 snr_result = csv_path + '/result'
 Path(snr_result).mkdir(parents=True, exist_ok=True)
@@ -22,7 +22,7 @@ noise = pd.concat([pd.read_csv(f) for f in data_list],
                   ignore_index=True)
 noise = noise.astype({'year': int, 'month': int, 'day': int})
 noise['time'] = pd.to_datetime(noise[['year', 'month', 'day']]).dt.date
-
+name = noise['location'][0] + '-' + str(int(noise['systemID'][0]))
 # noise_avg = pd.concat([pd.read_csv(f) for f in data_avg_list],
 #                       ignore_index=True)
 # noise_avg = noise_avg.astype({'year': int, 'month': int, 'day': int})
@@ -69,8 +69,10 @@ mean = groupby.mean()
 # %%
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.plot(sd, '.')
-ax.set_title('Standard deviation of SNR time series', fontweight='bold')
+ax.set_title('Standard deviation of SNR time series ' + name,
+             fontweight='bold')
 ax.set_ylabel('Standard deviation of SNR')
 ax.set_xlabel('Time')
-fig.savefig(snr_result + '/noise_sd_report.png',
+ax.set_ylim([0, 0.0025])
+fig.savefig(snr_result + '/' + name + 'noise_sd_report.png',
             bbox_inches='tight', dpi=150)
