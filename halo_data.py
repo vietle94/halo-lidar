@@ -166,14 +166,9 @@ class halo_data:
         hnu = 1.28e-19
         alpha = 0.01
 
-        if not self.info.get('lens_diameter'):
-            self.info['lens_diameter'] = 0.06
-
-        if not self.info.get('wavelength'):
-            self.info['wavelength'] = 1.5e-6
-
-        if not self.info.get('beam_energy'):
-            self.info['beam_energy'] = 0.00001
+        self.info['lens_diameter'] = self.info.get('lens_diameter', 0.06)
+        self.info['wavelength'] = self.info.get('wavelength', 1.5e-6)
+        self.info['beam_energy'] = self.info.get('beam_energy', 0.00001)
 
         het_area = np.pi * (0.7 * self.info['lens_diameter'] / 2) ** 2
 
