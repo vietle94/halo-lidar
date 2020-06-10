@@ -18,16 +18,18 @@ class halo_data:
                 'depo_averaged_raw': [0, 0.5],
                 'co_signal_averaged': [0.995, 1.005],
                 'cross_signal_averaged': [0.995, 1.005]}
-    units = {'beta_raw': '$\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
+    units = {'beta_raw': '$\\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
              'v_error': '$m s^{-1}$'}
 
     def __init__(self, path):
         self.full_data = netcdf.NetCDFFile(path, 'r', mmap=False)
         self.full_data_names = list(self.full_data.variables.keys())
         self.info = {name: self.full_data.variables[name].getValue(
-        ) for name in self.full_data_names if self.full_data.variables[name].shape == ()}
+        ) for name in self.full_data_names
+            if self.full_data.variables[name].shape == ()}
         self.data = {name: self.full_data.variables[name].data
-                     for name in self.full_data_names if self.full_data.variables[name].shape != ()}
+                     for name in self.full_data_names
+                     if self.full_data.variables[name].shape != ()}
         self.data_names = list(self.data.keys())
         self.more_info = bytes_Odict_convert(self.full_data._attributes)
 
@@ -35,11 +37,16 @@ class halo_data:
                 self.more_info.get(key) for
                 key in ['year', 'month', 'day', 'location', 'systemID']]
 
-        self.filename = '-'.join([str(elem).zfill(2) if name in ['month',
-                                                                 'day'] else str(elem).zfill(2) for elem in name])
-        self.meta_data = {key1: {key: bytes_Odict_convert(self.full_data.variables[key1].__dict__[key])
-                                 for key in self.full_data.variables[key1].__dict__ if key != 'data'}
-                          for key1 in self.full_data_names}
+        self.filename = '-'.join(
+            [str(elem).zfill(2) if name
+             in ['month', 'day'] else str(elem).zfill(2) for elem in name])
+        self.meta_data = {
+            key1: {
+                key: bytes_Odict_convert(
+                    self.full_data.variables[key1].__dict__[key])
+                for key in self.full_data.variables[key1].__dict__
+                if key != 'data'}
+            for key1 in self.full_data_names}
 
     def plot(self, variables=None, ncol=None, size=None):
         if ncol is None:
@@ -53,9 +60,9 @@ class halo_data:
             ax = ax.flatten()
         for i, var in enumerate(variables):
             if 'beta' in var:
-                val = np.log10(self.data.get(var)).transpose()
+                val = np.log10(self.data.get(var)).T
             else:
-                val = self.data.get(var).transpose()
+                val = self.data.get(var).T
 
             if 'average' in var:
                 xvar = self.data.get('time_averaged')
@@ -85,7 +92,8 @@ class halo_data:
                      size=30,
                      weight='bold')
         lab_ax = fig.add_subplot(111, frameon=False)
-        lab_ax.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+        lab_ax.tick_params(labelcolor='none', top=False, bottom=False,
+                           left=False, right=False)
         lab_ax.set_xlabel('Time (h)', weight='bold')
         lab_ax.set_ylabel('Height (km)', weight='bold')
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -187,9 +195,11 @@ class halo_data:
     def describe(self):
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
         var_avg = {var: self.data[var].flatten().astype('f8')
-                   for var in self.data if self.data[var].ndim != 1 and 'average' in var}
+                   for var in self.data if self.data[var].ndim != 1 and
+                   'average' in var}
         varn = {var: self.data[var].flatten().astype('f8')
-                for var in self.data if self.data[var].ndim != 1 and 'average' not in var}
+                for var in self.data if self.data[var].ndim != 1 and
+                'average' not in var}
 
         combined_data = pd.DataFrame.from_dict(varn)
         describ = combined_data.describe(percentiles=[.25, .5, .75, .95])
@@ -197,7 +207,8 @@ class halo_data:
         summary = describ.append(na.rename('Missing values'))
 
         combined_data_avg = pd.DataFrame.from_dict(var_avg)
-        describ_avg = combined_data_avg.describe(percentiles=[.25, .5, .75, .95])
+        describ_avg = combined_data_avg.describe(percentiles=[.25, .5,
+                                                              .75, .95])
         na_avg = combined_data_avg.isna().sum()
         summary_avg = describ_avg.append(na_avg.rename('Missing values'))
         return summary.join(summary_avg)
@@ -213,7 +224,7 @@ class halo_data:
 
         p1 = ax1.pcolormesh(self.data['time'],
                             self.data['range'],
-                            self.data['co_signal'].transpose(),
+                            self.data['co_signal'].T,
                             cmap='jet', vmin=0.995, vmax=1.005)
         ax1.yaxis.set_major_formatter(m_km_ticks())
         ax1.set_title('Choose background noise for co_signal')
@@ -222,7 +233,7 @@ class halo_data:
         ax1.set_ylim(bottom=0)
         self.area_snr = area_snr(self.data['time'],
                                  self.data['range'],
-                                 self.data['co_signal'].transpose(),
+                                 self.data['co_signal'].T,
                                  ax1,
                                  ax3,
                                  type='kde',
@@ -232,21 +243,22 @@ class halo_data:
 
         p2 = ax2.pcolormesh(self.data['time_averaged'],
                             self.data['range'],
-                            self.data['co_signal_averaged'].transpose(),
+                            self.data['co_signal_averaged'].T,
                             cmap='jet', vmin=0.995, vmax=1.005)
         ax2.yaxis.set_major_formatter(m_km_ticks())
         ax2.set_title('Choose background noise for co_signal averaged')
         ax2.set_ylabel('Height (km)')
         ax2.set_xlabel('Time (h)')
         ax2.set_ylim(bottom=0)
-        self.area_snr_avg = area_snr(self.data['time_averaged'],
-                                     self.data['range'],
-                                     self.data['co_signal_averaged'].transpose(),
-                                     ax2,
-                                     ax4,
-                                     type='kde',
-                                     multiplier=multiplier_avg,
-                                     fig=fig)
+        self.area_snr_avg = area_snr(
+            self.data['time_averaged'],
+            self.data['range'],
+            self.data['co_signal_averaged'].T,
+            ax2,
+            ax4,
+            type='kde',
+            multiplier=multiplier_avg,
+            fig=fig)
         fig.colorbar(p2, ax=ax2)
         fig.suptitle(self.filename, size=22,
                      weight='bold')
@@ -255,23 +267,30 @@ class halo_data:
         with open(snr_folder + '/' + self.filename + '_noise.csv', 'w') as f:
             noise_area = self.area_snr.area.flatten()
             noise_shape = noise_area.shape
-            noise_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_shape),
-                                                'month': np.repeat(self.more_info['month'], noise_shape),
-                                                'day': np.repeat(self.more_info['day'], noise_shape),
-                                                'location': np.repeat(self.more_info['location'], noise_shape),
-                                                'systemID': np.repeat(self.more_info['systemID'], noise_shape),
-                                                'noise': noise_area - 1})
+            noise_csv = pd.DataFrame.from_dict(
+                {'year': np.repeat(self.more_info['year'], noise_shape),
+                 'month': np.repeat(self.more_info['month'], noise_shape),
+                 'day': np.repeat(self.more_info['day'], noise_shape),
+                 'location': np.repeat(self.more_info['location'],
+                                       noise_shape),
+                 'systemID': np.repeat(self.more_info['systemID'],
+                                       noise_shape),
+                 'noise': noise_area - 1})
             noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
-        with open(snr_folder + '/' + self.filename + '_noise_avg' + '.csv', 'w') as ff:
+        with open(snr_folder + '/' + self.filename +
+                  '_noise_avg' + '.csv', 'w') as ff:
             noise_area = self.area_snr_avg.area.flatten()
             noise_avg_shape = noise_area.shape
-            noise_avg_csv = pd.DataFrame.from_dict({'year': np.repeat(self.more_info['year'], noise_avg_shape),
-                                                    'month': np.repeat(self.more_info['month'], noise_avg_shape),
-                                                    'day': np.repeat(self.more_info['day'], noise_avg_shape),
-                                                    'location': np.repeat(self.more_info['location'], noise_avg_shape),
-                                                    'systemID': np.repeat(self.more_info['systemID'], noise_avg_shape),
-                                                    'noise': noise_area - 1})
+            noise_avg_csv = pd.DataFrame.from_dict(
+                {'year': np.repeat(self.more_info['year'], noise_avg_shape),
+                 'month': np.repeat(self.more_info['month'], noise_avg_shape),
+                 'day': np.repeat(self.more_info['day'], noise_avg_shape),
+                 'location': np.repeat(self.more_info['location'],
+                                       noise_avg_shape),
+                 'systemID': np.repeat(self.more_info['systemID'],
+                                       noise_avg_shape),
+                 'noise': noise_area - 1})
             noise_avg_csv.to_csv(ff, header=ff.tell() == 0, index=False)
 
     def depo_timeprofile(self):
@@ -281,7 +300,7 @@ class halo_data:
         ax3 = fig.add_subplot(224, sharey=ax2)
         p = ax1.pcolormesh(self.data['time'],
                            self.data['range'],
-                           np.log10(self.data['beta_raw'].transpose()),
+                           np.log10(self.data['beta_raw'].T),
                            cmap='jet', vmin=self.cbar_lim['beta_raw'][0],
                            vmax=self.cbar_lim['beta_raw'][1])
         fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
@@ -295,11 +314,11 @@ class halo_data:
                      weight='bold')
         self.depo_tp = area_timeprofile(self.data['time'],
                                         self.data['range'],
-                                        self.data['depo_raw'].transpose(),
+                                        self.data['depo_raw'].T,
                                         ax1,
                                         ax_snr=ax3,
                                         ax_depo=ax2,
-                                        snr=self.data['co_signal'].transpose(),
+                                        snr=self.data['co_signal'].T,
                                         fig=fig)
         return fig
 
@@ -307,10 +326,10 @@ class halo_data:
         i = self.depo_tp.i
         area_value = self.depo_tp.area[:, i]
         area_range = self.data['range'][self.depo_tp.maskrange]
-        area_snr = self.data['co_signal'].transpose()[self.depo_tp.mask][:, i]
-        area_vraw = self.data['v_raw'].transpose()[self.depo_tp.mask][:, i]
-        area_betaraw = self.data['beta_raw'].transpose()[self.depo_tp.mask][:, i]
-        area_cross = self.data['cross_signal'].transpose()[self.depo_tp.mask][:, i]
+        area_snr = self.data['co_signal'].T[self.depo_tp.mask][:, i]
+        area_vraw = self.data['v_raw'].T[self.depo_tp.mask][:, i]
+        area_betaraw = self.data['beta_raw'].T[self.depo_tp.mask][:, i]
+        area_cross = self.data['cross_signal'].T[self.depo_tp.mask][:, i]
 
         # Calculate indice of maximum snr value
         max_i = np.argmax(area_snr)
@@ -321,7 +340,7 @@ class halo_data:
             'day': self.more_info['day'],
             'location': self.more_info['location'],
             'systemID': self.more_info['systemID'],
-            'time': self.data['time'][self.depo_tp.masktime][i],  # time as hour
+            'time': self.data['time'][self.depo_tp.masktime][i],  # hour
             'range': area_range[max_i],  # range
             'depo': area_value[max_i],  # depo value
             'depo_1': area_value[max_i - 1],
@@ -337,11 +356,14 @@ class halo_data:
         Path(depo_sub_folder).mkdir(parents=True, exist_ok=True)
 
         # Append to or create new csv file
-        with open(depo_sub_folder + '/' + self.filename + '_depo.csv', 'a') as f:
+        with open(depo_sub_folder + '/' +
+                  self.filename + '_depo.csv', 'a') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
         # save fig
-        fig.savefig(depo_sub_folder + '/' + self.filename + '_' +
-                    str(int(self.data['time'][self.depo_tp.masktime][i]*1000)) + '.png')
+        fig.savefig(
+            depo_sub_folder + '/' + self.filename + '_' +
+            str(int(self.data['time'][self.depo_tp.masktime][i]*1000)) +
+            '.png')
 
     def depo_wholeprofile(self):
         fig = plt.figure(figsize=(18, 9))
@@ -352,7 +374,7 @@ class halo_data:
         ax5 = fig.add_subplot(326)
         p = ax1.pcolormesh(self.data['time'],
                            self.data['range'],
-                           np.log10(self.data['beta_raw'].transpose()),
+                           np.log10(self.data['beta_raw'].T),
                            cmap='jet', vmin=self.cbar_lim['beta_raw'][0],
                            vmax=self.cbar_lim['beta_raw'][1])
         fig.colorbar(p, ax=ax1, fraction=0.05, pad=0.02)
@@ -367,13 +389,13 @@ class halo_data:
         fig.subplots_adjust(hspace=0.3)
         self.depo_wp = area_wholecloud(self.data['time'],
                                        self.data['range'],
-                                       self.data['depo_raw'].transpose(),
+                                       self.data['depo_raw'].T,
                                        ax1,
                                        ax_snr=ax3,
                                        ax_depo=ax2,
                                        ax_hist_depo=ax4,
                                        ax_hist_snr=ax5,
-                                       snr=self.data['co_signal'].transpose(),
+                                       snr=self.data['co_signal'].T,
                                        fig=fig)
         return fig
 
@@ -391,15 +413,17 @@ class halo_data:
             'depo_1': self.depo_wp.depo_max_snr1,
             'co_signal': self.depo_wp.max_snr,  # snr
             'co_signal1': self.depo_wp.max_snr1,
-            'vraw': np.take_along_axis(self.data['v_raw'].transpose()[self.depo_wp.mask],
+            'vraw': np.take_along_axis(self.data['v_raw'].T[self.depo_wp.mask],
                                        self.depo_wp.max_snr_indx,
                                        axis=0)[0],  # v_raw
-            'beta_raw': np.take_along_axis(self.data['beta_raw'].transpose()[self.depo_wp.mask],
-                                           self.depo_wp.max_snr_indx,
-                                           axis=0)[0],  # beta_raw
-            'cross_signal': np.take_along_axis(self.data['cross_signal'].transpose()[self.depo_wp.mask],
-                                               self.depo_wp.max_snr_indx,
-                                               axis=0)[0]  # cross_signal
+            'beta_raw': np.take_along_axis(
+                self.data['beta_raw'].T[self.depo_wp.mask],
+                self.depo_wp.max_snr_indx,
+                axis=0)[0],  # beta_raw
+            'cross_signal': np.take_along_axis(
+                self.data['cross_signal'].T[self.depo_wp.mask],
+                self.depo_wp.max_snr_indx,
+                axis=0)[0]  # cross_signal
         })
 
         # sub folder for each date
@@ -407,17 +431,19 @@ class halo_data:
         Path(depo_sub_folder).mkdir(parents=True, exist_ok=True)
 
         # Append to or create new csv file
-        with open(depo_sub_folder + '/' + self.filename + '_depo.csv', 'a') as f:
+        with open(depo_sub_folder + '/' +
+                  self.filename + '_depo.csv', 'a') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
         # save fig
         fig.savefig(depo_sub_folder + '/' + self.filename + '_' +
-                    f'{self.depo_wp.time.min()*100:.0f}' + '-' + f'{self.depo_wp.time.max()*100:.0f}' + '.png')
+                    f'{self.depo_wp.time.min()*100:.0f}' + '-' +
+                    f'{self.depo_wp.time.max()*100:.0f}' + '.png')
 
     # def depo_aerosol(self):
     #     fig, ax = plt.subplots(5, 1, figsize=(18, 9))
     #     p = ax[0].pcolormesh(self.data['time'],
     #                          self.data['range'],
-    #                          np.log10(self.data['beta_raw'].transpose()),
+    #                          np.log10(self.data['beta_raw'].T),
     #                          cmap='jet', vmin=self.cbar_lim['beta_raw'][0],
     #                          vmax=self.cbar_lim['beta_raw'][1])
     #     fig.colorbar(p, ax=ax[0], fraction=0.05, pad=0.02)
@@ -584,7 +610,7 @@ class area_snr(area_select):
         area_mean = np.nanmean(self.area)
         self.threshold = 1 + np.nanstd(self.area - 1) * self.multiplier
         self.ax_snr.set_xlabel(
-            f'selected area mean is {area_mean:.7f} \n calculated threshold is {self.threshold:.7f}')
+            f'mean: {area_mean:.7f} \n threshold: {self.threshold:.7f}')
         print('Calculated threshold is: ', self.threshold)
         self.ax_snr.axvline(area_mean, c='red')
         self.canvas.draw()
@@ -620,7 +646,8 @@ class area_timeprofile(area_select):
                             self.range,
                             c=snr_profile,
                             s=snr_profile*20)
-        self.ax_depo.set_xlabel(f"Depo value colored by SNR at time {time_point:.3f}")
+        self.ax_depo.set_xlabel(
+            f"Depo value colored by SNR at time {time_point:.3f}")
         self.ax_snr.set_xlabel(f"SNR at time {time_point:.3f}")
         self.ax_depo.set_ylabel('Height (m)')
         self.canvas.draw()
@@ -662,11 +689,13 @@ class area_wholecloud(area_select):
                                                 self.max_snr_indx - 1,
                                                 axis=0)[0]
 
-        self.ax_depo.plot(self.time, self.depo_max_snr, '-', label='depo at maxSNR')
+        self.ax_depo.plot(self.time, self.depo_max_snr, '-',
+                          label='depo at maxSNR')
         self.ax_depo.plot(self.time, self.depo_max_snr1, '--',
                           alpha=0.3, label='depo at maxSNR-1')
         self.ax_depo.set_ylabel('Depo value')
-        self.ax_depo.set_title('Depo time series in selected area', weight='bold')
+        self.ax_depo.set_title('Depo time series in selected area',
+                               weight='bold')
         self.ax_depo.legend()
 
         self.ax_snr.plot(self.time, self.max_snr, '-', label='maxSNR')
@@ -674,14 +703,16 @@ class area_wholecloud(area_select):
         self.ax_snr.legend()
         self.ax_snr.set_xlabel('Time (h)')
         self.ax_snr.set_ylabel('SNR')
-        self.ax_snr.set_title('SNR time series in selected area', weight='bold')
+        self.ax_snr.set_title('SNR time series in selected area',
+                              weight='bold')
 
         sns.kdeplot(self.max_snr, label='maxSNR', ax=self.ax_hist_snr)
         sns.kdeplot(self.max_snr1, label='maxSNR-1',
                     linestyle="--", ax=self.ax_hist_snr)
         self.ax_hist_snr.set_title('SNR distribution', weight='bold')
 
-        sns.kdeplot(self.depo_max_snr, label='depo at maxSNR', ax=self.ax_hist_depo)
+        sns.kdeplot(self.depo_max_snr, label='depo at maxSNR',
+                    ax=self.ax_hist_depo)
         sns.kdeplot(self.depo_max_snr1, label='depo at maxSNR-1',
                     linestyle="--", ax=self.ax_hist_depo)
         self.ax_hist_depo.set_title('Depo distribution', weight='bold')
@@ -699,7 +730,8 @@ def getdata(path):
 
 
 def getdata_date(data, date, data_folder):
-    data_indices = [i for i, s in enumerate(data) if date in s.replace(data_folder, '')]
+    data_indices = [i for i, s in enumerate(data) if date
+                    in s.replace(data_folder, '')]
     assert len(data_indices) == 1, 'There are more than 1 data have that date'
     return data_indices[0]
 
