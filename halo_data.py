@@ -12,9 +12,11 @@ from matplotlib.colors import LogNorm
 
 class halo_data:
     cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-2, 2],
+                'beta_averaged': [-8, -4],
                 'cross_signal': [0.995, 1.005],
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
-                'depo_averaged_raw': [0, 0.5], 'co_signal_averaged': [0.995, 1.005],
+                'depo_averaged_raw': [0, 0.5],
+                'co_signal_averaged': [0.995, 1.005],
                 'cross_signal_averaged': [0.995, 1.005]}
     units = {'beta_raw': '$\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
              'v_error': '$m s^{-1}$'}
@@ -50,7 +52,7 @@ class halo_data:
         if nrow != 1 and ncol != 1:
             ax = ax.flatten()
         for i, var in enumerate(variables):
-            if 'beta_raw' in var:
+            if 'beta' in var:
                 val = np.log10(self.data.get(var)).transpose()
             else:
                 val = self.data.get(var).transpose()
@@ -147,6 +149,40 @@ class halo_data:
             z[np.isnan(z)] = 0
             sum = np.add.reduceat(z, self.bin_idx[:-1], axis=0)
             setattr(self, val.replace('raw', 'binned'), sum/length_nan)
+
+    def beta_averaged(self):
+        '''
+        Calculate beta from co_signal_averaged, which take into account focus
+        '''
+        c_light = 299792458
+        hnu = 1.28e-19
+        alpha = 0.01
+
+        if not self.info.get('lens_diameter'):
+            self.info['lens_diameter'] = 0.06
+
+        if not self.info.get('wavelength'):
+            self.info['wavelength'] = 1.5e-6
+
+        if not self.info.get('beam_energy'):
+            self.info['beam_energy'] = 0.00001
+
+        het_area = np.pi * (0.7 * self.info['lens_diameter'] / 2) ** 2
+
+        if self.info['focus'] < 0:
+            nt = het_area / self.info['wavelength'] / self.data['range']
+        else:
+            nt = het_area / self.info['wavelength'] * (1 / self.info['focus'] -
+                                                       1 / self.data['range'])
+
+        effective_area = het_area / (1 + nt ** 2)
+        T = 10 ** (-1 * alpha * self.data['range'] / 5000)
+        het_cnr = 0.7 * 0.4 * 0.6 * effective_area * c_light * \
+            self.info['beam_energy'] * T / (2 * self.data['range'] ** 2 *
+                                            hnu * self.info['bandwidth'])
+
+        pr2 = (self.data['co_signal_averaged'] - 1) / het_cnr.T
+        self.data['beta_averaged'] = pr2
 
     def describe(self):
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
