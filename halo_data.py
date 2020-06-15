@@ -16,9 +16,12 @@ class halo_data:
                 'cross_signal': [0.995, 1.005],
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
                 'depo_averaged_raw': [0, 0.5],
+                'depo_averaged': [0, 0.5],
                 'co_signal_averaged': [0.995, 1.005],
                 'cross_signal_averaged': [0.995, 1.005]}
     units = {'beta_raw': '$\\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
+             'v_raw_averaged': '$m s^{-1}$',
+             'beta_averaged': '$\\log (m^{-1} sr^{-1})$',
              'v_error': '$m s^{-1}$'}
 
     def __init__(self, path):
@@ -136,6 +139,22 @@ class halo_data:
             if 'co_signal' not in var:
                 self.data[var][self.data[var] == -999] = float('nan')
 
+    def interpolate_nan(self):
+        '''
+        Interpolate nan values
+        '''
+        for j in range(self.data['cross_signal'].shape[1]):
+            mask_j = np.isnan(self.data['cross_signal'][:, j])
+            self.data['cross_signal'][mask_j, j] = np.interp(
+                self.data['time'][mask_j],
+                self.data['time'][~mask_j],
+                self.data['cross_signal'][~mask_j, j])
+
+    # def fill_nan(self):
+    #     '''
+    #     Fill nan with last non-nan values
+    #     '''
+
     def average(self, interval=15, thres_nan=0.5):
         '''
         Average data
@@ -157,6 +176,14 @@ class halo_data:
             z[np.isnan(z)] = 0
             sum = np.add.reduceat(z, self.bin_idx[:-1], axis=0)
             setattr(self, val.replace('raw', 'binned'), sum/length_nan)
+
+    def moving_average(self, n=3):
+        self.data['co_signal_averaged'] = ma(self.data['co_signal'], n)
+        self.data['cross_signal_averaged'] = ma(self.data['cross_signal'], n)
+        self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
+            (self.data['co_signal_averaged'] - 1)
+        delta_t = int((n-1)/2)
+        self.data['time_averaged'] = self.data['time'][delta_t:-delta_t]
 
     def beta_averaged(self):
         '''
@@ -749,6 +776,15 @@ def bytes_Odict_convert(x):
         return x.decode('utf-8')
     else:
         return x
+
+
+def ma(a, n=3, axis=0):
+    '''
+    Moving average
+    '''
+    ret = np.cumsum(a, axis=0)
+    ret[n:, :] = ret[n:, :] - ret[:-n, :]
+    return ret[n - 1:, :] / n
 
 
 def aggregate_data(nc_path, noise_path,
