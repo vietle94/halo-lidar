@@ -214,6 +214,22 @@ class halo_data:
         pr2 = (self.data['co_signal_averaged'] - 1) / het_cnr.T
         self.data['beta_averaged'] = pr2
 
+    def decision_tree(self, depo_thres, beta_thres, v_thres,
+                      depo, beta, v, fill_value, output):
+        '''
+        Decision three
+        '''
+        for (x, y), val in zip([depo_thres, beta_thres, v_thres],
+                               [depo, beta, v]):
+            if x:
+                output = np.where(val > x,
+                                  fill_value,
+                                  output)
+            if y:
+                output = np.where(val < y,
+                                  fill_value,
+                                  output)
+
     def describe(self):
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
         var_avg = {var: self.data[var].flatten().astype('f8')
