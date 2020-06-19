@@ -168,19 +168,6 @@ class halo_data:
         self.data['v_raw_averaged'] = nan_average(self.data['v_raw'], n)
         self.data['time_averaged'] = self.data['time'][::n]
 
-    def average_v2(self, n):
-        '''
-        Average data
-        '''
-        self.data['co_signal_averaged'] = nan_average(
-            self.data['co_signal'], n)
-        self.data['cross_signal_averaged'] = nan_average(
-            self.data['cross_signal'], n)
-        self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
-            (self.data['co_signal_averaged'] - 1)
-        self.data['v_raw_averaged'] = nan_average(self.data['v_raw'], n)
-        self.data['time_averaged'] = self.data['time'][::n]
-
     def moving_average(self, n=3):
         self.data['co_signal_averaged'] = ma(self.data['co_signal'], n)
         self.data['v_raw_averaged'] = ma(self.data['v_raw'], n)
@@ -809,19 +796,10 @@ def ma(a, n=3, axis=0):
 
 
 def nan_average(data, n):
-    sum = np.nancumsum(data, axis=0)
-    idx = np.arange(n-1, data.shape[0], n, dtype=int)
-    if data.shape[0] % n != 0:
-        idx = np.append(idx, data.shape[0]-1)
-    sum = sum[idx, :]
-    sum[1:, :] = np.diff(sum, axis=0)
-
-    n0 = np.nancumsum(~np.isnan(data), axis=0)
-    n0 = n0[idx, :]
-    n0[1:, :] = np.diff(n0, axis=0)
-
-    avg = sum/n0
-    return avg
+    x, y = data.shape
+    temp = np.full((n*int(np.ceil(x/n)), y), np.nan)
+    temp[:x, :y] = data
+    return np.nanmean(temp.reshape(-1, n, y), axis=1)
 
 
 def aggregate_data(nc_path, noise_path,
