@@ -12,7 +12,7 @@ from matplotlib.colors import LogNorm
 
 class halo_data:
     cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-2, 2],
-                'beta_averaged': [-8, -4],
+                'beta_averaged': [-8, -4], 'v_raw_averaged': [-2, 2],
                 'cross_signal': [0.995, 1.005],
                 'co_signal': [0.995, 1.005], 'depo_raw': [0, 0.5],
                 'depo_averaged_raw': [0, 0.5],
@@ -155,30 +155,35 @@ class halo_data:
     #     Fill nan with last non-nan values
     #     '''
 
-    def average(self, interval=15, thres_nan=0.5):
+    def average(self, n):
         '''
         Average data
         '''
-        self.bin_time = np.arange(0, 24 + interval/60, interval/60)
-        self.time_binned = self.bin_time[:-1] + interval/120
-        self.bin_idx = np.digitize(self.bin_time, self.data['time'])
-        self.bin_length = np.diff(self.bin_idx).reshape(-1, 1)
-        for val in ['depo_raw', 'beta_raw', 'v_raw']:
-            z = self.data[val].copy()
-            bin_nan = np.add.reduceat(np.isnan(z),
-                                      self.bin_idx[:-1], axis=0)
-            prop_nan = bin_nan / self.bin_length  # proportion of nan each bin
+        self.data['co_signal_averaged'] = nan_average(
+            self.data['co_signal'], n)
+        self.data['cross_signal_averaged'] = nan_average(
+            self.data['cross_signal'], n)
+        self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
+            (self.data['co_signal_averaged'] - 1)
+        self.data['v_raw_averaged'] = nan_average(self.data['v_raw'], n)
+        self.data['time_averaged'] = self.data['time'][::n]
 
-            # Number of values each bin, excluding nan
-            length_nan = (self.bin_length - bin_nan).astype('float')
-            length_nan[prop_nan > thres_nan] = np.nan
-
-            z[np.isnan(z)] = 0
-            sum = np.add.reduceat(z, self.bin_idx[:-1], axis=0)
-            setattr(self, val.replace('raw', 'binned'), sum/length_nan)
+    def average_v2(self, n):
+        '''
+        Average data
+        '''
+        self.data['co_signal_averaged'] = nan_average(
+            self.data['co_signal'], n)
+        self.data['cross_signal_averaged'] = nan_average(
+            self.data['cross_signal'], n)
+        self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
+            (self.data['co_signal_averaged'] - 1)
+        self.data['v_raw_averaged'] = nan_average(self.data['v_raw'], n)
+        self.data['time_averaged'] = self.data['time'][::n]
 
     def moving_average(self, n=3):
         self.data['co_signal_averaged'] = ma(self.data['co_signal'], n)
+        self.data['v_raw_averaged'] = ma(self.data['v_raw'], n)
         self.data['cross_signal_averaged'] = ma(self.data['cross_signal'], n)
         self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
             (self.data['co_signal_averaged'] - 1)
@@ -801,6 +806,22 @@ def ma(a, n=3, axis=0):
     ret = np.cumsum(a, axis=0)
     ret[n:, :] = ret[n:, :] - ret[:-n, :]
     return ret[n - 1:, :] / n
+
+
+def nan_average(data, n):
+    sum = np.nancumsum(data, axis=0)
+    idx = np.arange(n-1, data.shape[0], n, dtype=int)
+    if data.shape[0] % n != 0:
+        idx = np.append(idx, data.shape[0]-1)
+    sum = sum[idx, :]
+    sum[1:, :] = np.diff(sum, axis=0)
+
+    n0 = np.nancumsum(~np.isnan(data), axis=0)
+    n0 = n0[idx, :]
+    n0[1:, :] = np.diff(n0, axis=0)
+
+    avg = sum/n0
+    return avg
 
 
 def aggregate_data(nc_path, noise_path,
