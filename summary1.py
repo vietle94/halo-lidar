@@ -19,8 +19,8 @@ depo_paths = [
     'F:\\halo\\54\\depolarization\\depo',
     'F:\\halo\\146\\depolarization\\depo']
 # Create saving folder
-depo_result = 'F:\\halo\\summary'
-Path(depo_result).mkdir(parents=True, exist_ok=True)
+result_path = 'F:\\halo\\summary'
+Path(result_path).mkdir(parents=True, exist_ok=True)
 # Collect csv file in csv directory and subdirectory
 result_list = []
 for csv_path in depo_paths:
@@ -70,113 +70,116 @@ temp = result.groupby(['systemID', 'date']).mean()
 fig, ax = plt.subplots(figsize=(12, 6))
 sns.scatterplot('integration_time', 'depo', hue='systemID',
                 data=temp.reset_index(), ax=ax, alpha=0.2)
+ax.set_title('Integration time vs depolarization', weight='bold', size=22)
+fig.savefig(result_path + '/integration_time.png',
+            bbox_inches='tight', dpi=150)
 
 # %%
 fig, ax = plt.subplots(figsize=(12, 6))
 sns.stripplot('integration_time', 'depo', hue='systemID',
               data=temp.reset_index(), ax=ax, alpha=0.5)
+ax.set_title('Integration time vs depolarization', weight='bold', size=22)
+fig.savefig(result_path + '/integration_time1.png',
+            bbox_inches='tight', dpi=150)
 
 # %%
-fig2 = sns.relplot(x='time', y='depo',
-                    col='month', data=depo,
-                    alpha=0.2,
-                    linewidth=0, col_wrap=3, height=4.5, aspect=4/3)
- fig2.fig.savefig(depo_result + '/' + name + '_depo_diurnal.png')
+depo['sys'] = depo['location'] + '-' + depo['systemID']
+n_clusters = {'Kumpula-34': 2, 'Uto-32': 2, 'Uto-32XR': 1, 'Hyytiala-33': 1,
+              'Hyytiala-46': 2, 'Vehmasmaki-53': 1, 'Sodankyla-54': 1,
+              'Kumpula-146': 1}
+# %%
+for key, group in depo.groupby('sys'):
+    fig2 = sns.relplot(x='time', y='depo',
+                       col='month', data=group,
+                       alpha=0.2,
+                       linewidth=0, col_wrap=3, height=4.5, aspect=4/3)
+    fig2.fig.savefig(result_path + '/' + key + '_depo_diurnal.png',
+                     bbox_inches='tight', dpi=150)
 
-  # %%
-  fig4, axes = plt.subplots(3, 2, figsize=(18, 9), sharex=True)
-   for val, ax in zip(['co_signal', 'range', 'depo',
+    # Time series of other variables
+    fig3, axes = plt.subplots(3, 2, figsize=(18, 9), sharex=True)
+    for val, ax in zip(['co_signal', 'range', 'depo',
                         'vraw', 'beta_raw', 'cross_signal'],
                        axes.flatten()):
-        ax.plot(depo.groupby('date')[val].mean() if val is not 'beta_raw' else np.log10(
-            depo.groupby('date')[val].mean()), '.')
+        ax.plot(group.groupby('date')[val].mean() if val != 'beta_raw' else
+                np.log10(group.groupby('date')[val].mean()), '.')
         ax.set_title(val)
-    fig4.suptitle('Mean values at cloud base with max SNR ' + name,
+    fig3.suptitle('Mean values at cloud base with max SNR ' + key,
                   size=22, weight='bold')
-    fig4.savefig(depo_result + '/' + name + '_depo_other_vars.png')
+    fig3.savefig(result_path + '/' + key + '_depo_other_vars.png',
+                 bbox_inches='tight', dpi=150)
 
-    # %%
-    fig7 = sns.pairplot(depo, vars=['range', 'co_signal', 'cross_signal', 'vraw',
-                                             'beta_raw', 'depo'],
+    # Pair plots
+    fig4 = sns.pairplot(group, vars=['range', 'co_signal',
+                                     'cross_signal', 'vraw',
+                                     'beta_raw', 'depo'],
                         height=4.5, aspect=4/3)
-    fig7.savefig(depo_result + '/' + name + '_pairplot.png')
+    fig4.savefig(result_path + '/' + key + '_pairplot.png',
+                 bbox_inches='tight', dpi=150)
 
-    # %%
-    co_cross_data = depo[['co_signal', 'cross_signal']]
-    co_cross_data.dropna(inplace=True)
-    H, co_edges, cross_edges = np.histogram2d(co_cross_data['co_signal'] - 1,
-                                              co_cross_data['cross_signal'] - 1,
-                                              bins=500)
+    # Co-cross histogram
+    co_cross_data = group[['co_signal', 'cross_signal']].dropna()
+    H, co_edges, cross_edges = np.histogram2d(
+        co_cross_data['co_signal'] - 1,
+        co_cross_data['cross_signal'] - 1,
+        bins=500)
     X, Y = np.meshgrid(co_edges, cross_edges)
-    fig8, ax = plt.subplots(figsize=(18, 9))
+    fig5, ax = plt.subplots(figsize=(18, 9))
     p = ax.pcolormesh(X, Y, H.T, norm=LogNorm())
     ax.set_xlabel('co_signal - 1')
     ax.set_ylabel('cross_signal - 1')
-    colorbar = fig8.colorbar(p, ax=ax)
+    colorbar = fig5.colorbar(p, ax=ax)
     colorbar.ax.set_ylabel('Number of observations')
     colorbar.ax.yaxis.set_label_position('left')
-    ax.set_title('2D histogram of cross_signal vs co_signal ' + name,
+    ax.set_title('2D histogram of cross_signal vs co_signal ' + key,
                  size=22, weight='bold')
     ax.plot(co_cross_data['co_signal'] - 1,
             (co_cross_data['co_signal'] - 1) * 0.1, label='depo 0.1 fit',
             linewidth=0.5)
-    # ax.plot(co_cross_data['co_signal'] - 1,
-    #         (co_cross_data['co_signal'] - 1) * 0.07, label='depo 0.07 fit',
-    #         linewidth=0.5)
+    ax.plot(co_cross_data['co_signal'] - 1,
+            (co_cross_data['co_signal'] - 1) * 0.05, label='depo 0.05 fit',
+            linewidth=0.5)
     ax.legend(loc='upper left')
-    fig8.savefig(depo_result + '/' + name + '_cross_vs_co.png',
+    fig5.savefig(result_path + '/' + key + '_cross_vs_co.png',
                  bbox_inches='tight', dpi=200)
 
-    # %%
-    # For bimodal distribution
-    # temp = depo.loc[depo['date'] < pd.to_datetime('2017-09-01'), 'depo']
-    temp = depo['depo']
-    mask = (temp < 0.2) & (temp > -0.05)
-    fig0, ax = plt.subplots(figsize=(18, 9))
+    # Histogram of depo
+    temp = group['depo']
+    if key == 'Kumpula-146':
+        mask = (temp < 0.4) & (temp > -0.05)
+    else:
+        mask = (temp < 0.2) & (temp > -0.05)
+    fig6, ax = plt.subplots(figsize=(18, 9))
     temp.loc[mask].hist(bins=50)
     ax.set_xlabel('Depo')
 
-    gmm = GaussianMixture(n_components=2, max_iter=1000)
-    gmm.fit(temp[mask].values.reshape(-1, 1))
-    smean = gmm.means_.ravel()
-    sstd = np.sqrt(gmm.covariances_).ravel()
-    sort_idx = np.argsort(smean)
-    smean = smean[sort_idx]
-    sstd = sstd[sort_idx]
+    if n_clusters[key] == 2:
+        gmm = GaussianMixture(n_components=2, max_iter=1000)
+        gmm.fit(temp[mask].values.reshape(-1, 1))
+        smean = gmm.means_.ravel()
+        sstd = np.sqrt(gmm.covariances_).ravel()
+        sort_idx = np.argsort(smean)
+        smean = smean[sort_idx]
+        sstd = sstd[sort_idx]
+        ax.set_title('Distribution of depo at cloud base, ' + key + f'\n\
+        left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
+    else:
+        mean = np.mean(temp)
+        std = np.std(temp)
+        ax.set_title('Distribution of depo at cloud base, ' + key + f'\n\
+            peak is {mean:.4f} $\pm$ {std:.4f}', weight='bold')
 
-    ax.set_title('Distribution of depo at cloud base, ' + name + f'\n\
-    left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
-    fig0.savefig(depo_result + '/' + name + '_depo_hist.png',
+    fig6.savefig(result_path + '/' + key + '_depo_hist.png',
                  bbox_inches='tight', dpi=200)
 
-    # %%
-    # temp = depo.loc[depo['date'] > pd.to_datetime('2017-09-01'), 'depo']
-    temp = depo['depo']
-    mask = (temp < 0.2) & (temp > -0.05)
-    fig0, ax = plt.subplots(figsize=(18, 9))
-    temp.loc[mask].hist(bins=50)
-    ax.set_xlabel('Depo')
-    mean = np.mean(temp)
-    std = np.std(temp)
-    ax.set_title('Distribution of depo at cloud base, ' + name + f'\n\
-    peak is {mean:.4f} $\pm$ {std:.4f}', weight='bold')
-    fig0.savefig(depo_result + '/' + name + '_depo_hist.png',
-                 bbox_inches='tight', dpi=200)
-
-    # %%
-    fig, ax = plt.subplots(figsize=(12, 6))
-    group = depo.groupby('date').depo
-    ax.errorbar(depo['date'].unique(), group.mean(), yerr=group.std(),
+    fig7, ax = plt.subplots(figsize=(12, 6))
+    group_ = group.groupby('date').depo
+    ax.errorbar(group['date'].unique(), group_.mean(), yerr=group_.std(),
                 ls='none', marker='.', linewidth=0.5, markersize=5)
-    ax.set_title('Mean value of depo at cloud base ' + name, weight='bold')
+    ax.set_title('Mean value of depo at cloud base ' + key, weight='bold')
     ax.set_xlabel('Date')
     ax.set_ylabel('Depo')
-    fig.savefig(depo_result + '/' + name + '_depo_scatter.png',
-                bbox_inches='tight', dpi=200)
+    fig7.savefig(result_path + '/' + key + '_depo_scatter.png',
+                 bbox_inches='tight', dpi=200)
 
-# %%
-a = [1, 2, 4]
-b = [3, 4, 4]
-
-a.extend(b)
-a
+    plt.close('all')
