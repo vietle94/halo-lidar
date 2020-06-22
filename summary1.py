@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -183,3 +184,63 @@ for key, group in depo.groupby('sys'):
                  bbox_inches='tight', dpi=200)
 
     plt.close('all')
+
+# %%
+weather_path = glob.glob(r'F:\weather/*.csv')
+
+weather_list = []
+for file in weather_path:
+    weather_location = file.split('\\')[-1].split('_')[0]
+    weather_file = pd.read_csv(file)
+    weather_file['location'] = weather_location
+    weather_list.append(weather_file)
+
+weather = pd.concat(weather_list, ignore_index=True)
+weather['location'] = weather['location'].str.title()
+weather['location'] = ['Vehmasmaki' if x == 'Kuopio' else x
+                       for x in weather['location']]
+
+# %%
+weather = weather.rename(columns={'Vuosi': 'year', 'Kk': 'month',
+                                  'Pv': 'day', 'Klo': 'time'})
+weather[['year', 'month', 'day']] = weather[['year',
+                                             'month', 'day']].astype(str)
+weather['month'] = weather['month'].str.zfill(2)
+weather['day'] = weather['day'].str.zfill(2)
+weather['datetime'] = weather['year'] + weather['month'] + \
+    weather['day'] + weather['time']
+weather['datetime'] = pd.to_datetime(weather['datetime'], format='%Y%m%d%H:%M')
+
+# %%
+depo['hour'] = depo['time']
+depo['datetime'] = pd.to_datetime(depo[['year', 'month', 'day',
+                                        'hour']])
+depo['datetime_min10'] = depo.datetime.dt.round('10min')
+
+# %%
+depo_weather = depo.merge(weather, how='left',
+                          left_on=['datetime_min10', 'location'],
+                          right_on=['datetime', 'location'])
+
+# Impute missing weather data
+depo_weather.loc[depo_weather['datetime_y'].isnull(),
+                 ['Pilvien määrä (1/8)',
+                  'Suhteellinen kosteus (%)',
+                  'Sateen intensiteetti (mm/h)']] = \
+    weather.loc[
+        (weather['datetime'] == pd.to_datetime('2018-06-07 07:10:00')) &
+        (weather['location'] == 'Kumpula'),
+        ['Pilvien määrä (1/8)',
+         'Suhteellinen kosteus (%)',
+         'Sateen intensiteetti (mm/h)']].values[0]
+
+
+# %%
+grp = depo_weather.groupby('sys')
+
+fig, axes = plt.subplots(4, 2, figsize=(16, 9), sharex=True)
+for (key, val), ax in zip(grp, axes.flatten()):
+    val.plot('Suhteellinen kosteus (%)', 'depo',
+             kind='scatter', ax=ax, title=key)
+fig.subplots_adjust(hspace=0.3)
+fig.suptitle('Relative humidity vs depo', weight='bold', size=22)
