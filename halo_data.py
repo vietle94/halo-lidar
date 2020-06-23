@@ -9,6 +9,12 @@ from pathlib import Path
 from collections import OrderedDict
 from matplotlib.colors import LogNorm
 
+# Define bleed through
+bleed_through_mean = {'33': 0.0187, '46': 0.0164, '34': 0.0111,
+                      '146': 0.1372, '54': 0.0092, '32': 0.017, '32XR': 0.0121}
+bleed_through_sd = {'33': 0.0165, '46': 0.0105, '34': 0.0025,
+                    '146': 0.0537, '54': 0.0055, '32': 0.0072, '32XR': 0.0071}
+
 
 class halo_data:
     cbar_lim = {'beta_raw': [-8, -4], 'v_raw': [-2, 2],
@@ -150,11 +156,6 @@ class halo_data:
                 self.data['time'][~mask_j],
                 self.data['cross_signal'][~mask_j, j])
 
-    # def fill_nan(self):
-    #     '''
-    #     Fill nan with last non-nan values
-    #     '''
-
     def average(self, n):
         '''
         Average data
@@ -221,6 +222,19 @@ class halo_data:
                 output = np.where(val < y,
                                   fill_value,
                                   output)
+
+    # def depo_bleedthrough(self):
+    #     sysID = str(self.more_info['systemID'])
+    #     info = self.more_info
+    #     if (info['month'] >= 11) & (info['year'] >= 2017) & \
+    #             (info['systemID'] == 32):
+    #         sysID = '32XR'
+    #
+    #     bt_mean = bleed_through_mean[sysID]
+    #     bt_sd = bleed_through_sd[sysID]
+    #
+    #     cross_adj = self.data['cross_signal'] - bt_mean*self.data['co_signal']
+    #     cross_adj_sd = np.sqrt()
 
     def describe(self):
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
@@ -504,6 +518,45 @@ class halo_data:
             b, ax_in, fig,
             self.data['v_raw'].T, self.data['depo_raw'].T,
             ax1, ax2, ax3)
+
+    def cross_signal_sd(self):
+        fig, ax = plt.figure(1, 2, figsize=(18, 9))
+        p = ax[0].pcolormesh(self.data['time'], self.data['range'],
+                             self.data['cross_signal'], cmap='jet',
+                             vmin=0.995, vmax=1.005)
+        fig.colorbar(p, ax=ax[0])
+        ax[0].yaxis.set_major_formatter(m_km_ticks())
+        ax[0].set_title('Choose background noise for cross_signal')
+        ax[0].set_ylabel('Height (km)')
+        ax[0].set_xlabel('Time (h)')
+        ax[0].set_ylim(bottom=0)
+        self.area_cross_signal = area_snr(
+            self.data['time_averaged'],
+            self.data['range'],
+            self.data['co_signal_averaged'].T,
+            ax[0],
+            ax[1],
+            type='kde',
+            multiplier=3,
+            fig=fig)
+        fig.suptitle(self.filename, size=22,
+                     weight='bold')
+
+    def cross_signal_sd_save(self, cross_signal_folder):
+        with open(cross_signal_folder + '/' + self.filename +
+                  '_cross_signal.csv', 'w') as f:
+            noise_area = self.area_cross_signal.area.flatten()
+            noise_shape = noise_area.shape
+            noise_csv = pd.DataFrame.from_dict(
+                {'year': np.repeat(self.more_info['year'], noise_shape),
+                 'month': np.repeat(self.more_info['month'], noise_shape),
+                 'day': np.repeat(self.more_info['day'], noise_shape),
+                 'location': np.repeat(self.more_info['location'],
+                                       noise_shape),
+                 'systemID': np.repeat(self.more_info['systemID'],
+                                       noise_shape),
+                 'noise': noise_area - 1})
+            noise_csv.to_csv(f, header=f.tell() == 0, index=False)
 
 
 class area_select():
