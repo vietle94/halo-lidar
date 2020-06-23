@@ -23,15 +23,20 @@ df.unmask999()
 
 df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
           ref='co_signal', threshold=thres)
+
+# %%
 fig = plt.figure(figsize=(18, 9))
 ax_in = fig.add_subplot(211)
 ax1 = fig.add_subplot(234)
 ax2 = fig.add_subplot(235)
 ax3 = fig.add_subplot(236)
-p = ax_in.pcolormesh(df.data['time'], df.data['range'],
-                     np.log10(df.data['beta_raw']).T, cmap='jet',
-                     vmin=-8, vmax=-4)
+
+# %%
+b = np.log10(df.data['beta_raw']).T
+ax_in.pcolormesh(df.data['time'], df.data['range'],
+                 b, cmap='jet',
+                 vmin=-8, vmax=-4)
 hd.area_classification(df.data['time'], df.data['range'],
-                       np.log10(df.data['beta_raw']).T, ax_in, fig,
+                       b, ax_in, fig,
                        df.data['v_raw'].T, df.data['depo_raw'].T,
                        ax1, ax2, ax3)
