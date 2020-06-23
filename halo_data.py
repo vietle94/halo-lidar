@@ -586,6 +586,28 @@ class span_aerosol(span_select):
         self.canvas.draw()
 
 
+class area_classification(area_select):
+
+    def __init__(self, x, y, z, ax_in, fig,
+                 v, depo, ax1, ax2, ax3):
+        super().__init__(x, y, z, ax_in, fig)
+        self.v, self.depo = v, depo
+        self.ax1, self.ax2, self.ax3 = ax1, ax2, ax3
+
+    def __call__(self, event1, event2):
+        super().__call__(event1, event2)
+        self.ax1.cla()
+        self.ax2.cla()
+        self.ax3.cla()
+        self.ax1.set_title('Distribution of beta_raw')
+        self.ax2.set_title('Distribution of v_raw')
+        self.ax3.set_title('Distribution of depo')
+        self.ax1.hist(self.area.flatten(), bins=50)
+        self.ax2.hist(self.v[self.mask].flatten(), bins=50)
+        self.ax3.hist(self.depo[self.mask].flatten(), bins=50)
+        self.canvas.draw()
+
+
 class area_aerosol(area_select):
 
     def __init__(self, x, y, z, ax_in, fig,
