@@ -487,6 +487,23 @@ class halo_data:
     #                  weight='bold')
     #     fig.subplots_adjust(hspace=0.3)
     #     self.aerosol = area_select
+    def inspect_data(self):
+        fig = plt.figure(figsize=(18, 9))
+        ax_in = fig.add_subplot(211)
+        ax1 = fig.add_subplot(234)
+        ax2 = fig.add_subplot(235)
+        ax3 = fig.add_subplot(236)
+        b = np.log10(self.data['beta_raw']).T
+        p = ax_in.pcolormesh(self.data['time'], self.data['range'],
+                             b, cmap='jet',
+                             vmin=-8, vmax=-4)
+        fig.colorbar(p, ax=ax_in)
+        self.area_classification = area_classification(
+            self.data['time'],
+            self.data['range'],
+            b, ax_in, fig,
+            self.data['v_raw'].T, self.data['depo_raw'].T,
+            ax1, ax2, ax3)
 
 
 class area_select():
