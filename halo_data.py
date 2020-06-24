@@ -520,9 +520,9 @@ class halo_data:
             ax1, ax2, ax3)
 
     def cross_signal_sd(self):
-        fig, ax = plt.figure(1, 2, figsize=(18, 9))
+        fig, ax = plt.subplots(1, 2, figsize=(18, 9))
         p = ax[0].pcolormesh(self.data['time'], self.data['range'],
-                             self.data['cross_signal'], cmap='jet',
+                             self.data['cross_signal'].T, cmap='jet',
                              vmin=0.995, vmax=1.005)
         fig.colorbar(p, ax=ax[0])
         ax[0].yaxis.set_major_formatter(m_km_ticks())

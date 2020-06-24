@@ -17,6 +17,8 @@ file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
 # %%
+df.filter_height()
+df.unmask999()
 df.cross_signal_sd()
 
 # %%
