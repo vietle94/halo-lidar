@@ -178,6 +178,27 @@ class halo_data:
         delta_t = int((n-1)/2)
         self.data['time_averaged'] = self.data['time'][delta_t:-delta_t]
 
+    def depo_cross_adj(self, bleed, sigma_co, sigma_cross, sigma_bleed):
+
+        self.data['cross_signal'] = (self.data['cross_signal'] - 1) - \
+            bleed * (self.data['co_signal'] - 1) + 1
+
+        self.data['cross_signal_sd'] = np.sqrt(
+            sigma_cross**2 +
+            ((bleed * (self.data['co_signal'] - 1))**2 *
+             ((sigma_bleed/bleed)**2 +
+              (sigma_co/(self.data['co_signal'] - 1))**2))
+        )
+        self.data['depo_adj'] = (self.data['cross_signal'] - 1) / \
+            (self.data['co_signal'] - 1)
+
+        self.data['depo_adj_sd'] = np.sqrt(
+            (self.data['depo_adj'])**2 *
+            np.sqrt(
+                (self.data['cross_signal_sd']/(self.data['cross_signal'] - 1))**2 +
+                (sigma_co/self.data['co_signal'])**2
+            ))
+
     def beta_averaged(self):
         '''
         Calculate beta from co_signal_averaged, which take into account focus
