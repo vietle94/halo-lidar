@@ -166,7 +166,7 @@ class halo_data:
             self.data['cross_signal'], n)
         self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
             (self.data['co_signal_averaged'] - 1)
-        self.data['v_raw_averaged'] = nan_average(self.data['v_raw'], n)
+        self.data['v_averaged'] = nan_average(self.data['v_raw'], n)
         self.data['time_averaged'] = self.data['time'][::n]
 
     def moving_average(self, n=3):
