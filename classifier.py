@@ -43,6 +43,7 @@ aerosol = df.decision_tree(depo_thres=[None, None],
                            beta=np.log10(df.data['beta_raw']),
                            v=df.data['v_raw'])
 
+# Small size median filter to remove noise
 aerosol_smoothed = median_filter(aerosol, size=3)
 df.data['classifier'][aerosol_smoothed] = 3
 
@@ -53,25 +54,48 @@ liquid = df.decision_tree(depo_thres=[None, None],
                           depo=df.data['depo_raw'],
                           beta=np.log10(df.data['beta_raw']),
                           v=df.data['v_raw'])
+
+# maximum filter to increase the size of liquid region
 liquid_smoothed = maximum_filter(liquid, size=5)
+# Median filter to remove background noise
 liquid_smoothed = median_filter(liquid_smoothed, size=13)
 
 df.data['classifier'][liquid_smoothed] = 4
 
-precipitation = df.decision_tree(depo_thres=[None, None],
-                                 beta_thres=[None, None],
-                                 v_thres=[None, -1],
-                                 depo=df.data['depo_raw'],
-                                 beta=np.log10(df.data['beta_raw']),
-                                 v=df.data['v_raw'])
+# Precipitation < -1.5m/s
+precipitation_15 = df.decision_tree(depo_thres=[None, None],
+                                    beta_thres=[None, None],
+                                    v_thres=[None, -1.5],
+                                    depo=df.data['depo_raw'],
+                                    beta=np.log10(df.data['beta_raw']),
+                                    v=df.data['v_raw'])
 
-precipitation_smoothed = median_filter(precipitation, size=9)
-df.data['classifier'][precipitation_smoothed] = 1
+precipitation_15 = median_filter(precipitation_15, size=(45, 21))
+precipitation_15 = maximum_filter(precipitation_15, size=(99, 99))
+# Precipitation < -1m/s
+precipitation_1 = df.decision_tree(depo_thres=[None, None],
+                                   beta_thres=[None, None],
+                                   v_thres=[None, -1],
+                                   depo=df.data['depo_raw'],
+                                   beta=np.log10(df.data['beta_raw']),
+                                   v=df.data['v_raw'])
+
+# precipitation_1 = median_filter(precipitation_1, size=9)
+precipitation = precipitation_1 * precipitation_15
 
 
+# precipitation_smoothed = median_filter(precipitation_smoothed, size=9)
+# precipitation_smoothed = maximum_filter(precipitation_smoothed, size=(45, 45))
+df.data['classifier'][precipitation] = 1
+
+# %%
+fig, ax = plt.subplots(3, 1, sharex=True)
+ax[0].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation_15.T)
+ax[1].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation_1.T)
+ax[2].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation.T)
 # %%
 df.cbar_lim['classifier'] = [0, 4]
-df.plot(variables=['classifier'], size=(12, 4))
-
-# %%
-df.plot(variables=['beta_raw', 'v_raw', 'depo_raw'])
+df.plot(variables=['beta_raw', 'v_raw', 'classifier'])
