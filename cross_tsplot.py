@@ -18,4 +18,4 @@ for (key, grp), ax in zip(cross.groupby(['systemID']),
     ax.set_ylabel('Std of cross_signal')
 
 fig.subplots_adjust(hspace=0.5)
-fig.savefig('cross_ts.png', dpi=150, bbox_inches='tight')
+fig.savefig(cross_signal_folder + '/cross_ts.png', dpi=150, bbox_inches='tight')
