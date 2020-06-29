@@ -228,21 +228,30 @@ class halo_data:
         pr2 = (self.data['co_signal_averaged'] - 1) / het_cnr.T
         self.data['beta_averaged'] = pr2
 
-    def decision_tree(self, depo_thres, beta_thres, v_thres,
-                      depo, beta, v, fill_value, output):
+    @staticmethod
+    def decision_tree(depo_thres, beta_thres, v_thres,
+                      depo, beta, v):
         '''
         Decision three
         '''
-        for (x, y), val in zip([depo_thres, beta_thres, v_thres],
-                               [depo, beta, v]):
-            if x:
-                output = np.where(val > x,
-                                  fill_value,
-                                  output)
-            if y:
-                output = np.where(val < y,
-                                  fill_value,
-                                  output)
+        mask_depo, mask_beta, mask_v = True, True, True
+        mask_depo_0 = depo > depo_thres[0] if depo_thres[0] else True
+        mask_depo_1 = depo < depo_thres[1] if depo_thres[1] else True
+        if depo_thres[0] or depo_thres[1]:
+            mask_depo = mask_depo_0 & mask_depo_1
+
+        mask_beta_0 = beta > beta_thres[0] if beta_thres[0] else True
+        mask_beta_1 = beta < beta_thres[1] if beta_thres[1] else True
+        if beta_thres[0] or beta_thres[1]:
+            mask_beta = mask_beta_0 & mask_beta_1
+
+        mask_v_0 = v > v_thres[0] if v_thres[0] else True
+        mask_v_1 = v < v_thres[1] if v_thres[1] else True
+        if v_thres[0] or v_thres[1]:
+            mask_v = mask_v_0 & mask_v_1
+
+        mask = mask_depo & mask_beta & mask_v
+        return mask
 
     # def depo_bleedthrough(self):
     #     sysID = str(self.more_info['systemID'])
@@ -552,9 +561,9 @@ class halo_data:
         ax[0].set_xlabel('Time (h)')
         ax[0].set_ylim(bottom=0)
         self.area_cross_signal = area_snr(
-            self.data['time_averaged'],
+            self.data['time'],
             self.data['range'],
-            self.data['co_signal_averaged'].T,
+            self.data['cross_signal'].T,
             ax[0],
             ax[1],
             type='kde',
