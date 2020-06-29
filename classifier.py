@@ -13,7 +13,7 @@ data = hd.getdata('F:/halo/46/depolarization')
 snr = glob.glob('F:/halo/46/depolarization/snr/*_noise.csv')
 
 # %%
-date = '20180611'
+date = '20180618'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -70,8 +70,9 @@ precipitation_15 = df.decision_tree(depo_thres=[None, None],
                                     beta=np.log10(df.data['beta_raw']),
                                     v=df.data['v_raw'])
 
-precipitation_15 = median_filter(precipitation_15, size=(45, 21))
-precipitation_15 = maximum_filter(precipitation_15, size=(99, 99))
+precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
+precipitation_15_median_smooth = median_filter(precipitation_15_median, size=(9, 33))
+precipitation_15_max = maximum_filter(precipitation_15_median_smooth, size=(45, 99))
 # Precipitation < -1m/s
 precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                    beta_thres=[None, None],
@@ -81,7 +82,7 @@ precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                    v=df.data['v_raw'])
 
 # precipitation_1 = median_filter(precipitation_1, size=9)
-precipitation = precipitation_1 * precipitation_15
+precipitation = precipitation_1 * precipitation_15_max
 
 
 # precipitation_smoothed = median_filter(precipitation_smoothed, size=9)
@@ -89,12 +90,18 @@ precipitation = precipitation_1 * precipitation_15
 df.data['classifier'][precipitation] = 1
 
 # %%
-fig, ax = plt.subplots(3, 1, sharex=True)
+fig, ax = plt.subplots(6, 1, sharex=True, figsize=(16, 9))
 ax[0].pcolormesh(df.data['time'], df.data['range'],
                  precipitation_15.T)
 ax[1].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_1.T)
+                 precipitation_15_median.T)
 ax[2].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation_15_median_smooth.T)
+ax[3].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation_15_max.T)
+ax[4].pcolormesh(df.data['time'], df.data['range'],
+                 precipitation_1.T)
+ax[5].pcolormesh(df.data['time'], df.data['range'],
                  precipitation.T)
 # %%
 df.cbar_lim['classifier'] = [0, 4]
