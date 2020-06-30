@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import glob
 import pandas as pd
 from pathlib import Path
+import matplotlib as mpl
 %matplotlib qt
 
 # %%
@@ -64,7 +65,7 @@ liquid_max = maximum_filter(liquid, size=5)
 # Median filter to remove background noise
 liquid_smoothed = median_filter(liquid_max, size=13)
 
-df.data['classifier'][liquid_smoothed] = 4
+df.data['classifier'][liquid_smoothed] = 3
 
 # Precipitation < -1.5m/s
 precipitation_15 = df.decision_tree(depo_thres=[None, None],
@@ -91,12 +92,12 @@ for _ in range(100):
     precipitation_15_median_smooth = precipitation_1 * prep_15_max
 
 precipitation = precipitation_15_median_smooth
-df.data['classifier'][precipitation] = 3
+df.data['classifier'][precipitation] = 2
 
 # %%
 # Remove all aerosol above cloud or precipitation
 mask_aerosol0 = df.data['classifier'] == 1
-for i in np.array([3, 4]):
+for i in np.array([2, 3]):
     mask = df.data['classifier'] == i
     mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
     mask_col = np.nanargmax(df.data['classifier'][mask_row, :] == i,
@@ -109,13 +110,19 @@ for i in np.array([3, 4]):
 # %%
 fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
                          figsize=(16, 9))
-for val, ax in zip([aerosol, aerosol_smoothed,
-                    liquid, liquid_max, liquid_smoothed,
-                    precipitation_15, precipitation_15_median,
-                    precipitation_1, precipitation, df.data['classifier']],
-                   axes.flatten()[2:]):
+for val, ax, cmap in zip([aerosol, aerosol_smoothed,
+                          liquid, liquid_max, liquid_smoothed,
+                          precipitation_15, precipitation_15_median,
+                          precipitation_1, precipitation, df.data['classifier']],
+                         axes.flatten()[2:],
+                         [['white', '#2ca02c'], ['white', '#2ca02c'],
+                          ['white', 'red'], ['white', 'red'],
+                          ['white', 'red'],
+                          ['white', 'blue'], ['white', 'blue'],
+                          ['white', 'blue'], ['white', 'blue'],
+                          ['white', '#2ca02c', 'blue', 'red']]):
     ax.pcolormesh(df.data['time'], df.data['range'],
-                  val.T)
+                  val.T, cmap=mpl.colors.ListedColormap(cmap))
 axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
                       np.log10(df.data['beta_raw']).T,
                       cmap='jet', vmin=-8, vmax=-4)
