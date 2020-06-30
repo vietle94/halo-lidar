@@ -17,7 +17,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180621'
+date = '20180611'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -122,6 +122,9 @@ fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
             dpi=150, bbox_inches='tight')
 
 # %%
+###############################
+#     Hannah, no need to run after this here
+###############################
 mask_aerosol = df.data['classifier'] == 1
 beta_aerosol = df.data['beta_raw'][mask_aerosol].flatten()
 v_aerosol = df.data['v_raw'][mask_aerosol].flatten()
