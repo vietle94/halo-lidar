@@ -17,7 +17,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180611'
+date = '20180621'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -76,7 +76,7 @@ precipitation_15 = df.decision_tree(depo_thres=[None, None],
 
 precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
 precipitation_15_median_smooth = median_filter(precipitation_15_median, size=(9, 33))
-precipitation_15_max = maximum_filter(precipitation_15_median_smooth, size=(45, 99))
+
 # Precipitation < -1m/s
 precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                    beta_thres=[None, None],
@@ -85,12 +85,17 @@ precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                    beta=np.log10(df.data['beta_raw']),
                                    v=df.data['v_raw'])
 
-precipitation = precipitation_1 * precipitation_15_max
+# Ebola precipitation
+for _ in range(100):
+    prep_15_max = maximum_filter(precipitation_15_median_smooth, size=9)
+    precipitation_15_median_smooth = precipitation_1 * prep_15_max
+
+precipitation = precipitation_15_median_smooth
 df.data['classifier'][precipitation] = 3
-mask_aerosol0 = df.data['classifier'] == 1
 
 # %%
 # Remove all aerosol above cloud or precipitation
+mask_aerosol0 = df.data['classifier'] == 1
 for i in np.array([3, 4]):
     mask = df.data['classifier'] == i
     mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
@@ -102,12 +107,11 @@ for i in np.array([3, 4]):
     df.data['classifier'][mask_undefined] = i
 
 # %%
-fig, axes = plt.subplots(7, 2, sharex=True, sharey=True,
+fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
                          figsize=(16, 9))
 for val, ax in zip([aerosol, aerosol_smoothed,
                     liquid, liquid_max, liquid_smoothed,
                     precipitation_15, precipitation_15_median,
-                    precipitation_15_median_smooth, precipitation_15_max,
                     precipitation_1, precipitation, df.data['classifier']],
                    axes.flatten()[2:]):
     ax.pcolormesh(df.data['time'], df.data['range'],
@@ -123,7 +127,7 @@ fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
 
 # %%
 ###############################
-#     Hannah, no need to run after this here
+#     Hannah, no need to run any after this line
 ###############################
 mask_aerosol = df.data['classifier'] == 1
 beta_aerosol = df.data['beta_raw'][mask_aerosol].flatten()
