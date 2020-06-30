@@ -1,3 +1,4 @@
+import seaborn as sns
 from scipy.ndimage import uniform_filter
 from scipy.ndimage import median_filter
 from scipy.ndimage import maximum_filter
@@ -48,7 +49,7 @@ aerosol = df.decision_tree(depo_thres=[None, None],
 
 # Small size median filter to remove noise
 aerosol_smoothed = median_filter(aerosol, size=3)
-df.data['classifier'][aerosol_smoothed] = 3
+df.data['classifier'][aerosol_smoothed] = 1
 
 # Liquid
 liquid = df.decision_tree(depo_thres=[None, None],
@@ -84,13 +85,21 @@ precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                    beta=np.log10(df.data['beta_raw']),
                                    v=df.data['v_raw'])
 
-# precipitation_1 = median_filter(precipitation_1, size=9)
 precipitation = precipitation_1 * precipitation_15_max
+df.data['classifier'][precipitation] = 3
+mask_aerosol0 = df.data['classifier'] == 1
 
-
-# precipitation_smoothed = median_filter(precipitation_smoothed, size=9)
-# precipitation_smoothed = maximum_filter(precipitation_smoothed, size=(45, 45))
-df.data['classifier'][precipitation] = 1
+# %%
+# Remove all aerosol above cloud or precipitation
+for i in np.array([3, 4]):
+    mask = df.data['classifier'] == i
+    mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
+    mask_col = np.nanargmax(df.data['classifier'][mask_row, :] == i,
+                            axis=1)
+    for row, col in zip(mask_row, mask_col):
+        mask[row, col:] = True
+    mask_undefined = mask * mask_aerosol0
+    df.data['classifier'][mask_undefined] = i
 
 # %%
 fig, axes = plt.subplots(7, 2, sharex=True, sharey=True,
@@ -111,3 +120,32 @@ axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
 fig.tight_layout()
 fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
             dpi=150, bbox_inches='tight')
+
+# %%
+mask_aerosol = df.data['classifier'] == 1
+beta_aerosol = df.data['beta_raw'][mask_aerosol].flatten()
+v_aerosol = df.data['v_raw'][mask_aerosol].flatten()
+depo_aerosol = df.data['depo_raw'][mask_aerosol].flatten()
+time_aerosol = np.repeat(df.data['time'],
+                         df.data['beta_raw'].shape[1])[mask_aerosol.flatten()]
+range_aerosol = np.tile(df.data['range'],
+                        df.data['beta_raw'].shape[0])[mask_aerosol.flatten()]
+
+# %%
+result = pd.DataFrame({'beta': beta_aerosol,
+                       'v': v_aerosol,
+                       'depo': depo_aerosol,
+                       'time': time_aerosol,
+                       'range': range_aerosol})
+# %%
+result = result.astype({'time': float, 'range': float})
+result['hour'] = result['time'].astype(int)
+result['15min'] = 0.25 * (result['time'] // 0.25)
+
+# %%
+result.groupby('15min')['depo'].mean().plot()
+result.groupby('15min')['v'].mean().plot()
+result.groupby('15min')['range'].max().plot()
+# %%
+fig, ax = plt.subplots()
+sns.boxplot(result['15min'], result['depo'], ax=ax)
