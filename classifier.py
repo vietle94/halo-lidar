@@ -6,14 +6,17 @@ import halo_data as hd
 import matplotlib.pyplot as plt
 import glob
 import pandas as pd
+from pathlib import Path
 %matplotlib qt
 
 # %%
 data = hd.getdata('F:/halo/46/depolarization')
 snr = glob.glob('F:/halo/46/depolarization/snr/*_noise.csv')
+classifier_folder = 'F:\\halo\\classifier'
+Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180618'
+date = '20180621'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -56,9 +59,9 @@ liquid = df.decision_tree(depo_thres=[None, None],
                           v=df.data['v_raw'])
 
 # maximum filter to increase the size of liquid region
-liquid_smoothed = maximum_filter(liquid, size=5)
+liquid_max = maximum_filter(liquid, size=5)
 # Median filter to remove background noise
-liquid_smoothed = median_filter(liquid_smoothed, size=13)
+liquid_smoothed = median_filter(liquid_max, size=13)
 
 df.data['classifier'][liquid_smoothed] = 4
 
@@ -90,19 +93,21 @@ precipitation = precipitation_1 * precipitation_15_max
 df.data['classifier'][precipitation] = 1
 
 # %%
-fig, ax = plt.subplots(6, 1, sharex=True, figsize=(16, 9))
-ax[0].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_15.T)
-ax[1].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_15_median.T)
-ax[2].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_15_median_smooth.T)
-ax[3].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_15_max.T)
-ax[4].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation_1.T)
-ax[5].pcolormesh(df.data['time'], df.data['range'],
-                 precipitation.T)
-# %%
-df.cbar_lim['classifier'] = [0, 4]
-df.plot(variables=['beta_raw', 'v_raw', 'classifier'])
+fig, axes = plt.subplots(7, 2, sharex=True, sharey=True,
+                         figsize=(16, 9))
+for val, ax in zip([aerosol, aerosol_smoothed,
+                    liquid, liquid_max, liquid_smoothed,
+                    precipitation_15, precipitation_15_median,
+                    precipitation_15_median_smooth, precipitation_15_max,
+                    precipitation_1, precipitation, df.data['classifier']],
+                   axes.flatten()[2:]):
+    ax.pcolormesh(df.data['time'], df.data['range'],
+                  val.T)
+axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
+                      np.log10(df.data['beta_raw']).T,
+                      cmap='jet', vmin=-8, vmax=-4)
+axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
+                      df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
+fig.tight_layout()
+fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
+            dpi=150, bbox_inches='tight')
