@@ -76,7 +76,8 @@ precipitation_15 = df.decision_tree(depo_thres=[None, None],
                                     v=df.data['v_raw'])
 
 precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
-precipitation_15_median_smooth = median_filter(precipitation_15_median, size=(9, 33))
+precipitation_15_median_smooth = median_filter(precipitation_15_median,
+                                               size=(9, 33))
 
 # Precipitation < -1m/s
 precipitation_1 = df.decision_tree(depo_thres=[None, None],
@@ -113,7 +114,8 @@ fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
 for val, ax, cmap in zip([aerosol, aerosol_smoothed,
                           liquid, liquid_max, liquid_smoothed,
                           precipitation_15, precipitation_15_median,
-                          precipitation_1, precipitation, df.data['classifier']],
+                          precipitation_1, precipitation,
+                          df.data['classifier']],
                          axes.flatten()[2:],
                          [['white', '#2ca02c'], ['white', '#2ca02c'],
                           ['white', 'red'], ['white', 'red'],
@@ -151,15 +153,31 @@ result = pd.DataFrame({'beta': beta_aerosol,
                        'depo': depo_aerosol,
                        'time': time_aerosol,
                        'range': range_aerosol})
+result['beta'] = np.log10(result['beta'])
 # %%
 result = result.astype({'time': float, 'range': float})
 result['hour'] = result['time'].astype(int)
 result['15min'] = 0.25 * (result['time'] // 0.25)
+result['5min'] = 5/60 * (result['time'] // (5/60))
 
 # %%
-result.groupby('15min')['depo'].mean().plot()
-result.groupby('15min')['v'].mean().plot()
-result.groupby('15min')['range'].max().plot()
+fig, ax = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
+result.groupby('15min')['v'].mean().plot(ax=ax[0], title='velocity - 15min')
+result.groupby('15min')['depo'].mean().plot(ax=ax[1], title='depo - 15min')
+result.groupby('15min')['beta'].mean().plot(ax=ax[2], title='beta - 15min')
+
+# %%
+fig, ax = plt.subplots(3, 1, figsize=(16, 9), sharex=True, sharey=True)
+ax[0].pcolormesh(df.data['time'], df.data['range'],
+                 np.log10(df.data['beta_raw']).T,
+                 cmap='jet', vmin=-8, vmax=-4)
+ax[1].pcolormesh(df.data['time'], df.data['range'],
+                 df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
+ax[2].pcolormesh(df.data['time'], df.data['range'],
+                 df.data['classifier'].T, cmap=mpl.colors.ListedColormap(cmap))
+result.groupby(['5min',
+                'hour'])['range'].max().groupby('hour').median().plot(ax=ax[2])
+
 # %%
 fig, ax = plt.subplots()
 sns.boxplot(result['15min'], result['depo'], ax=ax)
