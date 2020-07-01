@@ -33,9 +33,9 @@ df.filter_height()
 df.unmask999()
 
 # %%
-df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
+df.filter(variables=['beta_raw'],
           ref='co_signal',
-          threshold=1 + 3 * (np.std(noise['noise'])/1))
+          threshold=1 + 2 * (np.std(noise['noise'])/1))
 
 # %%
 df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
@@ -49,8 +49,12 @@ aerosol = df.decision_tree(depo_thres=[None, None],
                            v=df.data['v_raw'])
 
 # Small size median filter to remove noise
-aerosol_smoothed = median_filter(aerosol, size=3)
+aerosol_smoothed = median_filter(aerosol, size=11)
 df.data['classifier'][aerosol_smoothed] = 1
+
+df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
+          ref='co_signal',
+          threshold=1 + 3 * (np.std(noise['noise'])/1))
 
 # Liquid
 liquid = df.decision_tree(depo_thres=[None, None],
