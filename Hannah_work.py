@@ -15,7 +15,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '201806'
+date = '20180414'
 file = [file for file in data if date in file]
 for file in file:
     df = hd.halo_data(file)
@@ -111,17 +111,20 @@ for file in file:
     for val, ax, cmap in zip([aerosol, aerosol_smoothed,
                               liquid, liquid_max, liquid_smoothed,
                               precipitation_15, precipitation_15_median,
-                              precipitation_1, precipitation,
-                              df.data['classifier']],
-                             axes.flatten()[2:],
+                              precipitation_1, precipitation],
+                             axes.flatten()[2:-1],
                              [['white', '#2ca02c'], ['white', '#2ca02c'],
                               ['white', 'red'], ['white', 'red'],
                               ['white', 'red'],
                               ['white', 'blue'], ['white', 'blue'],
-                              ['white', 'blue'], ['white', 'blue'],
-                              ['white', '#2ca02c', 'blue', 'red']]):
+                              ['white', 'blue'], ['white', 'blue']]):
         ax.pcolormesh(df.data['time'], df.data['range'],
                       val.T, cmap=mpl.colors.ListedColormap(cmap))
+    axes.flatten()[-1].pcolormesh(df.data['time'], df.data['range'],
+                                  df.data['classifier'].T,
+                                  cmap=mpl.colors.ListedColormap(
+        ['white', '#2ca02c', 'blue', 'red']),
+        vmin=0, vmax=3)
     axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
                           np.log10(df.data['beta_raw']).T,
                           cmap='jet', vmin=-8, vmax=-4)
