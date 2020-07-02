@@ -18,7 +18,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180621'
+date = '20180602'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -73,7 +73,7 @@ df.data['classifier'][liquid_smoothed] = 3
 
 # Precipitation < -1.5m/s
 precipitation_15 = df.decision_tree(depo_thres=[None, None],
-                                    beta_thres=[None, None],
+                                    beta_thres=[-7, None],
                                     v_thres=[None, -1.5],
                                     depo=df.data['depo_raw'],
                                     beta=np.log10(df.data['beta_raw']),
@@ -85,7 +85,7 @@ precipitation_15_median_smooth = median_filter(precipitation_15_median,
 
 # Precipitation < -1m/s
 precipitation_1 = df.decision_tree(depo_thres=[None, None],
-                                   beta_thres=[None, None],
+                                   beta_thres=[-7, None],
                                    v_thres=[None, -1],
                                    depo=df.data['depo_raw'],
                                    beta=np.log10(df.data['beta_raw']),
