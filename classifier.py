@@ -18,17 +18,15 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180602'
+date = '20180629'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
-# %%
 noise_csv = [noise_file for noise_file in snr
              if df.filename in noise_file][0]
 noise = pd.read_csv(noise_csv, usecols=['noise'])
 thres = 1 + 3 * np.std(noise['noise'])
 
-# %%
 df.filter_height()
 df.unmask999()
 
@@ -37,7 +35,6 @@ df.filter(variables=['beta_raw'],
           ref='co_signal',
           threshold=1 + 2 * (np.std(noise['noise'])/1))
 
-# %%
 df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
 
 # Aerosol
@@ -73,15 +70,16 @@ df.data['classifier'][liquid_smoothed] = 3
 
 # Precipitation < -1.5m/s
 precipitation_15 = df.decision_tree(depo_thres=[None, None],
-                                    beta_thres=[-7, None],
+                                    beta_thres=[-6.5, None],
                                     v_thres=[None, -1.5],
                                     depo=df.data['depo_raw'],
                                     beta=np.log10(df.data['beta_raw']),
                                     v=df.data['v_raw'])
 
-precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
-precipitation_15_median_smooth = median_filter(precipitation_15_median,
-                                               size=(9, 33))
+# precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
+precipitation_15_median_smooth = median_filter(precipitation_15,
+                                               size=(9, 17))
+precipitation_15_median = precipitation_15_median_smooth
 
 # Precipitation < -1m/s
 precipitation_1 = df.decision_tree(depo_thres=[None, None],
@@ -99,7 +97,6 @@ for _ in range(100):
 precipitation = precipitation_15_median_smooth
 df.data['classifier'][precipitation] = 2
 
-# %%
 # Remove all aerosol above cloud or precipitation
 mask_aerosol0 = df.data['classifier'] == 1
 for i in np.array([2, 3]):
@@ -135,8 +132,8 @@ axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
 axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
                       df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
 fig.tight_layout()
-fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
-            dpi=150, bbox_inches='tight')
+# fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
+#             dpi=150, bbox_inches='tight')
 
 # %%
 ###############################
