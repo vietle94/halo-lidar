@@ -1,5 +1,3 @@
-import seaborn as sns
-from scipy.ndimage import uniform_filter
 from scipy.ndimage import median_filter
 from scipy.ndimage import maximum_filter
 import numpy as np
@@ -9,7 +7,6 @@ import glob
 import pandas as pd
 from pathlib import Path
 import matplotlib as mpl
-%matplotlib qt
 
 # %%
 data = hd.getdata('F:/halo/46/depolarization')
@@ -70,19 +67,20 @@ for file in file:
 
     # Precipitation < -1.5m/s
     precipitation_15 = df.decision_tree(depo_thres=[None, None],
-                                        beta_thres=[None, None],
+                                        beta_thres=[-6.5, None],
                                         v_thres=[None, -1.5],
                                         depo=df.data['depo_raw'],
                                         beta=np.log10(df.data['beta_raw']),
                                         v=df.data['v_raw'])
 
-    precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
-    precipitation_15_median_smooth = median_filter(precipitation_15_median,
-                                                   size=(9, 33))
+    # precipitation_15_median = median_filter(precipitation_15, size=(9, 33))
+    precipitation_15_median_smooth = median_filter(precipitation_15,
+                                                   size=(9, 17))
+    precipitation_15_median = precipitation_15_median_smooth
 
     # Precipitation < -1m/s
     precipitation_1 = df.decision_tree(depo_thres=[None, None],
-                                       beta_thres=[None, None],
+                                       beta_thres=[-7, None],
                                        v_thres=[None, -1],
                                        depo=df.data['depo_raw'],
                                        beta=np.log10(df.data['beta_raw']),
@@ -132,3 +130,4 @@ for file in file:
     fig.tight_layout()
     fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
                 dpi=150, bbox_inches='tight')
+    plt.close(fig)

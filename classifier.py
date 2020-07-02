@@ -132,8 +132,8 @@ axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
 axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
                       df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
 fig.tight_layout()
-# fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
-#             dpi=150, bbox_inches='tight')
+fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
+            dpi=150, bbox_inches='tight')
 
 # %%
 ###############################
