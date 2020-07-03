@@ -8,12 +8,11 @@ import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
 from matplotlib.colors import LogNorm
+import json
 
-# Define bleed through
-bleed_through_mean = {'33': 0.0187, '46': 0.0164, '34': 0.0111,
-                      '146': 0.1372, '54': 0.0092, '32': 0.017, '32XR': 0.0121}
-bleed_through_sd = {'33': 0.0165, '46': 0.0105, '34': 0.0025,
-                    '146': 0.0537, '54': 0.0055, '32': 0.0072, '32XR': 0.0071}
+# Summary file
+with open('summary_info.json', 'r') as file:
+    summary_info = json.load(file)
 
 
 class halo_data:
@@ -45,11 +44,25 @@ class halo_data:
         name = [int(self.more_info.get(key)) if key != 'location' else
                 self.more_info.get(key) for
                 key in ['year', 'month', 'day', 'location', 'systemID']]
+        self.date = '-'.join([str(ele).zfill(2) for ele in name[:-2]])
+        self.location = '-'.join([str(ele).zfill(2) for ele in name[-2:]])
+        self.filename = self.date + '-' + self.location
 
-        self.filename = '-'.join(
-            [str(elem).zfill(2) if name
-             in ['month', 'day'] else str(elem).zfill(2) for elem in name])
-        self.meta_data = {
+        if '32' in self.location:
+            for period in summary_info['32']:
+                if (period['start_date'] <= self.date) & \
+                        (self.date <= period['end_date']):
+                    self.snr_sd = period['snr_sd']
+                    self.bleed_through_mean = period['bleed_through']['mean']
+                    self.bleed_through_sd = period['bleed_through']['sd']
+        else:
+            id = str(int(self.more_info['systemID']))
+            self.snr_sd = summary_info[id]['snr_sd']
+            self.bleed_through_mean = summary_info[id]['bleed_through']['mean']
+            self.bleed_through_sd = summary_info[id]['bleed_through']['sd']
+
+    def meta_data(self):
+        return {
             key1: {
                 key: bytes_Odict_convert(
                     self.full_data.variables[key1].__dict__[key])
