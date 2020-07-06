@@ -191,7 +191,10 @@ class halo_data:
         delta_t = int((n-1)/2)
         self.data['time_averaged'] = self.data['time'][delta_t:-delta_t]
 
-    def depo_cross_adj(self, bleed, sigma_co, sigma_cross, sigma_bleed):
+    def depo_cross_adj(self):
+        bleed = self.bleed_through_mean
+        sigma_bleed = self.bleed_through_sd
+        sigma_co, sigma_cross = self.snr_sd, self.snr_sd
 
         self.data['cross_signal'] = (self.data['cross_signal'] - 1) - \
             bleed * (self.data['co_signal'] - 1) + 1
