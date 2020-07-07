@@ -18,22 +18,17 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180629'
+date = '20180607'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
-noise_csv = [noise_file for noise_file in snr
-             if df.filename in noise_file][0]
-noise = pd.read_csv(noise_csv, usecols=['noise'])
-thres = 1 + 3 * np.std(noise['noise'])
-
 df.filter_height()
 df.unmask999()
+df.depo_cross_adj()
 
-# %%
 df.filter(variables=['beta_raw'],
           ref='co_signal',
-          threshold=1 + 2 * (np.std(noise['noise'])/1))
+          threshold=1 + 2 * df.snr_sd)
 
 df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
 
@@ -51,7 +46,7 @@ df.data['classifier'][aerosol_smoothed] = 1
 
 df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
           ref='co_signal',
-          threshold=1 + 3 * (np.std(noise['noise'])/1))
+          threshold=1 + 3 * df.snr_sd)
 
 # Liquid
 liquid = df.decision_tree(depo_thres=[None, None],
@@ -145,43 +140,20 @@ fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
 mask_aerosol = df.data['classifier'] == 1
 beta_aerosol = df.data['beta_raw'][mask_aerosol].flatten()
 v_aerosol = df.data['v_raw'][mask_aerosol].flatten()
-depo_aerosol = df.data['depo_raw'][mask_aerosol].flatten()
+depo_aerosol = df.data['depo_adj'][mask_aerosol].flatten()
 time_aerosol = np.repeat(df.data['time'],
                          df.data['beta_raw'].shape[1])[mask_aerosol.flatten()]
 range_aerosol = np.tile(df.data['range'],
                         df.data['beta_raw'].shape[0])[mask_aerosol.flatten()]
 
 # %%
-result = pd.DataFrame({'beta': beta_aerosol,
+result = pd.DataFrame({'date': df.date,
+                       'location': df.location,
+                       'beta': np.log10(beta_aerosol),
                        'v': v_aerosol,
                        'depo': depo_aerosol,
                        'time': time_aerosol,
                        'range': range_aerosol})
-result['beta'] = np.log10(result['beta'])
-# %%
-result = result.astype({'time': float, 'range': float})
-result['hour'] = result['time'].astype(int)
-result['15min'] = 0.25 * (result['time'] // 0.25)
-result['5min'] = 5/60 * (result['time'] // (5/60))
 
-# %%
-fig, ax = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
-result.groupby('15min')['v'].mean().plot(ax=ax[0], title='velocity - 15min')
-result.groupby('15min')['depo'].mean().plot(ax=ax[1], title='depo - 15min')
-result.groupby('15min')['beta'].mean().plot(ax=ax[2], title='beta - 15min')
-
-# %%
-fig, ax = plt.subplots(3, 1, figsize=(16, 9), sharex=True, sharey=True)
-ax[0].pcolormesh(df.data['time'], df.data['range'],
-                 np.log10(df.data['beta_raw']).T,
-                 cmap='jet', vmin=-8, vmax=-4)
-ax[1].pcolormesh(df.data['time'], df.data['range'],
-                 df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-ax[2].pcolormesh(df.data['time'], df.data['range'],
-                 df.data['classifier'].T, cmap=mpl.colors.ListedColormap(cmap))
-result.groupby(['5min',
-                'hour'])['range'].max().groupby('hour').median().plot(ax=ax[2])
-
-# %%
-fig, ax = plt.subplots()
-sns.boxplot(result['15min'], result['depo'], ax=ax)
+result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
+              index=False)
