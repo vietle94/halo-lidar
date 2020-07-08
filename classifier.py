@@ -60,7 +60,9 @@ liquid = df.decision_tree(depo_thres=[None, None],
 liquid_max = maximum_filter(liquid, size=5)
 # Median filter to remove background noise
 liquid_smoothed = median_filter(liquid_max, size=13)
-
+# use snr threshold
+snr = df.data['co_signal'] > (1 + 3*df.snr_sd)
+lidquid_smoothed = liquid_smoothed * snr
 df.data['classifier'][liquid_smoothed] = 3
 
 # Precipitation < -1.5m/s
@@ -137,23 +139,23 @@ fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
 ###############################
 #     Hannah, no need to run any after this line
 ###############################
-mask_aerosol = df.data['classifier'] == 1
-beta_aerosol = df.data['beta_raw'][mask_aerosol].flatten()
-v_aerosol = df.data['v_raw'][mask_aerosol].flatten()
-depo_aerosol = df.data['depo_adj'][mask_aerosol].flatten()
+classifier = df.data['classifier'].flatten()
+beta_aerosol = df.data['beta_raw'].flatten()
+v_aerosol = df.data['v_raw'].flatten()
+depo_aerosol = df.data['depo_adj'].flatten()
 time_aerosol = np.repeat(df.data['time'],
-                         df.data['beta_raw'].shape[1])[mask_aerosol.flatten()]
+                         df.data['beta_raw'].shape[1])
 range_aerosol = np.tile(df.data['range'],
-                        df.data['beta_raw'].shape[0])[mask_aerosol.flatten()]
+                        df.data['beta_raw'].shape[0])
 
-# %%
 result = pd.DataFrame({'date': df.date,
                        'location': df.location,
                        'beta': np.log10(beta_aerosol),
                        'v': v_aerosol,
                        'depo': depo_aerosol,
                        'time': time_aerosol,
-                       'range': range_aerosol})
+                       'range': range_aerosol,
+                       'classifier': classifier})
 
 result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
               index=False)

@@ -3,34 +3,27 @@ from scipy.ndimage import maximum_filter
 import numpy as np
 import halo_data as hd
 import matplotlib.pyplot as plt
-import glob
 import pandas as pd
 from pathlib import Path
 import matplotlib as mpl
 
-# %%
+
 data = hd.getdata('F:/halo/46/depolarization')
-snr = glob.glob('F:/halo/46/depolarization/snr/*_noise.csv')
 classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
-# %%
-date = '20180414'
-file = [file for file in data if date in file]
-for file in file:
+date = '201806'
+files = [file for file in data if date in file]
+
+for file in files:
     df = hd.halo_data(file)
-
-    noise_csv = [noise_file for noise_file in snr
-                 if df.filename in noise_file][0]
-    noise = pd.read_csv(noise_csv, usecols=['noise'])
-    thres = 1 + 3 * np.std(noise['noise'])
-
     df.filter_height()
     df.unmask999()
+    df.depo_cross_adj()
 
     df.filter(variables=['beta_raw'],
               ref='co_signal',
-              threshold=1 + 2 * (np.std(noise['noise'])/1))
+              threshold=1 + 2 * df.snr_sd)
 
     df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
 
@@ -48,7 +41,7 @@ for file in file:
 
     df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
               ref='co_signal',
-              threshold=1 + 3 * (np.std(noise['noise'])/1))
+              threshold=1 + 3 * df.snr_sd)
 
     # Liquid
     liquid = df.decision_tree(depo_thres=[None, None],
@@ -62,7 +55,9 @@ for file in file:
     liquid_max = maximum_filter(liquid, size=5)
     # Median filter to remove background noise
     liquid_smoothed = median_filter(liquid_max, size=13)
-
+    # use snr threshold
+    snr = df.data['co_signal'] > (1 + 3*df.snr_sd)
+    lidquid_smoothed = liquid_smoothed * snr
     df.data['classifier'][liquid_smoothed] = 3
 
     # Precipitation < -1.5m/s
@@ -133,4 +128,27 @@ for file in file:
     fig.tight_layout()
     fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
                 dpi=150, bbox_inches='tight')
-    plt.close(fig)
+
+    ###############################
+    #     Hannah, no need to run any after this line
+    ###############################
+    classifier = df.data['classifier'].flatten()
+    beta_aerosol = df.data['beta_raw'].flatten()
+    v_aerosol = df.data['v_raw'].flatten()
+    depo_aerosol = df.data['depo_adj'].flatten()
+    time_aerosol = np.repeat(df.data['time'],
+                             df.data['beta_raw'].shape[1])
+    range_aerosol = np.tile(df.data['range'],
+                            df.data['beta_raw'].shape[0])
+
+    result = pd.DataFrame({'date': df.date,
+                           'location': df.location,
+                           'beta': np.log10(beta_aerosol),
+                           'v': v_aerosol,
+                           'depo': depo_aerosol,
+                           'time': time_aerosol,
+                           'range': range_aerosol,
+                           'classifier': classifier})
+
+    result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
+                  index=False)
