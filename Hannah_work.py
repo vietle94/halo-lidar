@@ -31,7 +31,7 @@ for file in files:
     aerosol = df.decision_tree(depo_thres=[None, None],
                                beta_thres=[None, -5.5],
                                v_thres=[None, None],
-                               depo=df.data['depo_raw'],
+                               depo=df.data['depo_adj'],
                                beta=np.log10(df.data['beta_raw']),
                                v=df.data['v_raw'])
 
@@ -39,7 +39,7 @@ for file in files:
     aerosol_smoothed = median_filter(aerosol, size=11)
     df.data['classifier'][aerosol_smoothed] = 1
 
-    df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
+    df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
               ref='co_signal',
               threshold=1 + 3 * df.snr_sd)
 
@@ -47,7 +47,7 @@ for file in files:
     liquid = df.decision_tree(depo_thres=[None, None],
                               beta_thres=[-5.5, None],
                               v_thres=[None, None],
-                              depo=df.data['depo_raw'],
+                              depo=df.data['depo_adj'],
                               beta=np.log10(df.data['beta_raw']),
                               v=df.data['v_raw'])
 
@@ -64,7 +64,7 @@ for file in files:
     precipitation_15 = df.decision_tree(depo_thres=[None, None],
                                         beta_thres=[-6.5, None],
                                         v_thres=[None, -1.5],
-                                        depo=df.data['depo_raw'],
+                                        depo=df.data['depo_adj'],
                                         beta=np.log10(df.data['beta_raw']),
                                         v=df.data['v_raw'])
 
@@ -77,7 +77,7 @@ for file in files:
     precipitation_1 = df.decision_tree(depo_thres=[None, None],
                                        beta_thres=[-7, None],
                                        v_thres=[None, -1],
-                                       depo=df.data['depo_raw'],
+                                       depo=df.data['depo_adj'],
                                        beta=np.log10(df.data['beta_raw']),
                                        v=df.data['v_raw'])
 
@@ -152,3 +152,33 @@ for file in files:
 
     result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
                   index=False)
+
+    temp = result[['depo', 'classifier']]
+    temp = temp[(temp['depo'] < 0.6) & (temp['depo'] > -0.25)]
+    fig = plt.figure(figsize=(16, 9))
+    ax1 = fig.add_subplot(421)
+    ax2 = fig.add_subplot(422)
+    ax3 = fig.add_subplot(423, sharex=ax1)
+    ax4 = fig.add_subplot(424, sharex=ax2)
+    ax5 = fig.add_subplot(425, sharex=ax1)
+    ax6 = fig.add_subplot(426, sharex=ax2)
+    ax7 = fig.add_subplot(414)
+    ax1.pcolormesh(df.data['time'], df.data['range'],
+                   np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
+    ax3.pcolormesh(df.data['time'], df.data['range'],
+                   df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
+    ax5.pcolormesh(df.data['time'], df.data['range'],
+                   df.data['depo_adj'].T, cmap='jet', vmin=0, vmax=0.5)
+    ax7.pcolormesh(df.data['time'], df.data['range'],
+                   df.data['classifier'].T, vmin=0, vmax=3,
+                   cmap=mpl.colors.ListedColormap(
+        ['white', '#2ca02c', 'blue', 'red']))
+    ax2.hist(temp.loc[temp['classifier'] == 1, 'depo'], bins=40)
+    ax2.set_ylabel('aerosol')
+    ax4.hist(temp.loc[temp['classifier'] == 2, 'depo'], bins=40)
+    ax4.set_ylabel('precipitation')
+    ax6.hist(temp.loc[temp['classifier'] == 3, 'depo'], bins=40)
+    ax6.set_ylabel('clouds')
+    fig.tight_layout()
+    fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
+                dpi=150, bbox_inches='tight')
