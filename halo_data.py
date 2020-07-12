@@ -565,6 +565,21 @@ class halo_data:
             self.data['v_raw'].T, self.data['depo_raw'].T,
             ax1, ax2, ax3)
 
+    def v_along_time(self, size=51, height=2000, v='v_raw'):
+        height_idx = np.argmin(self.data['range'] < height)
+        v_ = self.data[v][:, :height_idx]
+        shape = v_.shape
+        z = np.full([shape[0]+size, shape[1] * size], np.nan)
+        for i in range(size):
+            z[i:(shape[0]+i),
+              (shape[1] * i):(shape[1] * (i + 1))] = v_
+
+        bound = int(np.floor(size/2))
+        self.v_std = np.nanstd(z, axis=1)
+        self.v_std = self.v_std[bound+1:-bound]
+        self.v_mean = np.nanmean(z, axis=1)
+        self.v_mean = self.v_mean[bound+1:-bound]
+
     def cross_signal_sd(self):
         fig, ax = plt.subplots(1, 2, figsize=(18, 9))
         p = ax[0].pcolormesh(self.data['time'], self.data['range'],
