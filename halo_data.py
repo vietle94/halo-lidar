@@ -558,11 +558,14 @@ class halo_data:
                              b, cmap='jet',
                              vmin=-8, vmax=-4)
         fig.colorbar(p, ax=ax_in)
+        depo = self.data['depo_adj']
+        depo[depo > 1] = np.nan
+        depo[depo < -0.25] = np.nan
         self.area_classification = area_classification(
             self.data['time'],
             self.data['range'],
             b, ax_in, fig,
-            self.data['v_raw'].T, self.data['depo_raw'].T,
+            self.data['v_raw'].T, depo.T,
             ax1, ax2, ax3)
 
     def v_along_time(self, size=51, height=2000, v='v_raw'):
