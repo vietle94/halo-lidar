@@ -248,22 +248,22 @@ class halo_data:
     def decision_tree(depo_thres, beta_thres, v_thres,
                       depo, beta, v):
         '''
-        Decision three
+        Decision tree
         '''
         mask_depo, mask_beta, mask_v = True, True, True
-        mask_depo_0 = depo > depo_thres[0] if depo_thres[0] else True
-        mask_depo_1 = depo < depo_thres[1] if depo_thres[1] else True
-        if depo_thres[0] or depo_thres[1]:
+        mask_depo_0 = depo > depo_thres[0] if depo_thres[0] is not None else True
+        mask_depo_1 = depo < depo_thres[1] if depo_thres[1] is not None else True
+        if depo_thres[0] is not None or depo_thres[1] is not None:
             mask_depo = mask_depo_0 & mask_depo_1
 
-        mask_beta_0 = beta > beta_thres[0] if beta_thres[0] else True
-        mask_beta_1 = beta < beta_thres[1] if beta_thres[1] else True
-        if beta_thres[0] or beta_thres[1]:
+        mask_beta_0 = beta > beta_thres[0] if beta_thres[0] is not None else True
+        mask_beta_1 = beta < beta_thres[1] if beta_thres[1] is not None else True
+        if beta_thres[0] is not None or beta_thres[1] is not None:
             mask_beta = mask_beta_0 & mask_beta_1
 
-        mask_v_0 = v > v_thres[0] if v_thres[0] else True
-        mask_v_1 = v < v_thres[1] if v_thres[1] else True
-        if v_thres[0] or v_thres[1]:
+        mask_v_0 = v > v_thres[0] if v_thres[0] is not None else True
+        mask_v_1 = v < v_thres[1] if v_thres[1] is not None else True
+        if v_thres[0] is not None or v_thres[1] is not None:
             mask_v = mask_v_0 & mask_v_1
 
         mask = mask_depo & mask_beta & mask_v
