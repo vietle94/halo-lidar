@@ -211,6 +211,9 @@ for file in files:
     bin_height = np.arange(0, df.data['range'].max() + 31, 30)
     for i, ax, lab in zip([1, 2, 3], [ax2, ax4, ax6],
                           ['aerosol_15min', 'precipitation', 'clouds']):
+        ax.set_ylabel(lab)
+        if not (classifier == i).any():
+            continue
         co, _, _, _ = binned_statistic_2d(range_save[classifier == i],
                                           time_save[classifier == i],
                                           co_save[classifier == i],
@@ -225,7 +228,6 @@ for file in files:
         depo = depo[depo < 0.8]
         depo = depo[depo > -0.25]
         ax.hist(depo, bins=40)
-        ax.set_ylabel(lab)
 
     bin_time1h = np.arange(0, 24+1.5, 1)
     co, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
