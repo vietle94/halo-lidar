@@ -19,7 +19,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180611'
+date = '20180111'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -215,38 +215,41 @@ bin_time = np.arange(0, 24+0.35, 0.25)
 bin_height = np.arange(0, df.data['range'].max() + 31, 30)
 for i, ax, lab in zip([1, 2, 3], [ax2, ax4, ax6],
                       ['aerosol_15min', 'precipitation', 'clouds']):
-    co, _, _, _ = binned_statistic_2d(range_save[classifier == i],
-                                      time_save[classifier == i],
-                                      co_save[classifier == i],
-                                      bins=[bin_height, bin_time],
+    ax.set_ylabel(lab)
+    if (classifier == i).any():
+        co, _, _, _ = binned_statistic_2d(range_save[classifier == i],
+                                          time_save[classifier == i],
+                                          co_save[classifier == i],
+                                          bins=[bin_height, bin_time],
+                                          statistic=np.nanmean)
+        cross, _, _, _ = binned_statistic_2d(range_save[classifier == i],
+                                             time_save[classifier == i],
+                                             cross_save[classifier == i],
+                                             bins=[bin_height, bin_time],
+                                             statistic=np.nanmean)
+        depo = (cross-1)/(co-1)
+        depo = depo[depo < 0.8]
+        depo = depo[depo > -0.25]
+        ax.hist(depo, bins=40)
+
+ax8.set_ylabel('aerosol_1hr')
+if (classifier == 1).any():
+    bin_time1h = np.arange(0, 24+1.5, 1)
+    co, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
+                                      time_save[classifier == 1],
+                                      co_save[classifier == 1],
+                                      bins=[bin_height, bin_time1h],
                                       statistic=np.nanmean)
-    cross, _, _, _ = binned_statistic_2d(range_save[classifier == i],
-                                         time_save[classifier == i],
-                                         cross_save[classifier == i],
-                                         bins=[bin_height, bin_time],
+    cross, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
+                                         time_save[classifier == 1],
+                                         cross_save[classifier == 1],
+                                         bins=[bin_height, bin_time1h],
                                          statistic=np.nanmean)
     depo = (cross-1)/(co-1)
     depo = depo[depo < 0.8]
     depo = depo[depo > -0.25]
-    ax.hist(depo, bins=40)
-    ax.set_ylabel(lab)
+    ax8.hist(depo, bins=40)
 
-bin_time1h = np.arange(0, 24+1.5, 1)
-co, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
-                                  time_save[classifier == 1],
-                                  co_save[classifier == 1],
-                                  bins=[bin_height, bin_time1h],
-                                  statistic=np.nanmean)
-cross, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
-                                     time_save[classifier == 1],
-                                     cross_save[classifier == 1],
-                                     bins=[bin_height, bin_time1h],
-                                     statistic=np.nanmean)
-depo = (cross-1)/(co-1)
-depo = depo[depo < 0.8]
-depo = depo[depo > -0.25]
-ax8.hist(depo, bins=40)
-ax8.set_ylabel('aerosol_1hr')
 
 fig.tight_layout()
 fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
