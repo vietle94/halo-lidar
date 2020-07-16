@@ -19,7 +19,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180111'
+date = '20180103'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 

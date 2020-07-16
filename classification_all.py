@@ -243,7 +243,24 @@ for file in files:
         depo = (cross-1)/(co-1)
         depo = depo[depo < 0.8]
         depo = depo[depo > -0.25]
-        ax8.hist(depo, bins=40)
+        ax.hist(depo, bins=40)
+
+    bin_time1h = np.arange(0, 24+1.5, 1)
+    co, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
+                                      time_save[classifier == 1],
+                                      co_save[classifier == 1],
+                                      bins=[bin_height, bin_time1h],
+                                      statistic=np.nanmean)
+    cross, _, _, _ = binned_statistic_2d(range_save[classifier == 1],
+                                         time_save[classifier == 1],
+                                         cross_save[classifier == 1],
+                                         bins=[bin_height, bin_time1h],
+                                         statistic=np.nanmean)
+    depo = (cross-1)/(co-1)
+    depo = depo[depo < 0.8]
+    depo = depo[depo > -0.25]
+    ax8.hist(depo, bins=40)
+    ax8.set_ylabel('aerosol_1hr')
 
     fig.tight_layout()
     fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
