@@ -19,7 +19,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180103'
+date = '20180304'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -120,10 +120,13 @@ updraft_ebola = df.decision_tree(depo_thres=[None, None],
 updraft_ebola_max = maximum_filter(updraft_ebola, size=3)
 
 # Ebola precipitation
-for _ in range(100):
+for _ in range(500):
     prep_1_max = maximum_filter(precipitation, size=3)
     prep_1_max *= ~updraft_ebola_max  # Avoid updraft area
-    precipitation = precipitation_1_low * prep_1_max
+    precipitation_ = precipitation_1_low * prep_1_max
+    if np.sum(precipitation) == np.sum(precipitation_):
+        break
+    precipitation = precipitation_
 
 df.data['classifier'][precipitation] = 2
 
@@ -194,11 +197,11 @@ result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
 fig = plt.figure(figsize=(16, 9))
 ax1 = fig.add_subplot(421)
 ax2 = fig.add_subplot(422)
-ax3 = fig.add_subplot(423, sharex=ax1)
+ax3 = fig.add_subplot(423, sharex=ax1, sharey=ax1)
 ax4 = fig.add_subplot(424, sharex=ax2)
-ax5 = fig.add_subplot(425, sharex=ax1)
+ax5 = fig.add_subplot(425, sharex=ax1, sharey=ax1)
 ax6 = fig.add_subplot(426, sharex=ax2)
-ax7 = fig.add_subplot(427, sharex=ax1)
+ax7 = fig.add_subplot(427, sharex=ax1, sharey=ax1)
 ax8 = fig.add_subplot(428, sharex=ax2)
 ax1.pcolormesh(df.data['time'], df.data['range'],
                np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
