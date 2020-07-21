@@ -183,13 +183,15 @@ class halo_data:
         self.data['time_averaged'] = self.data['time'][::n]
 
     def moving_average(self, n=3):
-        self.data['co_signal_averaged'] = ma(self.data['co_signal'], n)
-        self.data['v_raw_averaged'] = ma(self.data['v_raw'], n)
-        self.data['cross_signal_averaged'] = ma(self.data['cross_signal'], n)
-        self.data['depo_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
+        # pad = int((n-1)/2)
+        for avg, raw in zip(['co_signal_averaged', 'cross_signal_averaged',
+                             'v_raw_averaged'],
+                            ['co_signal', 'cross_signal', 'v_raw']):
+            # self.data[avg] = self.data[raw].copy()
+            self.data[avg] = ma(self.data[raw], n)
+        self.data['depo_adj_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
             (self.data['co_signal_averaged'] - 1)
-        delta_t = int((n-1)/2)
-        self.data['time_averaged'] = self.data['time'][delta_t:-delta_t]
+        self.data['time_averaged'] = self.data['time']
 
     def depo_cross_adj(self):
         bleed = self.bleed_through_mean
@@ -946,9 +948,16 @@ def ma(a, n=3, axis=0):
     '''
     Moving average
     '''
-    ret = np.cumsum(a, axis=0)
-    ret[n:, :] = ret[n:, :] - ret[:-n, :]
-    return ret[n - 1:, :] / n
+    pad = int((n-1)/2)
+    sum_ = np.nancumsum(a, axis=0)
+    sum_[n:, :] = sum_[n:, :] - sum_[:-n, :]
+    sum_ = sum_[n - 1:, :]
+    count_ = np.nancumsum(~np.isnan(a), axis=0)
+    count_[n:, :] = count_[n:, :] - count_[:-n, :]
+    count_ = count_[n - 1:, :]
+    b = a.copy()
+    b[pad:-pad] = sum_/count_
+    return b
 
 
 def nan_average(data, n):
