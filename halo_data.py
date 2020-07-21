@@ -183,11 +183,9 @@ class halo_data:
         self.data['time_averaged'] = self.data['time'][::n]
 
     def moving_average(self, n=3):
-        # pad = int((n-1)/2)
         for avg, raw in zip(['co_signal_averaged', 'cross_signal_averaged',
                              'v_raw_averaged'],
                             ['co_signal', 'cross_signal', 'v_raw']):
-            # self.data[avg] = self.data[raw].copy()
             self.data[avg] = ma(self.data[raw], n)
         self.data['depo_adj_averaged'] = (self.data['cross_signal_averaged'] - 1) / \
             (self.data['co_signal_averaged'] - 1)
