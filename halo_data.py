@@ -269,19 +269,6 @@ class halo_data:
         mask = mask_depo & mask_beta & mask_v
         return mask
 
-    # def depo_bleedthrough(self):
-    #     sysID = str(self.more_info['systemID'])
-    #     info = self.more_info
-    #     if (info['month'] >= 11) & (info['year'] >= 2017) & \
-    #             (info['systemID'] == 32):
-    #         sysID = '32XR'
-    #
-    #     bt_mean = bleed_through_mean[sysID]
-    #     bt_sd = bleed_through_sd[sysID]
-    #
-    #     cross_adj = self.data['cross_signal'] - bt_mean*self.data['co_signal']
-    #     cross_adj_sd = np.sqrt()
-
     def describe(self):
         pd.set_option('display.float_format', lambda x: '%.5g' % x)
         var_avg = {var: self.data[var].flatten().astype('f8')
