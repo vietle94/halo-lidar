@@ -948,13 +948,17 @@ def ma(a, n=3, axis=0):
     '''
     pad = int((n-1)/2)
     sum_ = np.nancumsum(a, axis=0)
-    sum_[n:, :] = sum_[n:, :] - sum_[:-n, :]
-    sum_ = sum_[n - 1:, :]
     count_ = np.nancumsum(~np.isnan(a), axis=0)
-    count_[n:, :] = count_[n:, :] - count_[:-n, :]
-    count_ = count_[n - 1:, :]
     b = a.copy()
-    b[pad:-pad] = sum_/count_
+    b[pad+1:-pad] = (sum_[n:, :] - sum_[:-n, :]) / \
+        (count_[n:, :] - count_[:-n, :])
+    b[pad] = sum_[n - 1]/count_[n - 1]
+    sum_0 = sum_[pad:n-1, :]
+    sum_1 = sum_[-1, :] - sum_[-n:-pad-1, :]
+    count_0 = count_[pad:n-1, :]
+    count_1 = count_[-1, :] - count_[-n:-pad-1, :]
+    b[:pad] = sum_0/count_0
+    b[-pad:] = sum_1/count_1
     return b
 
 
