@@ -21,7 +21,7 @@ classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180514'
+date = '20180111'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -56,6 +56,12 @@ df.data['classifier'][aerosol_smoothed] = 10
 df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
           ref='co_signal',
           threshold=1 + 3 * df.snr_sd)
+range_save = np.tile(df.data['range'],
+                     df.data['beta_raw'].shape[0])
+
+time_save = np.repeat(df.data['time'],
+                      df.data['beta_raw'].shape[1])
+v_save = df.data['v_raw'].flatten()  # put here to avoid noisy values at 1sd snr
 
 # Liquid
 liquid = df.decision_tree(depo_thres=[None, None],
@@ -143,43 +149,89 @@ for i in np.array([20, 30]):
     mask_undefined = mask * mask_aerosol0
     df.data['classifier'][mask_undefined] = i
 
+# %%
+if (df.data['classifier'] == 10).any():
+    classifier = df.data['classifier'].ravel()
+    time_dbscan = np.repeat(np.arange(df.data['time'].size),
+                            df.data['beta_raw'].shape[1])
+    height_dbscan = np.tile(np.arange(df.data['range'].size),
+                            df.data['beta_raw'].shape[0])
 
-# fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
-#                          figsize=(16, 9))
-# for val, ax, cmap in zip([aerosol, aerosol_smoothed,
-#                           liquid_smoothed, precipitation_1_median,
-#                           updraft_median,
-#                           precipitation_1_median_smooth, precipitation_1_low,
-#                           updraft_ebola_max, precipitation],
-#                          axes.flatten()[2:-1],
-#                          [['white', '#2ca02c'], ['white', '#2ca02c'],
-#                           ['white', 'red'], ['white', 'blue'],
-#                           ['white', '#D2691E'],
-#                           ['white', 'blue'], ['white', 'blue'],
-#                           ['white', '#D2691E'], ['white', 'blue']]):
-#     ax.pcolormesh(df.data['time'], df.data['range'],
-#                   val.T, cmap=mpl.colors.ListedColormap(cmap))
-# axes.flatten()[-1].pcolormesh(df.data['time'], df.data['range'],
-#                               df.data['classifier'].T,
-#                               cmap=mpl.colors.ListedColormap(
-#     ['white', '#2ca02c', 'blue', 'red']),
-#     vmin=0, vmax=3)
-# axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
-#                       np.log10(df.data['beta_raw']).T,
-#                       cmap='jet', vmin=-8, vmax=-4)
-# axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
-#                       df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-# fig.tight_layout()
-# fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
-#             dpi=150, bbox_inches='tight')
+    time_dbscan = time_dbscan[classifier == 10].reshape(-1, 1)
+    height_dbscan = height_dbscan[classifier == 10].reshape(-1, 1)
+    X = np.hstack([time_dbscan, height_dbscan])
+    db = DBSCAN(eps=3, min_samples=1).fit(X)
+
+    v_dbscan = v_save[classifier == 10]
+    range_dbscan = range_save[classifier == 10]
+
+    v_dict = {}
+    r_dict = {}
+    for i in np.unique(db.labels_):
+        v_dict[i] = np.nanmean(v_dbscan[db.labels_ == i])
+        r_dict[i] = np.nanmin(range_dbscan[db.labels_ == i])
+
+    lab = db.labels_.copy()
+    for key, val in v_dict.items():
+        if (val < -0.5):
+            lab[db.labels_ == key] = 20
+        elif r_dict[key] == min(df.data['range']):
+            lab[db.labels_ == key] = 10
+        elif (val > -0.2):
+            lab[db.labels_ == key] = 11
+        else:
+            lab[db.labels_ == key] = 40
+
+    df.data['classifier'][df.data['classifier'] == 10] = lab
+
+# %%
+ground = df.data['classifier'] == 20
+ground[:, 3:] = False
+rain = df.data['classifier'] == 20
+for _ in range(500):
+    ground_max = maximum_filter(ground, size=3)
+    ground_rain = ground_max * rain
+    if np.sum(ground_rain) == np.sum(ground):
+        break
+    ground = ground_rain
+df.data['classifier'][ground] = 21
+
+# %%
+cmap = mpl.colors.ListedColormap(
+    ['white', '#2ca02c', '#808000', '#00ffff', 'blue', 'red', 'gray'])
+boundaries = [0, 10, 11, 20, 21, 30, 40, 50]
+norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
+
+# %%
+fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
+                         figsize=(16, 9))
+for val, ax, cmap_ in zip([aerosol, aerosol_smoothed,
+                           liquid_smoothed, precipitation_1_median,
+                           updraft_median,
+                           precipitation_1_median_smooth, precipitation_1_low,
+                           updraft_ebola_max, precipitation],
+                          axes.flatten()[2:-1],
+                          [['white', '#2ca02c'], ['white', '#2ca02c'],
+                           ['white', 'red'], ['white', 'blue'],
+                           ['white', '#D2691E'],
+                           ['white', 'blue'], ['white', 'blue'],
+                           ['white', '#D2691E'], ['white', 'blue']]):
+    ax.pcolormesh(df.data['time'], df.data['range'],
+                  val.T, cmap=mpl.colors.ListedColormap(cmap_))
+axes.flatten()[-1].pcolormesh(df.data['time'], df.data['range'],
+                              df.data['classifier'].T,
+                              cmap=cmap, norm=norm)
+axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
+                      np.log10(df.data['beta_raw']).T,
+                      cmap='jet', vmin=-8, vmax=-4)
+axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
+                      df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
+fig.tight_layout()
+fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
+            dpi=150, bbox_inches='tight')
 
 # %%
 classifier = df.data['classifier'].flatten()
-time_save = np.repeat(df.data['time'],
-                      df.data['beta_raw'].shape[1])
-range_save = np.tile(df.data['range'],
-                     df.data['beta_raw'].shape[0])
-v_save = df.data['v_raw'].flatten()  # put here to avoid noisy values at 1sd snr
 result = pd.DataFrame({'date': df.date,
                        'location': df.location,
                        'beta': np.log10(beta_save),
@@ -190,59 +242,9 @@ result = pd.DataFrame({'date': df.date,
                        'time': time_save,
                        'range': range_save,
                        'classifier': classifier})
-#
-# result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
-#               index=False)
 
-# %%
-temp = df.data['classifier']
-filter_c = df.data['classifier'] != 0
-df = hd.halo_data(file)
-df.filter_height()
-df.unmask999()
-df.depo_cross_adj()
-df.moving_average(n=51)
-df.beta_averaged()
-
-filter = temp != 10
-co = df.data['co_signal'].copy()
-co[filter] = np.nan
-co = hd.ma(co, n=101)
-cross = df.data['cross_signal'].copy()
-cross[filter] = np.nan
-cross = hd.ma(cross, n=101)
-depo = (cross - 1) / (co - 1)
-for val in ['beta_averaged', 'v_raw', 'depo_adj_averaged']:
-    df.data[val] = np.where(filter_c, df.data[val], np.nan)
-df.data['classifier'] = temp
-
-# %%
-
-
-def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
-    new_cmap = colors.LinearSegmentedColormap.from_list(
-        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
-        cmap(np.linspace(minval, maxval, n)))
-    return new_cmap
-
-
-cmap = plt.get_cmap('Greens')
-new_cmap = truncate_colormap(cmap, 0.15, 1)
-
-dep = depo.copy()
-dep[df.data['classifier'] != 10] = np.nan
-fig, ax = plt.subplots(figsize=(12, 3))
-ax.pcolormesh(df.data['time'], df.data['range'],
-              df.data['classifier'].T, cmap=mpl.colors.ListedColormap(
-    ['white', 'white', 'blue', 'red']))
-p = ax.pcolormesh(df.data['time'], df.data['range'],
-                  dep.T, cmap='jet', vmin=0, vmax=0.5)
-fig.colorbar(p, ax=ax)
-
-# %%
-fig, ax = plt.subplots()
-depo_hist = dep[(dep < 0.4) & (dep > -0.25)]
-ax.hist(depo_hist.flatten(), bins=40)
+result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
+              index=False)
 
 # %%
 fig = plt.figure(figsize=(16, 9))
@@ -255,48 +257,37 @@ ax6 = fig.add_subplot(426, sharex=ax2)
 ax7 = fig.add_subplot(427, sharex=ax1, sharey=ax1)
 ax8 = fig.add_subplot(428, sharex=ax2)
 ax1.pcolormesh(df.data['time'], df.data['range'],
-               np.log10(df.data['beta_averaged']).T, cmap='jet', vmin=-8, vmax=-4)
+               np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
 ax3.pcolormesh(df.data['time'], df.data['range'],
                df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
 ax5.pcolormesh(df.data['time'], df.data['range'],
-               df.data['depo_adj_averaged'].T, cmap='jet', vmin=0, vmax=0.5)
+               df.data['depo_adj'].T, cmap='jet', vmin=0, vmax=0.5)
 ax7.pcolormesh(df.data['time'], df.data['range'],
                df.data['classifier'].T,
-               cmap=mpl.colors.ListedColormap(
-    ['white', '#2ca02c', 'blue', 'red']))
-
-bin_time = np.arange(0, 24+0.35, 0.25)
-bin_height = np.arange(0, df.data['range'].max() + 31, 30)
-for i, ax, lab in zip([10, 20, 30], [ax2, ax4, ax6],
-                      ['aerosol_15min', 'precipitation', 'clouds']):
+               cmap=cmap, norm=norm)
+for i, ax, lab in zip([20, 21, 30], [ax2, ax4, ax6],
+                      ['ice clouds', 'precipitation', 'clouds']):
     ax.set_ylabel(lab)
     if (classifier == i).any():
-        co, _, _, _ = binned_statistic_2d(range_save[classifier == i],
-                                          time_save[classifier == i],
-                                          co_save[classifier == i],
-                                          bins=[bin_height, bin_time],
-                                          statistic=np.nanmean)
-        cross, _, _, _ = binned_statistic_2d(range_save[classifier == i],
-                                             time_save[classifier == i],
-                                             cross_save[classifier == i],
-                                             bins=[bin_height, bin_time],
-                                             statistic=np.nanmean)
-        depo = (cross-1)/(co-1)
+        depo = depo_save[classifier == i]
         depo = depo[depo < 0.8]
         depo = depo[depo > -0.25]
         ax.hist(depo, bins=40)
 
-ax8.set_ylabel('aerosol_1hr')
-if (classifier == 10).any():
-    bin_time1h = np.arange(0, 24+1.5, 1)
-    co, _, _, _ = binned_statistic_2d(range_save[classifier == 10],
-                                      time_save[classifier == 10],
-                                      co_save[classifier == 10],
+bin_time = np.arange(0, 24+0.35, 0.25)
+bin_height = np.arange(0, df.data['range'].max() + 31, 30)
+
+ax8.set_ylabel('aerosol_30min')
+if (classifier // 10 == 1).any():
+    bin_time1h = np.arange(0, 24+0.5, 0.5)
+    co, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
+                                      time_save[classifier // 10 == 1],
+                                      co_save[classifier // 10 == 1],
                                       bins=[bin_height, bin_time1h],
                                       statistic=np.nanmean)
-    cross, _, _, _ = binned_statistic_2d(range_save[classifier == 10],
-                                         time_save[classifier == 10],
-                                         cross_save[classifier == 10],
+    cross, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
+                                         time_save[classifier // 10 == 1],
+                                         cross_save[classifier // 10 == 1],
                                          bins=[bin_height, bin_time1h],
                                          statistic=np.nanmean)
     depo = (cross-1)/(co-1)
@@ -306,65 +297,5 @@ if (classifier == 10).any():
 
 
 fig.tight_layout()
-# fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
-#             dpi=150, bbox_inches='tight')
-
-# %%
-time_c = np.repeat(np.arange(df.data['time'].size),
-                   df.data['beta_raw'].shape[1])
-height_c = np.tile(np.arange(df.data['range'].size),
-                   df.data['beta_raw'].shape[0])
-
-time_c = time_c[classifier == 10].reshape(-1, 1)
-height_c = height_c[classifier == 10].reshape(-1, 1)
-X = np.hstack([time_c, height_c])
-db = DBSCAN(eps=3, min_samples=1).fit(X)
-
-v_c = v_save[classifier == 10]
-range_c = range_save[classifier == 10]
-
-# %%
-temp = df.data['classifier'].copy()
-v_dict = {}
-r_dict = {}
-for i in np.unique(db.labels_):
-    v_dict[i] = np.nanmean(v_c[db.labels_ == i])
-    r_dict[i] = np.nanmin(range_c[db.labels_ == i])
-
-# %%
-lab = db.labels_.copy()
-for key, val in v_dict.items():
-    if (val < -0.5):
-        lab[db.labels_ == key] = 20
-    elif r_dict[key] == min(df.data['range']):
-        lab[db.labels_ == key] = 10
-    elif (val > -0.2):
-        lab[db.labels_ == key] = 11
-    else:
-        lab[db.labels_ == key] = 31
-
-temp[df.data['classifier'] == 10] = lab
-
-# %%
-ground = temp == 20
-ground[:, 3:] = False
-rain = temp == 20
-for _ in range(500):
-    ground_max = maximum_filter(ground, size=3)
-    ground_rain = ground_max * rain
-    if np.sum(ground_rain) == np.sum(ground):
-        break
-    ground = ground_rain
-temp[ground_rain] = 21
-
-# %%
-cmap = mpl.colors.ListedColormap(
-    ['red', '#000000', '#ffffff', 'blue', 'orange', 'green', 'yellow'])
-boundaries = [0, 10, 11, 20, 21, 30, 31, 40]
-norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-fig, ax = plt.subplots(figsize=(12, 3))
-p = ax.pcolormesh(df.data['time'], df.data['range'],
-                  temp.T, cmap=cmap, norm=norm)
-fig.colorbar(p, ax=ax)
-# ax.pcolormesh(df.data['time'], df.data['range'],
-#               dep.T, cmap='summer', vmin=0, vmax=0.5)
+fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
+            dpi=150, bbox_inches='tight')
