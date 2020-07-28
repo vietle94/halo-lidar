@@ -121,7 +121,7 @@ for file in files:
     updraft_ebola_max = maximum_filter(updraft_ebola, size=3)
 
     # Ebola precipitation
-    for _ in range(500):
+    for _ in range(1500):
         prep_1_max = maximum_filter(precipitation, size=3)
         prep_1_max *= ~updraft_ebola_max  # Avoid updraft area
         precipitation_ = precipitation_1_low * prep_1_max
@@ -179,7 +179,7 @@ for file in files:
     ground = df.data['classifier'] == 20
     ground[:, 3:] = False
     rain = df.data['classifier'] == 20
-    for _ in range(500):
+    for _ in range(1500):
         ground_max = maximum_filter(ground, size=3)
         ground_rain = ground_max * rain
         if np.sum(ground_rain) == np.sum(ground):
