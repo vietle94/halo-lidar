@@ -152,7 +152,7 @@ for file in files:
         time_dbscan = time_dbscan[classifier == 10].reshape(-1, 1)
         height_dbscan = height_dbscan[classifier == 10].reshape(-1, 1)
         X = np.hstack([time_dbscan, height_dbscan])
-        db = DBSCAN(eps=3, min_samples=1).fit(X)
+        db = DBSCAN(eps=3, min_samples=1, n_jobs=-1).fit(X)
 
         v_dbscan = v_save[classifier == 10]
         range_dbscan = range_save[classifier == 10]
