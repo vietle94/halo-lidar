@@ -183,6 +183,13 @@ for key, group in depo.groupby('sys'):
     fig7.savefig(result_path + '/' + key + '_depo_scatter.png',
                  bbox_inches='tight', dpi=200)
 
+    fig8, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(group['depo'], group['range'], '.')
+    ax.set_title('Depolarization ratio vs range at ' + key, weight='bold')
+    ax.set_xlabel('Depo')
+    ax.set_ylabel('Range')
+    fig8.savefig(result_path + '/' + key + '_depo_range.png',
+                 bbox_inches='tight', dpi=200)
     plt.close('all')
 
 # %%
