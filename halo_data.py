@@ -913,7 +913,7 @@ def m_km_ticks():
     '''
     Modify ticks from m to km
     '''
-    return FuncFormatter(lambda x, pos: f'{x/1000:.1f}')
+    return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
 
 
 def bytes_Odict_convert(x):
