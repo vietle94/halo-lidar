@@ -71,15 +71,24 @@ fig.savefig('F:/halo/classifier/RH/' + df.filename + '_rh.png',
             bbox_inches='tight', dpi=150)
 
 # %%
-weather_ = weather[weather['datetime'].dt.hour > 8]
-RH = weather_.groupby(weather_['datetime'].dt.hour)['Suhteellinen kosteus (%)'].mean()
+# weather_ = weather[weather['datetime'].dt.hour > 8]
+# RH = weather_.groupby(weather_['datetime'].dt.hour)['Suhteellinen kosteus (%)'].mean()
+#
+# fig, ax = plt.subplots(figsize=(7, 4))
+# ax.plot(RH, dep[t > 8.5], '.')
+# ax.set_xlabel('Relative humidity [%]')
+# ax.set_ylabel('Hourly depo < 300m')
+# fig.savefig('F:/halo/classifier/RH/' + df.filename + '_rh_scatter.png',
+#             bbox_inches='tight', dpi=150)
 
 # %%
+# Choose all time
+weather_ = weather
+RH = weather_.groupby(weather_['datetime'].dt.hour)['Suhteellinen kosteus (%)'].mean()
+
 fig, ax = plt.subplots(figsize=(7, 4))
-ax.plot(RH, dep[t > 8.5], '.')
+ax.plot(RH, dep, '.')
 ax.set_xlabel('Relative humidity [%]')
 ax.set_ylabel('Hourly depo < 300m')
 fig.savefig('F:/halo/classifier/RH/' + df.filename + '_rh_scatter.png',
             bbox_inches='tight', dpi=150)
-
-# %%
