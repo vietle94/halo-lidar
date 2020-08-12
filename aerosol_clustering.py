@@ -11,67 +11,56 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from scipy.stats import binned_statistic
 from sklearn.mixture import GaussianMixture
+from scipy.stats import multivariate_normal
+%matplotlib qt
 
 # %%
 # Specify data folder path
-data_folder = r'F:\halo\32\depolarization'
-# Specify folder path for snr collection
-snr_folder = data_folder + r'\snr'
+data_folder = r'F:\halo\46\depolarization'
 # Specify output images folder path
-image_folder = data_folder + r'\aerosol_algorithm'
-Path(image_folder).mkdir(parents=True, exist_ok=True)
+image_folder = 'F:/halo/classifier/clustering'
 
 # %%
-X_full, time_full, range_full = hd.aggregate_data(data_folder, snr_folder,
-                                                  '2018-06-01', '2018-08-01',
-                                                  snr_mul=3,
+X_full, time_full, range_full = hd.aggregate_data(data_folder,
+                                                  '2018-05-02', '2018-07-01',
                                                   cloud_thres=10**-4.5,
                                                   cloud_buffer=2,
-                                                  interval=15, thres_nan=0.5,
-                                                  attenuation=False,
-                                                  positive_depo=True)
+                                                  attenuation=False)
 
 X_full['date'] = X_full['date'].astype('int')
 
 # %%
+X_full.replace(np.inf, np.nan, inplace=True)
+X_full.loc[:, 'beta_raw'] = np.log10(X_full.loc[:, 'beta_raw'])
 na_mask = ~np.isnan(X_full).any(axis=1)
 X = X_full[na_mask]
 
 # %%
 X.loc[X['depo'] > 1, 'depo'] = 1
-X.loc[:, 'beta_raw'] = np.log10(X.loc[:, 'beta_raw'])
-
 X.loc[X['v_raw'] > 2, 'v_raw'] = 2
 X.loc[X['v_raw'] < -5, 'v_raw'] = -5
 
 # %%
-means_init = np.array([[0.2, -0.8, -5.5],
-                       [0.1, -0.05, -7],
-                       [0.05, -0.05, -4.5],
-                       [0.6, -0.3, -6]])
-
+gmm = GaussianMixture(n_components=3, max_iter=1000)
+gmm.fit(X.iloc[:, 1:3])
 
 # %%
-gmm = GaussianMixture(n_components=4, max_iter=1000, means_init=means_init)
-gmm.fit(X.iloc[:, :3])
-
-# %%
-prob = gmm.predict_proba(X.iloc[:, :3])
-prob_lab = gmm.predict(X.iloc[:, :3])
+prob = gmm.predict_proba(X.iloc[:, 1:3])
+prob_lab = gmm.predict(X.iloc[:, 1:3])
 delta_prob = (prob.max(axis=1)[:, np.newaxis] - prob)
 for i, row in enumerate(delta_prob):
     row_ = row[row != 0]
     if min(row_) < 0.1:
-        prob_lab[i] = 5
+        prob_lab[i] = 4
 
 # %%
 label = np.repeat(np.nan, X_full.shape[0])
 label[na_mask] = prob_lab
 gmm.means_
-gmm.covariances_
 
+gmm.covariances_
 # %%
-date = '20160115'
+date = '20180611'
 beta_date = X_full.loc[X_full['date'] == int(date), 'beta_raw'].values
 depo_date = X_full.loc[X_full['date'] == int(date), 'depo'].values
 v_date = X_full.loc[X_full['date'] == int(date), 'v_raw'].values
@@ -80,28 +69,66 @@ time_date = time_full[date]
 time_dim = int(len(time_date))
 range_date = range_full[date]
 range_dim = int(len(range_date))
-fig, ax = plt.subplots(4, 1, figsize=(12, 9))
+fig, ax = plt.subplots(3, 1, figsize=(9, 12))
 p = ax[0].pcolormesh(time_date, range_date,
-                     np.log10(beta_date.reshape(time_dim, range_dim).T),
+                     beta_date.reshape(time_dim, range_dim).T,
                      cmap='jet', vmin=-8, vmax=-4)
-fig.colorbar(p, ax=ax[0])
+cbar = fig.colorbar(p, ax=ax[0])
+cbar.ax.set_ylabel('Attenuated backscatter')
+cbar.ax.yaxis.set_label_position('left')
 p = ax[1].pcolormesh(time_date, range_date,
                      v_date.reshape(time_dim, range_dim).T,
                      cmap='jet', vmin=-2, vmax=2)
-fig.colorbar(p, ax=ax[1])
+cbar = fig.colorbar(p, ax=ax[1])
+cbar.ax.set_ylabel('Velocity [m/s]')
+cbar.ax.yaxis.set_label_position('left')
+# p = ax[2].pcolormesh(time_date, range_date,
+#                      depo_date.reshape(time_dim, range_dim).T,
+#                      cmap='jet', vmin=0, vmax=0.5)
+# cbar = fig.colorbar(p, ax=ax[2])
+# cbar.ax.set_ylabel('Depolarization ratio')
+# cbar.ax.yaxis.set_label_position('left')
 p = ax[2].pcolormesh(time_date, range_date,
-                     depo_date.reshape(time_dim, range_dim).T,
-                     cmap='jet', vmin=0, vmax=0.5)
-fig.colorbar(p, ax=ax[2])
-p = ax[3].pcolormesh(time_date, range_date,
                      label[X_full['date'] == int(date)].reshape(time_dim, range_dim).T,
-                     cmap=plt.cm.get_cmap('jet', 5))
-cbar = fig.colorbar(p, ax=ax[3])
-cbar.set_ticks([0.5, 1.5, 2.5, 3.5, 4.5])
-cbar.set_ticklabels(['Rain fall', 'aerosol',
-                     'Liquid cloud/Drizzle', 'Snow fall', 'Undefined'])
-fig.tight_layout()
+                     cmap=plt.cm.get_cmap('jet', 4))
+cbar = fig.colorbar(p, ax=ax[2])
+cbar.set_ticks([0.5, 1.5, 2.5, 3.5])
+cbar.set_ticklabels(['Cluster 1', 'Cluster 2',
+                     'Cluster 3', 'Undefined'])
 
+for ax in [ax[0], ax[1], ax[2]]:
+    ax.yaxis.set_major_formatter(hd.m_km_ticks())
+    ax.set_ylabel('Height [km, a.g.l]')
+
+fig.tight_layout()
+fig.savefig(image_folder + '/' + date + '_clustering.png',
+            bbox_inches='tight')
+
+# %%
+H, co_edges, cross_edges = np.histogram2d(
+    X['v_raw'],
+    X['beta_raw'],
+    bins=500)
+X_, Y = np.meshgrid(co_edges, cross_edges)
+fig5, ax = plt.subplots(figsize=(7, 5))
+p = ax.pcolormesh(X_, Y, H.T, norm=LogNorm())
+ax.set_xlabel('Velocity [m/s]')
+ax.set_ylabel('Beta (log scaled)')
+cbar = fig5.colorbar(p, ax=ax)
+cbar.ax.set_ylabel('Number of data points')
+cbar.ax.yaxis.set_label_position('left')
+# fig5.savefig(image_folder + '/' + '2d_hist.png',
+#              bbox_inches='tight')
+
+x, y = np.mgrid[-5:2:.01, -8:-3:.01]
+pos = np.dstack((x, y))
+for i in np.arange(3):
+    rv = multivariate_normal(gmm.means_[i],
+                             gmm.covariances_[i])
+    ax.contour(x, y, rv.pdf(pos),
+               colors='black')
+fig5.savefig(image_folder + '/' + '2d_hist_result.png',
+             bbox_inches='tight')
 # %%
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X.iloc[:, :3])
