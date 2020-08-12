@@ -956,13 +956,10 @@ def nan_average(data, n):
     return np.nanmean(temp.reshape(-1, n, y), axis=1)
 
 
-def aggregate_data(nc_path, noise_path,
+def aggregate_data(nc_path,
                    start_date, end_date,
-                   snr_mul=3,
                    cloud_thres=10**-4.5, cloud_buffer=2,
-                   interval=15, thres_nan=0.5,
-                   attenuation=True, positive_depo=True,
-                   co_cross=False):
+                   attenuation=True):
     '''
     Aggerate and preprocess data
     date format: '%Y-%m-%d'
@@ -972,7 +969,6 @@ def aggregate_data(nc_path, noise_path,
                                end=end_date).strftime('%Y%m%d')
 
     data_list = glob.glob(nc_path + '/*.nc')
-    noise_list = glob.glob(noise_path + '/*_noise.csv')
 
     depo_list = []
     v_list = []
@@ -980,10 +976,6 @@ def aggregate_data(nc_path, noise_path,
     date_list = []
     range_list = {}
     time_list = {}
-
-    if co_cross:
-        co_raw = []
-        cross_raw = []
 
     for date in date_range:
         file = [file for file in data_list if date in file]
@@ -999,58 +991,33 @@ def aggregate_data(nc_path, noise_path,
         df = halo_data(file)
         df.unmask999()
         df.filter_height()
-
-        noise_csv = [noise_file for noise_file in noise_list
-                     if df.filename in noise_file]
-
-        assert noise_csv, "Missing noise csv for " + df.filename
-        noise_csv = noise_csv[0]
-        noise = pd.read_csv([noise_file for noise_file in noise_list
-                             if df.filename in noise_file][0],
-                            usecols=['noise'])
-        noise_threshold = 1 + snr_mul * np.std(noise['noise'])
-        df.filter(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                  ref='co_signal', threshold=noise_threshold)
+        df.depo_cross_adj()
+        df.average(25)
+        df.beta_averaged()
+        noise_threshold = 1 + 3 * df.snr_sd/5
+        df.filter(variables=['beta_averaged', 'v_averaged', 'depo_averaged',
+                             'cross_signal_averaged'],
+                  ref='co_signal_averaged', threshold=noise_threshold)
 
         if attenuation:
-            df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw'],
-                                  ref='beta_raw',
+            df.filter_attenuation(variables=['beta_raw', 'v_raw', 'depo_raw',
+                                             'cross_signal_averaged'],
+                                  ref='beta_averaged',
                                   threshold=cloud_thres, buffer=cloud_buffer)
 
-        df.average(interval=15, thres_nan=0.5)
-
-        for depo_value in df.depo_binned.ravel():
+        for depo_value in df.data['depo_averaged'].ravel():
             depo_list.append(depo_value)
-        for v_value in df.v_binned.ravel():
+        for v_value in df.data['v_averaged'].ravel():
             v_list.append(v_value)
-        b = df.beta_binned.ravel()
+        b = df.data['beta_averaged'].ravel()
         for beta_value in b:
             beta_list.append(beta_value)
         for date_value in np.repeat(date, len(b)):
             date_list.append(date_value)
-        if co_cross:
-            for co_value in df['co_signal'].ravel():
-                co_raw.append(co_value)
-            for cross_value in df['cross_signal'].ravel():
-                cross_raw.append(cross_value)
 
         range_list[date] = df.data['range']
-        time_list[date] = df.time_binned
+        time_list[date] = df.data['time_averaged']
 
-    # depo_list = np.array(depo_list)
-    # v_list = np.array(v_list)
-    # beta_list = np.array(beta_list)
-    # date_list = np.array(date_list)
-    # date_list = date_list.astype('int')
-    if co_cross:
-        # co_raw = np.array(co_raw)
-        # cross_raw = np.array(cross_raw)
-        result = pd.DataFrame({'depo': depo_list, 'v_raw': v_list,
-                               'beta_raw': beta_list, 'date': date_list,
-                               'co_signal': co_raw, 'cross_signal': cross_raw})
-    else:
-        result = pd.DataFrame({'depo': depo_list, 'v_raw': v_list,
-                               'beta_raw': beta_list, 'date': date_list})
-    if positive_depo:
-        result.loc[result['depo'] < 0, 'depo'] = np.nan
+    result = pd.DataFrame({'depo': depo_list, 'v_raw': v_list,
+                           'beta_raw': beta_list, 'date': date_list})
     return result, time_list, range_list
