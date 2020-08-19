@@ -89,7 +89,7 @@ for k, v in n0.groupby('month'):
 newdf = df.copy()
 newdf['day'] = newdf['date'].dt.day
 newdf['month'] = newdf['date'].dt.month
-fig, axes = plt.subplots(2, 2, figsize=(16, 9))
+fig, axes = plt.subplots(4, 1, figsize=(11, 15))
 with sns.axes_style("darkgrid"):
     for mo, ax in zip(subyear[sub], axes.flatten()):
         if not (newdf['month'] == mo).any():
@@ -100,7 +100,9 @@ with sns.axes_style("darkgrid"):
         #         color='#ff7f0e')
         ax.set_ylim([-0.2, 0.6])
         ax.set_xlabel('')
-        ax.set_title(calendar.month_name[mo])
+        ax.set_ylabel('Depolarization ratio')
+        ax.set_title(calendar.month_name[mo], size=14, weight='bold')
     sns.despine(left=True)
+fig.subplots_adjust(hspace=0.4)
 fig.savefig('F:\\halo\\classifier\\result\\' + sub + str(year) +
             classifier['location'][0] + '.png', bbox_inches='tight')
