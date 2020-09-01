@@ -10,11 +10,11 @@ from scipy.stats import binned_statistic_2d
 import pandas as pd
 
 
-data = hd.getdata('F:/halo/46/depolarization')
-classifier_folder = 'F:\\halo\\classifier'
+data = hd.getdata('F:/halo/54/depolarization')
+classifier_folder = 'F:\\halo\\classifier\\54'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
-date = '2018'
+date = '2019'
 files = [file for file in data if date in file]
 for file in files:
     df = hd.halo_data(file)
@@ -236,23 +236,41 @@ for file in files:
                   index=False)
 
     fig = plt.figure(figsize=(16, 9))
-    ax1 = fig.add_subplot(421)
-    ax2 = fig.add_subplot(422)
-    ax3 = fig.add_subplot(423, sharex=ax1, sharey=ax1)
-    ax4 = fig.add_subplot(424, sharex=ax2)
-    ax5 = fig.add_subplot(425, sharex=ax1, sharey=ax1)
-    ax6 = fig.add_subplot(426, sharex=ax2)
-    ax7 = fig.add_subplot(427, sharex=ax1, sharey=ax1)
-    ax8 = fig.add_subplot(428, sharex=ax2)
-    ax1.pcolormesh(df.data['time'], df.data['range'],
-                   np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
-    ax3.pcolormesh(df.data['time'], df.data['range'],
-                   df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-    ax5.pcolormesh(df.data['time'], df.data['range'],
-                   df.data['depo_adj'].T, cmap='jet', vmin=0, vmax=0.5)
-    ax7.pcolormesh(df.data['time'], df.data['range'],
-                   df.data['classifier'].T,
-                   cmap=cmap, norm=norm)
+    gs = fig.add_gridspec(4, 2, width_ratios=[5, 4])
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, 0], sharex=ax1, sharey=ax1)
+    ax4 = fig.add_subplot(gs[1, 1], sharex=ax2)
+    ax5 = fig.add_subplot(gs[2, 0], sharex=ax1, sharey=ax1)
+    ax6 = fig.add_subplot(gs[2, 1], sharex=ax2)
+    ax7 = fig.add_subplot(gs[3, 0], sharex=ax1, sharey=ax1)
+    ax8 = fig.add_subplot(gs[3, 1], sharex=ax2)
+    p1 = ax1.pcolormesh(df.data['time'], df.data['range'],
+                        np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
+    p2 = ax3.pcolormesh(df.data['time'], df.data['range'],
+                        df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
+    p3 = ax5.pcolormesh(df.data['time'], df.data['range'],
+                        df.data['depo_adj'].T, cmap='jet', vmin=0, vmax=0.5)
+    p4 = ax7.pcolormesh(df.data['time'], df.data['range'],
+                        df.data['classifier'].T,
+                        cmap=cmap, norm=norm)
+    for ax in [ax1, ax3, ax5, ax7]:
+        ax.yaxis.set_major_formatter(hd.m_km_ticks())
+        ax.set_ylabel('Height [km, a.g.l]')
+
+    cbar = fig.colorbar(p1, ax=ax1)
+    cbar.ax.set_ylabel('Attenuated backscatter')
+    cbar.ax.yaxis.set_label_position('left')
+    cbar = fig.colorbar(p2, ax=ax3)
+    cbar.ax.set_ylabel('Velocity [m/s]')
+    cbar.ax.yaxis.set_label_position('left')
+    cbar = fig.colorbar(p3, ax=ax5)
+    cbar.ax.set_ylabel('Depolarization ratio')
+    cbar.ax.yaxis.set_label_position('left')
+    cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 20.5, 25, 35, 45])
+    cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol', 'Ice clouds',
+                             'Precipitation', 'Clouds', 'Undefined'])
+
     for i, ax, lab in zip([20, 21, 30], [ax2, ax4, ax6],
                           ['ice clouds', 'precipitation', 'clouds']):
         ax.set_ylabel(lab)
@@ -283,7 +301,10 @@ for file in files:
         depo = depo[depo > -0.25]
         ax8.hist(depo, bins=40)
 
+    ax8.set_xlabel('Depolarization ratio', weight='bold')
+    ax7.set_xlabel('Time UTC [hour]', weight='bold')
+
     fig.tight_layout()
     fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
                 dpi=150, bbox_inches='tight')
-    plt.close(fig)
+    plt.close('all')
