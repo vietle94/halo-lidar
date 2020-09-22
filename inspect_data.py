@@ -16,31 +16,22 @@ df.filter_height()
 df.unmask999()
 df.depo_cross_adj()
 
-# %%
-# Modify t: time interval
-t = 1
-n = 1
-while True:
-    dif = np.median(df.data['time'][n::n] - df.data['time'][:-n:n])
-    if t - dif < 0:
-        break
-    n += 1
-
-# %%
-df.average(n)
-df.data['depo_averaged'] = hd.ma(df.data['depo_averaged'].T, n=5).T
-df.filter(variables=['depo_averaged'],
-          ref='co_signal_averaged',
-          threshold=1 + 3*df.snr_sd/np.sqrt(n))
-
+df.filter(variables=['cross_signal', 'beta_raw'],
+          ref='co_signal',
+          threshold=1 + 3*df.snr_sd)
 
 # %%
 fig, ax = plt.subplots()
-ax.pcolormesh(df.data['time_averaged'], df.data['range'],
-              df.data['depo_averaged'].T, cmap='jet', vmin=0, vmax=0.5)
-p = hd.area_select(df.data['time_averaged'], df.data['range'],
-                   df.data['depo_averaged'].T, ax_in=ax, fig=fig)
+ax.pcolormesh(df.data['time'], df.data['range'],
+              np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
+p = hd.area_select(df.data['time'], df.data['range'],
+                   df.data['depo_raw'].T, ax_in=ax, fig=fig)
+
 
 # %%
-p.area
-np.nanmean(p.area)
+# Averaged depo of the whole box
+cross = np.nanmean(df.data['cross_signal'].T[p.mask])
+co = np.nanmean(df.data['co_signal'].T[p.mask])
+
+
+print((cross-1)/(co-1))
