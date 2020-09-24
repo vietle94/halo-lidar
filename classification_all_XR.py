@@ -10,10 +10,11 @@ from scipy.stats import binned_statistic_2d
 import pandas as pd
 
 
-data = hd.getdata('F:/halo/34/depolarization')
-classifier_folder = 'F:\\halo\\classifier\\34'
+data = hd.getdata('F:/halo/32/depolarization')
+classifier_folder = 'F:\\halo\\classifier\\32'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
-
+with open('ref_XR2.npy', 'rb') as f:
+    ref = np.load(f)
 date = '2019'
 files = [file for file in data if date in file]
 for file in files:
@@ -23,7 +24,12 @@ for file in files:
     df.unmask999()
     df.depo_cross_adj()
 
-    df.filter(variables=['beta_raw'],
+    # XR
+    df.data['beta_log'] = np.log10(df.data['beta_raw'])
+    df.data['beta_log'][:, :50] = df.data['beta_log'][:, :50] - ref
+    #
+
+    df.filter(variables=['beta_raw', 'beta_log'],
               ref='co_signal',
               threshold=1 + df.snr_sd)
 
@@ -40,14 +46,14 @@ for file in files:
                                beta_thres=[None, -5.5],
                                v_thres=[None, None],
                                depo=df.data['depo_adj'],
-                               beta=np.log10(df.data['beta_raw']),
+                               beta=df.data['beta_log'],
                                v=df.data['v_raw'])
 
     # Small size median filter to remove noise
     aerosol_smoothed = median_filter(aerosol, size=11)
     df.data['classifier'][aerosol_smoothed] = 10
 
-    df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
+    df.filter(variables=['beta_raw', 'v_raw', 'depo_adj', 'beta_log'],
               ref='co_signal',
               threshold=1 + 3 * df.snr_sd)
     range_save = np.tile(df.data['range'],
@@ -62,7 +68,7 @@ for file in files:
                               beta_thres=[-5.5, None],
                               v_thres=[None, None],
                               depo=df.data['depo_adj'],
-                              beta=np.log10(df.data['beta_raw']),
+                              beta=df.data['beta_log'],
                               v=df.data['v_raw'])
 
     # maximum filter to increase the size of liquid region
@@ -79,7 +85,7 @@ for file in files:
                                beta_thres=[None, None],
                                v_thres=[1, None],
                                depo=df.data['depo_adj'],
-                               beta=np.log10(df.data['beta_raw']),
+                               beta=df.data['beta_log'],
                                v=df.data['v_raw'])
     updraft_smooth = median_filter(updraft, size=3)
     updraft_max = maximum_filter(updraft_smooth, size=91)
@@ -92,7 +98,7 @@ for file in files:
                                        beta_thres=[-7, None],
                                        v_thres=[None, -1],
                                        depo=df.data['depo_adj'],
-                                       beta=np.log10(df.data['beta_raw']),
+                                       beta=df.data['beta_log'],
                                        v=df.data['v_raw'])
     precipitation_1_median = median_filter(precipitation_1, size=9)
 
@@ -107,7 +113,7 @@ for file in files:
                                            beta_thres=[-7, None],
                                            v_thres=[None, -0.5],
                                            depo=df.data['depo_adj'],
-                                           beta=np.log10(df.data['beta_raw']),
+                                           beta=df.data['beta_log'],
                                            v=df.data['v_raw'])
 
     # Avoid ebola infection surrounding updraft
@@ -116,7 +122,7 @@ for file in files:
                                      beta_thres=[None, None],
                                      v_thres=[0.2, None],
                                      depo=df.data['depo_adj'],
-                                     beta=np.log10(df.data['beta_raw']),
+                                     beta=df.data['beta_log'],
                                      v=df.data['v_raw'])
     updraft_ebola_max = maximum_filter(updraft_ebola, size=3)
 
@@ -142,6 +148,7 @@ for file in files:
             mask[row, col:] = True
         mask_undefined = mask * mask_aerosol0
         df.data['classifier'][mask_undefined] = i
+
     if (df.data['classifier'] == 10).any():
         classifier = df.data['classifier'].ravel()
         time_dbscan = np.repeat(np.arange(df.data['time'].size),
@@ -218,7 +225,6 @@ for file in files:
     fig.tight_layout()
     fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
                 dpi=150, bbox_inches='tight')
-    plt.close(fig)
 
     classifier = df.data['classifier'].flatten()
     result = pd.DataFrame({'date': df.date,
