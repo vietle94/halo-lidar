@@ -18,11 +18,11 @@ from scipy.stats import binned_statistic_2d
 data = hd.getdata('F:/halo/32/depolarization')
 classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
-with open('ref_XR.npy', 'rb') as f:
+with open('ref_XR2.npy', 'rb') as f:
     ref = np.load(f)
 
 # %%
-date = '20180621'
+date = '20180908'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -32,7 +32,7 @@ df.depo_cross_adj()
 
 # %% if XR
 df.data['beta_log'] = np.log10(df.data['beta_raw'])
-df.data['beta_log'][:, :20] = df.data['beta_log'][:, :20] - ref
+df.data['beta_log'][:, :50] = df.data['beta_log'][:, :50] - ref
 
 # %%
 df.filter(variables=['beta_raw', 'beta_log'],
@@ -325,3 +325,10 @@ ax7.set_xlabel('Time UTC [hour]', weight='bold')
 fig.tight_layout()
 fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
             dpi=150, bbox_inches='tight')
+
+# %%
+fig, ax = plt.subplots(2, 1, figsize=(12, 6))
+ax[0].pcolormesh(df.data['time'], df.data['range'],
+                 np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
+ax[1].pcolormesh(df.data['time'], df.data['range'],
+                 df.data['beta_log'].T, cmap='jet', vmin=-8, vmax=-4)
