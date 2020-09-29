@@ -12,9 +12,9 @@ my_cmap.set_under('w')
 bin_depo = np.linspace(0, 0.5, 50)
 bin_month = np.arange(0.5, 13, 1)
 bin_time = np.arange(0, 25)
+save_location = 'F:\\halo\\classifier\\summary\\'
 
 for site in ['46', '54', '33', '53', '34', '32']:
-    save_location = 'F:\\halo\\classifier\\summary\\'
     df = pd.read_csv('F:\\halo\\classifier\\' + site + '\\result.csv')
 
     df['date'] = pd.to_datetime(df['date'])
@@ -177,3 +177,55 @@ for i, key in enumerate(pos.keys()):
     lab_ax.set_ylabel(key, weight='bold', labelpad=20, size=15)
 fig.tight_layout()
 fig.savefig(save_location + 'month_time_count.png', bbox_inches='tight')
+
+# %%
+df = pd.read_csv('smeardata_20160101120000.csv')
+df['time'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']])
+df = df.drop(['HYY_META.SO21250'], axis=1)
+df = df.rename(columns={'HYY_META.CO1250': 'CO',
+                        'HYY_META.O31250': 'O3'})
+# %%
+fig, axes = plt.subplots(1, 4, figsize=(16, 9/3.5))
+for year, grp_year in df.groupby('Year'):
+    CO_mean, time_edge, month_edge, _ = binned_statistic_2d(
+        grp_year['Hour'],
+        grp_year['Month'],
+        grp_year['CO'],
+        bins=[bin_time, bin_month],
+        statistic=np.nanmean)
+
+    X, Y = np.meshgrid(time_edge, month_edge)
+    p = axes[y[year]].pcolormesh(X, Y, CO_mean.T, cmap='jet',
+                                 vmin=100, vmax=200)
+    cbar = fig.colorbar(p, ax=axes[y[year]])
+    if year == 2019:
+        cbar.ax.set_ylabel('CO concentration')
+    axes[y[year]].yaxis.set_ticks([4, 8, 12])
+    axes[y[year]].set_title(year, weight='bold')
+    axes[y[year]].set_xlabel('Time (hour)', weight='bold')
+axes[0].set_ylabel('Month')
+fig.tight_layout()
+fig.savefig(save_location + 'CO.png', bbox_inches='tight')
+
+# %%
+fig, axes = plt.subplots(1, 4, figsize=(16, 9/3.5))
+for year, grp_year in df.groupby('Year'):
+    O3_mean, time_edge, month_edge, _ = binned_statistic_2d(
+        grp_year['Hour'],
+        grp_year['Month'],
+        grp_year['O3'],
+        bins=[bin_time, bin_month],
+        statistic=np.nanmean)
+
+    X, Y = np.meshgrid(time_edge, month_edge)
+    p = axes[y[year]].pcolormesh(X, Y, O3_mean.T, cmap='jet',
+                                 vmin=20, vmax=50)
+    cbar = fig.colorbar(p, ax=axes[y[year]])
+    if year == 2019:
+        cbar.ax.set_ylabel('O3 concentration')
+    axes[y[year]].yaxis.set_ticks([4, 8, 12])
+    axes[y[year]].set_title(year, weight='bold')
+    axes[y[year]].set_xlabel('Time (hour)', weight='bold')
+axes[0].set_ylabel('Month')
+fig.tight_layout()
+fig.savefig(save_location + 'O3.png', bbox_inches='tight')
