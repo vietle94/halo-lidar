@@ -52,8 +52,6 @@ df.data['co_signal'] = df.data['co_signal']/y_co
 df.data['cross_signal'] = df.data['cross_signal']/y_cross
 
 # %%
-df.depo_cross_adj()
-
 df.filter(variables=['cross_signal', 'beta_raw'],
           ref='co_signal',
           threshold=1 + 3*df.snr_sd)
@@ -70,6 +68,7 @@ p = hd.area_select(df.data['time'], df.data['range'],
 # Averaged depo of the whole box
 cross = np.nanmean(df.data['cross_signal'].T[p.mask])
 co = np.nanmean(df.data['co_signal'].T[p.mask])
-
+cross = (cross - 1) - \
+    df.bleed_through_mean * (co - 1) + 1
 
 print((cross-1)/(co-1))
