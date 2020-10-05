@@ -210,9 +210,9 @@ class halo_data:
 
         self.data['depo_adj_sd'] = np.sqrt(
             (self.data['depo_adj'])**2 *
-            np.sqrt(
+            (
                 (self.data['cross_signal_sd']/(self.data['cross_signal'] - 1))**2 +
-                (sigma_co/self.data['co_signal'])**2
+                (sigma_co/(self.data['co_signal']-1))**2
             ))
 
     def beta_averaged(self):
