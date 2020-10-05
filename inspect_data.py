@@ -40,8 +40,10 @@ ax.set_xlim([0.9995, 1.003])
 fig.tight_layout()
 
 # %%
+##############################################
 # Now choose range based on co_signal for the background
 range_co = (df.data['range'] > 3200) & (df.data['range'] < 8000)
+##############################################
 
 # %%
 n = t.size
@@ -50,7 +52,6 @@ cross = np.nanmean(df.data['cross_signal'][np.ix_(t, range_co)], axis=0)
 x_co = df.data['range'][range_co]
 x_cross = df.data['range'][range_co]
 
-# %%
 a, b, c = np.polyfit(x_co, co, deg=2)
 y_co = c + b*df.data['range'] + a*(df.data['range']**2)
 
@@ -101,7 +102,6 @@ depo_corrected_sd = np.sqrt(
         (sigma_co/(co_corrected - 1))**2
     ))
 
-# %%
 depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
 depo_corrected_sd[co_corrected < 1 + 3*co_sd_background] = np.nan
 
