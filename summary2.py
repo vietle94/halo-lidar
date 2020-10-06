@@ -77,22 +77,29 @@ df[['location2', 'temp']] = df['location'].str.split('-', expand=True)
 pos = {'Uto': 3, 'Hyytiala': 2,
        'Vehmasmaki': 1, 'Sodankyla': 0}
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
-
 cbar_max = {'Uto': 600, 'Hyytiala': 600,
             'Vehmasmaki': 400, 'Sodankyla': 400}
-fig, axes = plt.subplots(4, 4, figsize=(16, 9), sharex=True, sharey=True)
+avg = {}
+
+X, Y = np.meshgrid(month_edge, depo_edge)
+
+fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
         H, month_edge, depo_edge = np.histogram2d(
             g['month'], g['depo'],
             bins=(bin_month, bin_depo)
         )
-        X, Y = np.meshgrid(month_edge, depo_edge)
 
         p = axes[pos[k], y[key]].pcolormesh(X, Y, H.T, cmap=my_cmap,
                                             vmin=0.1, vmax=cbar_max[k])
         fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].xaxis.set_ticks([4, 8, 12])
+
+        if k not in avg:
+            avg[k] = H[:, :, np.newaxis]
+        else:
+            avg[k] = np.append(avg[k], H[:, :, np.newaxis], axis=2)
 
 for i, val in enumerate(y.keys()):
     axes[0, i].set_title(val, weight='bold', size=15)
@@ -104,11 +111,22 @@ for i, key in enumerate(pos.keys()):
     lab_ax.tick_params(labelcolor='none', top=False, bottom=False,
                        left=False, right=False)
     lab_ax.set_ylabel(key, weight='bold', labelpad=20, size=15)
+
+for key, val in avg.items():
+
+    p = axes[pos[key], -1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
+                                      cmap=my_cmap,
+                                      vmin=0.1, vmax=cbar_max[key])
+    fig.colorbar(p, ax=axes[pos[key], -1])
+    axes[pos[k], -1].xaxis.set_ticks([4, 8, 12])
+axes[0, -1].set_title('4 years averaged', weight='bold', size=15)
 fig.tight_layout()
 fig.savefig(save_location + 'month_depo.png', bbox_inches='tight')
 
 # %%
-fig, axes = plt.subplots(4, 4, figsize=(16, 9), sharex=True, sharey=True)
+avg = {}
+X, Y = np.meshgrid(time_edge, month_edge)
+fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
         dep_mean, time_edge, month_edge, _ = binned_statistic_2d(
@@ -118,14 +136,15 @@ for key, grp in df.groupby(['year']):
             bins=[bin_time, bin_month],
             statistic=np.nanmean)
 
-        X, Y = np.meshgrid(time_edge, month_edge)
-
         p = axes[pos[k], y[key]].pcolormesh(X, Y, dep_mean.T, cmap='jet',
                                             vmin=1e-5, vmax=0.3)
-        cbar = fig.colorbar(p, ax=axes[pos[k], y[key]])
-        if y[key] == 3:
-            cbar.ax.set_ylabel('Depolarization ratio')
+        fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].yaxis.set_ticks([4, 8, 12])
+
+        if k not in avg:
+            avg[k] = dep_mean[:, :, np.newaxis]
+        else:
+            avg[k] = np.append(avg[k], dep_mean[:, :, np.newaxis], axis=2)
 
 for i, val in enumerate(y.keys()):
     axes[0, i].set_title(val, weight='bold', size=15)
@@ -137,13 +156,26 @@ for i, key in enumerate(pos.keys()):
     lab_ax.tick_params(labelcolor='none', top=False, bottom=False,
                        left=False, right=False)
     lab_ax.set_ylabel(key, weight='bold', labelpad=20, size=15)
+
+for key, val in avg.items():
+    p = axes[pos[key], -1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
+                                      cmap='jet',
+                                      vmin=1e-5, vmax=0.3)
+    cbar = fig.colorbar(p, ax=axes[pos[key], -1])
+    cbar.ax.set_ylabel('Depolarization ratio')
+
+axes[0, -1].set_title('4 years averaged', weight='bold', size=15)
+axes[-1, -1].set_xlabel('Time (hour)')
 fig.tight_layout()
 fig.savefig(save_location + 'month_time.png', bbox_inches='tight')
 
 # %%
+avg = {}
 cbar_max2 = {'Uto': 300, 'Hyytiala': 400,
              'Vehmasmaki': 300, 'Sodankyla': 200}
-fig, axes = plt.subplots(4, 4, figsize=(16, 9), sharex=True, sharey=True)
+
+X, Y = np.meshgrid(time_edge, month_edge)
+fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
         dep_mean, time_edge, month_edge, _ = binned_statistic_2d(
@@ -152,13 +184,15 @@ for key, grp in df.groupby(['year']):
             g['depo'],
             bins=[bin_time, bin_month],
             statistic='count')
-
-        X, Y = np.meshgrid(time_edge, month_edge)
-
         p = axes[pos[k], y[key]].pcolormesh(X, Y, dep_mean.T, cmap=my_cmap,
                                             vmin=0.001, vmax=cbar_max2[k])
         cbar = fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].yaxis.set_ticks([4, 8, 12])
+
+        if k not in avg:
+            avg[k] = dep_mean[:, :, np.newaxis]
+        else:
+            avg[k] = np.append(avg[k], dep_mean[:, :, np.newaxis], axis=2)
 
 for i, val in enumerate(y.keys()):
     axes[0, i].set_title(val, weight='bold', size=15)
@@ -170,6 +204,14 @@ for i, key in enumerate(pos.keys()):
     lab_ax.tick_params(labelcolor='none', top=False, bottom=False,
                        left=False, right=False)
     lab_ax.set_ylabel(key, weight='bold', labelpad=20, size=15)
+
+for key, val in avg.items():
+    p = axes[pos[key], -1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
+                                      cmap=my_cmap,
+                                      vmin=0.001, vmax=cbar_max2[key])
+    fig.colorbar(p, ax=axes[pos[key], -1])
+axes[0, -1].set_title('4 years averaged', weight='bold', size=15)
+axes[-1, -1].set_xlabel('Time (hour)')
 fig.tight_layout()
 fig.savefig(save_location + 'month_time_count.png', bbox_inches='tight')
 
@@ -180,10 +222,6 @@ df = df.drop(['HYY_META.SO21250'], axis=1)
 df = df.rename(columns={'HYY_META.CO1250': 'CO',
                         'HYY_META.O31250': 'O3'})
 
-df2 = pd.read_csv('smeardata2_20160101120000.csv')
-df2['time'] = pd.to_datetime(df2[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']])
-df2 = df.rename(columns={'HYY_META.T1250': 'temperature',
-                         'HYY_META.O31250': 'O3'})
 # %%
 fig, axes = plt.subplots(2, 4, figsize=(16, 5),
                          sharex=True, sharey=True)
