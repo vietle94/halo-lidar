@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic_2d
 from matplotlib.colors import LogNorm
 import matplotlib
+import copy
 %matplotlib qt
 
 # %%
-my_cmap = matplotlib.cm.get_cmap('jet')
+my_cmap = copy.copy(matplotlib.cm.get_cmap('jet'))
 my_cmap.set_under('w')
 bin_depo = np.linspace(0, 0.5, 50)
 bin_month = np.arange(0.5, 13, 1)
@@ -59,9 +60,6 @@ for site in ['46', '54', '33', '53', '34', '32']:
         plt.close('all')
 
 # %%
-my_cmap = matplotlib.cm.get_cmap('jet')
-my_cmap.set_under('w')
-
 df = pd.DataFrame()
 for site in ['46', '54', '33', '53', '32']:
     save_location = 'F:\\halo\\classifier\\summary\\'
@@ -75,9 +73,6 @@ df['depo'][df['depo'] > 1] = np.nan
 df.loc[df['location'] == 'Kuopio-33', 'location'] = 'Hyytiala-33'
 
 # %%
-bin_depo = np.linspace(0, 0.5, 50)
-bin_month = np.arange(0.5, 13, 1)
-bin_time = np.arange(0, 25)
 df[['location2', 'temp']] = df['location'].str.split('-', expand=True)
 pos = {'Uto': 3, 'Hyytiala': 2,
        'Vehmasmaki': 1, 'Sodankyla': 0}
@@ -160,7 +155,7 @@ for key, grp in df.groupby(['year']):
 
         X, Y = np.meshgrid(time_edge, month_edge)
 
-        p = axes[pos[k], y[key]].pcolormesh(X, Y, dep_mean.T, cmap='jet',
+        p = axes[pos[k], y[key]].pcolormesh(X, Y, dep_mean.T, cmap=my_cmap,
                                             vmin=0.001, vmax=cbar_max2[k])
         cbar = fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].yaxis.set_ticks([4, 8, 12])
@@ -184,8 +179,14 @@ df['time'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Secon
 df = df.drop(['HYY_META.SO21250'], axis=1)
 df = df.rename(columns={'HYY_META.CO1250': 'CO',
                         'HYY_META.O31250': 'O3'})
+
+df2 = pd.read_csv('smeardata2_20160101120000.csv')
+df2['time'] = pd.to_datetime(df2[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']])
+df2 = df.rename(columns={'HYY_META.T1250': 'temperature',
+                         'HYY_META.O31250': 'O3'})
 # %%
-fig, axes = plt.subplots(1, 4, figsize=(16, 9/3.5))
+fig, axes = plt.subplots(2, 4, figsize=(16, 5),
+                         sharex=True, sharey=True)
 for year, grp_year in df.groupby('Year'):
     CO_mean, time_edge, month_edge, _ = binned_statistic_2d(
         grp_year['Hour'],
@@ -195,21 +196,12 @@ for year, grp_year in df.groupby('Year'):
         statistic=np.nanmean)
 
     X, Y = np.meshgrid(time_edge, month_edge)
-    p = axes[y[year]].pcolormesh(X, Y, CO_mean.T, cmap='jet',
-                                 vmin=100, vmax=200)
-    cbar = fig.colorbar(p, ax=axes[y[year]])
+    p = axes[0, y[year]].pcolormesh(X, Y, CO_mean.T, cmap='jet',
+                                    vmin=100, vmax=200)
+    cbar = fig.colorbar(p, ax=axes[0, y[year]])
     if year == 2019:
         cbar.ax.set_ylabel('CO concentration')
-    axes[y[year]].yaxis.set_ticks([4, 8, 12])
-    axes[y[year]].set_title(year, weight='bold')
-    axes[y[year]].set_xlabel('Time (hour)', weight='bold')
-axes[0].set_ylabel('Month')
-fig.tight_layout()
-fig.savefig(save_location + 'CO.png', bbox_inches='tight')
 
-# %%
-fig, axes = plt.subplots(1, 4, figsize=(16, 9/3.5))
-for year, grp_year in df.groupby('Year'):
     O3_mean, time_edge, month_edge, _ = binned_statistic_2d(
         grp_year['Hour'],
         grp_year['Month'],
@@ -218,14 +210,16 @@ for year, grp_year in df.groupby('Year'):
         statistic=np.nanmean)
 
     X, Y = np.meshgrid(time_edge, month_edge)
-    p = axes[y[year]].pcolormesh(X, Y, O3_mean.T, cmap='jet',
-                                 vmin=20, vmax=50)
-    cbar = fig.colorbar(p, ax=axes[y[year]])
+    p = axes[1, y[year]].pcolormesh(X, Y, O3_mean.T, cmap='jet',
+                                    vmin=20, vmax=50)
+    cbar = fig.colorbar(p, ax=axes[1, y[year]])
     if year == 2019:
         cbar.ax.set_ylabel('O3 concentration')
-    axes[y[year]].yaxis.set_ticks([4, 8, 12])
-    axes[y[year]].set_title(year, weight='bold')
-    axes[y[year]].set_xlabel('Time (hour)', weight='bold')
-axes[0].set_ylabel('Month')
-fig.tight_layout()
-fig.savefig(save_location + 'O3.png', bbox_inches='tight')
+    axes[1, y[year]].yaxis.set_ticks([4, 8, 12])
+    axes[0, y[year]].set_title(year, weight='bold')
+    axes[1, y[year]].set_xlabel('Time (hour)', weight='bold')
+axes[0, 0].set_ylabel('Month')
+axes[1, 0].set_ylabel('Month')
+fig.suptitle('Auxiliary data at Hyytiala', weight='bold', size=22)
+fig.tight_layout(rect=[0, 0, 1, 0.90])
+fig.savefig(save_location + 'auxiliary_hyytiala.png', bbox_inches='tight')
