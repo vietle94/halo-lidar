@@ -14,9 +14,9 @@ df = hd.halo_data(file)
 
 df.filter_height()
 df.unmask999()
-df.depo_cross_adj()
 
 # %%
+# Choose careful the area of interest
 fig, ax = plt.subplots()
 ax.pcolormesh(df.data['time'], df.data['range'],
               np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
@@ -24,11 +24,31 @@ p = hd.area_select(df.data['time'], df.data['range'],
                    df.data['depo_raw'].T, ax_in=ax, fig=fig)
 
 # %%
-df.filter(variables=['depo_adj', 'depo_adj_sd'],
-          ref='co_signal',
-          threshold=1 + 3*df.snr_sd)
+cross = np.nanmean(df.data['cross_signal'].T[p.mask])
+co = np.nanmean(df.data['co_signal'].T[p.mask])
+sigma_cross = sigma_co = df.snr_sd/np.sqrt(p.mask[0].size * p.mask[1].size)
+bleed = df.bleed_through_mean
+sigma_bleed = df.bleed_through_sd
+cross_corrected = (cross-1) - \
+    bleed * (co-1) + 1
+cross_sd = np.sqrt(
+    sigma_cross**2 +
+    ((bleed * (co-1))**2 *
+     ((sigma_bleed/bleed)**2 +
+      (sigma_co/(co-1))**2))
+)
 
-dep = np.nanmean(df.data['depo_adj'].T[p.mask])
-dep_sd = np.nanmean(df.data['depo_adj_sd'].T[p.mask])
+depo_corrected = (cross_corrected - 1) / \
+    (co - 1)
 
-print(dep, dep_sd)
+depo_corrected_sd = np.sqrt(
+    (depo_corrected)**2 *
+    (
+        (cross_sd/(cross_corrected - 1))**2 +
+        (sigma_co/(co - 1))**2
+    ))
+
+# %%
+dep = np.nanmean(depo_corrected[co > 1+3*sigma_co])
+dep_sd = np.nanmean(depo_corrected_sd[co > 1+3*sigma_co])
+print(f'depo: {dep:.5f}, depo sd: {dep_sd:.5f}')
