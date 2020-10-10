@@ -625,12 +625,12 @@ class span_select():
 
 class area_aerosol(area_select):
 
-    def __init__(self, x, y, z, ax_in, fig, ax2, df):
+    def __init__(self, x, y, z, ax_in, fig, ax2, df, ax3, ax4):
         super().__init__(x, y, z, ax_in, fig)
         self.df = df
         self.co = self.df.data['co_signal']
         self.cross = self.df.data['cross_signal']
-        self.ax2 = ax2
+        self.ax2, self.ax3, self.ax4 = ax2, ax3, ax4
 
     def __call__(self, event1, event2):
         super().__call__(event1, event2)
@@ -646,28 +646,34 @@ class area_aerosol(area_select):
         self.ax2.yaxis.set_major_formatter(m_km_ticks())
         self.ax2.legend()
         self.ax2.set_xlim([0.9995, 1.003])
-        self.axapply = self.fig.add_axes([0.7, 0.05, 0.1, 0.075])
-        self.axfit = self.fig.add_axes([0.81, 0.05, 0.1, 0.075])
+        self.ax2.set_title('Co and cross profile')
+        self.ax2.set_ylabel('Height (km)')
+        self.ax2.set_xlabel('SNR')
+        self.axapply = self.fig.add_axes([0.7, 0.005, 0.1, 0.025])
+        self.axfit = self.fig.add_axes([0.81, 0.005, 0.1, 0.025])
         self.bfit = Button(self.axfit, 'Fit')
         self.bapply = Button(self.axapply, 'Apply')
         self.canvas.draw()
         self.span_aerosol = span_aerosol(self.co_mean_profile, self.y, self.ax2,
                                          self.canvas, 'vertical',
                                          self.cross_mean_profile,
-                                         self.range_aerosol, self.df)
+                                         self.range_aerosol,
+                                         self.df, self.ax3, self.ax4)
         self.bfit.on_clicked(self.span_aerosol.fit)
         self.bapply.on_clicked(self.span_aerosol.apply)
 
 
 class span_aerosol(span_select):
 
-    def __init__(self, x, y, ax_in, canvas, orient, cross, range_aerosol, df):
+    def __init__(self, x, y, ax_in, canvas, orient, cross, range_aerosol, df,
+                 ax3, ax4):
         super().__init__(x, y, ax_in, canvas, orient)
         self.range_aerosol, self.df = range_aerosol, df
         self.co, self.range, self.cross = x, y, cross
         self.co_all = np.array([])
         self.cross_all = np.array([])
         self.range_all = np.array([])
+        self.ax3, self.ax4 = ax3, ax4
 
     def __call__(self, min, max):
         self.min = min
@@ -737,6 +743,21 @@ class span_aerosol(span_select):
         self.final_depo = np.nanmean(depo_corrected[self.range_aerosol])
         self.final_depo_sd = np.nanmean(depo_corrected_sd[self.range_aerosol])
         print(f'Depo: {self.final_depo:.3f} with std: {self.final_depo_sd:.3f}')
+        self.ax3.plot(self.co_corrected,
+                      self.range, '.', label='co_signal', c='red')
+        self.ax3.plot(self.cross_corrected,
+                      self.range, '.', label='cross_signal', c='blue')
+        self.ax3.set_xlim([0.9995, 1.003])
+        self.ax3.legend()
+        self.ax3.set_title('Corrected co and cross')
+        self.ax3.set_xlabel('SNR')
+        self.ax4.errorbar(depo_corrected,
+                          self.range, xerr=depo_corrected_sd,
+                          errorevery=1, elinewidth=0.5, fmt='.')
+        self.ax4.set_xlabel('Depolarization ratio')
+        self.ax4.set_title('Averaged depo profile')
+        self.ax4.set_xlim([-0.1, 0.5])
+        self.canvas.draw()
 
 
 class area_snr(area_select):
