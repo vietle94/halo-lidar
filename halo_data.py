@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib import Path
 from collections import OrderedDict
 from matplotlib.colors import LogNorm
+from matplotlib.widgets import Button
 import json
 
 # Summary file
@@ -516,45 +517,6 @@ class halo_data:
                     f'{self.depo_wp.time.min()*100:.0f}' + '-' +
                     f'{self.depo_wp.time.max()*100:.0f}' + '.png')
 
-    # def depo_aerosol(self):
-    #     fig, ax = plt.subplots(5, 1, figsize=(18, 9))
-    #     p = ax[0].pcolormesh(self.data['time'],
-    #                          self.data['range'],
-    #                          np.log10(self.data['beta_raw'].T),
-    #                          cmap='jet', vmin=self.cbar_lim['beta_raw'][0],
-    #                          vmax=self.cbar_lim['beta_raw'][1])
-    #     fig.colorbar(p, ax=ax[0], fraction=0.05, pad=0.02)
-    #     ax[0].set_title('beta_raw')
-    #     ax[0].set_xlabel('Time (h)')
-    #     ax[0].set_xlim([0, 24])
-    #     ax[0].set_ylabel('Height (km)')
-    #     ax[0].yaxis.set_major_formatter(m_km_ticks())
-    #     fig.suptitle(self.filename,
-    #                  size=30,
-    #                  weight='bold')
-    #     fig.subplots_adjust(hspace=0.3)
-    #     self.aerosol = area_select
-    def inspect_data(self):
-        fig = plt.figure(figsize=(18, 9))
-        ax_in = fig.add_subplot(211)
-        ax1 = fig.add_subplot(234)
-        ax2 = fig.add_subplot(235)
-        ax3 = fig.add_subplot(236)
-        b = np.log10(self.data['beta_raw']).T
-        p = ax_in.pcolormesh(self.data['time'], self.data['range'],
-                             b, cmap='jet',
-                             vmin=-8, vmax=-4)
-        fig.colorbar(p, ax=ax_in)
-        depo = self.data['depo_adj']
-        depo[depo > 1] = np.nan
-        depo[depo < -0.25] = np.nan
-        self.area_classification = area_classification(
-            self.data['time'],
-            self.data['range'],
-            b, ax_in, fig,
-            self.data['v_raw'].T, depo.T,
-            ax1, ax2, ax3)
-
     def v_along_time(self, size=51, height=2000, v='v_raw'):
         height_idx = np.argmin(self.data['range'] < height)
         v_ = self.data[v][:, :height_idx]
@@ -616,6 +578,7 @@ class area_select():
         self.x, self.y, self.z = x, y, z
         self.ax_in = ax_in
         self.canvas = fig.canvas
+        self.fig = fig
         self.selector = RectangleSelector(
             self.ax_in,
             self,
@@ -646,123 +609,134 @@ class area_select():
 
 class span_select():
 
-    def __init__(self, x, y, ax_in, canvas, velocity, beta):
+    def __init__(self, x, y, ax_in, canvas, orient='horizontal'):
         self.x, self.y = x, y
-        self.v, self.b = velocity, beta
         self.ax_in = ax_in
         self.canvas = canvas
         self.selector = SpanSelector(
-            self.ax_in, self, 'horizontal', span_stays=True, useblit=True
+            self.ax_in, self, orient, span_stays=True, useblit=True
         )
 
     def __call__(self, min, max):
         self.maskx = (self.x > min) & (self.x < max)
-        # self.selected_x = self.x[self.maskx]
+        self.selected_x = self.x[self.maskx]
         self.selected_y = self.y[self.maskx]
-        self.selected_v = self.v[self.maskx]
-        self.selected_b = self.b[self.maskx]
-        # self.not_selected_y = self.y[np.invert(self.maskx)]
-
-
-class span_aerosol(span_select):
-
-    def __init__(self, x, y, ax_in, canvas,
-                 ax10, ax12, velocity, beta):
-        super().__init__(x, y, ax_in, canvas, velocity, beta)
-        self.ax10 = ax10
-        self.ax12 = ax12
-
-    def __call__(self, min, max):
-        super().__call__(min, max)
-        for ax in [self.ax10, self.ax12]:
-            ax.cla()
-
-        self.df = pd.DataFrame({'depo': self.selected_y,
-                                'velocity': self.selected_v,
-                                'beta': self.selected_b})
-        self.df.dropna(inplace=True)
-        self.df.beta = np.log10(self.df.beta)
-        H, x_edges, y_edges = np.histogram2d(self.df['depo'],
-                                             self.df['velocity'],
-                                             bins=20)
-        X, Y = np.meshgrid(x_edges, y_edges)
-        p = self.ax10.pcolormesh(X, Y, H.T, norm=LogNorm())
-        self.ax10.set_xlabel('depo')
-        self.ax10.set_ylabel('velocity')
-
-        # self.ax10.hist(self.selected_y.flatten())
-        # self.ax10.set_title('Depo of chosen area')
-        # self.ax10.set_xlabel('Depo')
-
-        self.ax12.scatter(self.df['depo'], self.df['velocity'],
-                          self.df['beta'])
-        self.ax12.set_xlabel('Depo')
-        self.ax12.set_ylabel('Velocity')
-        self.ax12.set_zlabel('Beta')
-        self.canvas.fig.colorbar(p, ax=self.ax10)
-
-        # self.ax12.hist(self.not_selected_y.flatten())
-        # self.ax12.set_title('Depo of unchosen area')
-        # self.ax12.set_xlabel('Depo')
-        self.canvas.draw()
-
-
-class area_classification(area_select):
-
-    def __init__(self, x, y, z, ax_in, fig,
-                 v, depo, ax1, ax2, ax3):
-        super().__init__(x, y, z, ax_in, fig)
-        self.v, self.depo = v, depo
-        self.ax1, self.ax2, self.ax3 = ax1, ax2, ax3
-
-    def __call__(self, event1, event2):
-        super().__call__(event1, event2)
-        self.ax1.cla()
-        self.ax2.cla()
-        self.ax3.cla()
-        self.ax1.set_title('Distribution of beta_raw')
-        self.ax2.set_title('Distribution of v_raw')
-        self.ax3.set_title('Distribution of depo')
-        self.ax1.hist(self.area.flatten(), bins=50)
-        self.ax2.hist(self.v[self.mask].flatten(), bins=50)
-        self.ax3.hist(self.depo[self.mask].flatten(), bins=50)
-        self.canvas.draw()
 
 
 class area_aerosol(area_select):
 
-    def __init__(self, x, y, z, ax_in, fig,
-                 snr, ax_out,
-                 ax10, ax12, threshold,
-                 velocity, beta):
+    def __init__(self, x, y, z, ax_in, fig, ax2, df):
         super().__init__(x, y, z, ax_in, fig)
-        self.ax_out = ax_out
-        self.ax10 = ax10
-        self.ax12 = ax12
-        self.snr = snr
-        self.threshold = threshold
-        self.v, self.b = velocity, beta
+        self.df = df
+        self.co = self.df.data['co_signal']
+        self.cross = self.df.data['cross_signal']
+        self.ax2 = ax2
 
     def __call__(self, event1, event2):
         super().__call__(event1, event2)
-        self.ax10.cla()
-        self.ax12.cla()
-        self.ax_out.cla()
-        self.ax_out.set_title('co_signal vs depo')
-        self.ax_out.set_xlabel('co_signal')
-        self.ax_out.set_ylabel('depo')
-        self.selected_depo = self.area.flatten()
-        self.selected_snr = self.snr[self.mask].flatten()
-        self.selected_v = self.v[self.mask].flatten()
-        self.selected_b = self.b[self.mask].flatten()
-        self.ax_out.plot(self.selected_snr, self.selected_depo, '.')
-        if self.threshold is not None:
-            self.ax_out.axvline(self.threshold)
-        self.area_aerosol = span_aerosol(
-            self.selected_snr, self.selected_depo, self.ax_out, self.canvas,
-            self.ax10, self.ax12, self.selected_v, self.selected_b
-        )
+        self.ax2.cla()
+        self.t = (self.x >= self.xcord[0]) & (self.x <= self.xcord[1])
+        self.range_aerosol = (self.y > self.ycord[0]) & (self.y < self.ycord[1])
+        self.co_mean_profile = np.nanmean(self.co[self.t, :], axis=0)
+        self.cross_mean_profile = np.nanmean(self.cross[self.t, :], axis=0)
+        self.ax2.plot(self.co_mean_profile,
+                      self.y, '.', label='co_signal', c='red')
+        self.ax2.plot(self.cross_mean_profile,
+                      self.y, '.', label='cross_signal', c='blue')
+        self.ax2.yaxis.set_major_formatter(m_km_ticks())
+        self.ax2.legend()
+        self.ax2.set_xlim([0.9995, 1.003])
+        self.axapply = self.fig.add_axes([0.7, 0.05, 0.1, 0.075])
+        self.axfit = self.fig.add_axes([0.81, 0.05, 0.1, 0.075])
+        self.bfit = Button(self.axfit, 'Fit')
+        self.bapply = Button(self.axapply, 'Apply')
         self.canvas.draw()
+        self.span_aerosol = span_aerosol(self.co_mean_profile, self.y, self.ax2,
+                                         self.canvas, 'vertical',
+                                         self.cross_mean_profile,
+                                         self.range_aerosol, self.df)
+        self.bfit.on_clicked(self.span_aerosol.fit)
+        self.bapply.on_clicked(self.span_aerosol.apply)
+
+
+class span_aerosol(span_select):
+
+    def __init__(self, x, y, ax_in, canvas, orient, cross, range_aerosol, df):
+        super().__init__(x, y, ax_in, canvas, orient)
+        self.range_aerosol, self.df = range_aerosol, df
+        self.co, self.range, self.cross = x, y, cross
+        self.co_all = np.array([])
+        self.cross_all = np.array([])
+        self.range_all = np.array([])
+
+    def __call__(self, min, max):
+        self.min = min
+        self.max = max
+        self.maskrange = (self.range > self.min) & (self.range < self.max)
+        self.selected_co = self.co[self.maskrange]
+        self.selected_range = self.range[self.maskrange]
+        self.selected_cross = self.cross[self.maskrange]
+
+    def apply(self, event):
+        self.co_all = np.append(self.co_all, self.selected_co)
+        self.cross_all = np.append(self.cross_all, self.selected_cross)
+        self.range_all = np.append(self.range_all, self.selected_range)
+        self.ax_in.axhspan(self.min, self.max, alpha=0.5, color='yellow')
+        self.canvas.draw()
+        # print(f'you choose the background area between: \n' +
+        #       f'{self.min/1000:.2f}km and {self.max/1000:.2}km')
+
+    def fit(self, event):
+        co = self.co_all
+        cross = self.cross_all
+        x_co = self.range_all
+
+        a, b, c = np.polyfit(x_co, co, deg=2)
+        y_co = c + b*self.range + a*(self.range**2)
+        y_co_background = c + b*x_co + a*(x_co**2)
+
+        a, b, c = np.polyfit(x_co, cross, deg=2)
+        y_cross = c + b*self.range + a*(self.range**2)
+        y_cross_background = c + b*x_co + a*(x_co**2)
+
+        self.ax_in.plot(y_co, self.range, c='red')
+        self.ax_in.plot(y_cross, self.range, c='blue')
+
+        co_corrected = self.co/y_co
+        self.co_corrected = co_corrected
+        cross_corrected = self.cross/y_cross
+        cross_sd_background = np.nanstd(cross/y_cross_background)
+        co_sd_background = np.nanstd(co/y_co_background)
+        sigma_co, sigma_cross = co_sd_background, cross_sd_background
+        bleed = self.df.bleed_through_mean
+        sigma_bleed = self.df.bleed_through_sd
+
+        self.cross_corrected = (cross_corrected - 1) - \
+            self.df.bleed_through_mean * (co_corrected - 1) + 1
+
+        cross_sd_background_bleed = np.sqrt(
+            sigma_cross**2 +
+            ((bleed * (co_corrected - 1))**2 *
+             ((sigma_bleed/bleed)**2 +
+              (sigma_co/(co_corrected - 1))**2))
+        )
+
+        depo_corrected = (cross_corrected - 1) / \
+            (co_corrected - 1)
+
+        depo_corrected_sd = np.sqrt(
+            (depo_corrected)**2 *
+            (
+                (cross_sd_background_bleed/(cross_corrected - 1))**2 +
+                (sigma_co/(co_corrected - 1))**2
+            ))
+
+        depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
+        depo_corrected_sd[co_corrected < 1 + 3*co_sd_background] = np.nan
+
+        self.final_depo = np.nanmean(depo_corrected[self.range_aerosol])
+        self.final_depo_sd = np.nanmean(depo_corrected_sd[self.range_aerosol])
+        print(f'Depo: {self.final_depo:.3f} with std: {self.final_depo_sd:.3f}')
 
 
 class area_snr(area_select):
