@@ -5,6 +5,7 @@ from scipy.stats import binned_statistic_2d
 from matplotlib.colors import LogNorm
 import matplotlib
 import copy
+import glob
 %matplotlib qt
 
 # %%
@@ -71,9 +72,9 @@ df['year'] = df['date'].dt.year
 df['month'] = df['date'].dt.month
 df['depo'][df['depo'] > 1] = np.nan
 df.loc[df['location'] == 'Kuopio-33', 'location'] = 'Hyytiala-33'
+df[['location2', 'ID']] = df['location'].str.split('-', expand=True)
 
 # %%
-df[['location2', 'temp']] = df['location'].str.split('-', expand=True)
 pos = {'Uto': 3, 'Hyytiala': 2,
        'Vehmasmaki': 1, 'Sodankyla': 0}
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
@@ -216,16 +217,16 @@ fig.tight_layout()
 fig.savefig(save_location + 'month_time_count.png', bbox_inches='tight')
 
 # %%
-df = pd.read_csv('smeardata_20160101120000.csv')
-df['time'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']])
-df = df.drop(['HYY_META.SO21250'], axis=1)
-df = df.rename(columns={'HYY_META.CO1250': 'CO',
-                        'HYY_META.O31250': 'O3'})
+df2 = pd.read_csv('smeardata_20160101120000.csv')
+df2['time'] = pd.to_datetime(df2[['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']])
+df2 = df2.drop(['HYY_META.SO21250'], axis=1)
+df2 = df2.rename(columns={'HYY_META.CO1250': 'CO',
+                          'HYY_META.O31250': 'O3'})
 
 # %%
 fig, axes = plt.subplots(2, 4, figsize=(16, 5),
                          sharex=True, sharey=True)
-for year, grp_year in df.groupby('Year'):
+for year, grp_year in df2.groupby('Year'):
     CO_mean, time_edge, month_edge, _ = binned_statistic_2d(
         grp_year['Hour'],
         grp_year['Month'],
@@ -261,3 +262,116 @@ axes[1, 0].set_ylabel('Month')
 fig.suptitle('Auxiliary data at Hyytiala', weight='bold', size=22)
 fig.tight_layout(rect=[0, 0, 1, 0.90])
 fig.savefig(save_location + 'auxiliary_hyytiala.png', bbox_inches='tight')
+
+# %%
+temp = df[(df['month'] < 7) & (df['month'] > 3)]
+temp
+fig, ax = plt.subplots(1, 2, figsize=(12, 9), sharey=True, sharex=True)
+for y, grp in temp.groupby('location2'):
+    grp.groupby('range').mean()['depo'].plot(ax=ax[0], label=y)
+ax[0].set_ylabel('Depo')
+ax[0].set_title('Range vs Depo Pol season')
+ax[0].legend()
+
+temp2 = df[(df['month'] < 9) & (df['month'] > 6)]
+temp2
+for y, grp in temp2.groupby('location2'):
+    grp.groupby('range').mean()['depo'].plot(ax=ax[1], label=y)
+ax[1].set_ylabel('Depo')
+ax[1].set_title('Range vs Depo')
+ax[1].legend()
+
+# %%
+# std, hisogram to cut noise
+# every 2 months and with RH
+temp = df[(df['month'] >= 9) | (df['month'] <= 3)]
+temp
+fig, ax = plt.subplots(figsize=(12, 9))
+for y, grp in temp.groupby('location'):
+    grp.groupby('range').mean()['depo'].plot(ax=ax, label=y)
+ax.set_ylabel('Depo')
+ax.set_title('Range vs Depo')
+ax.legend()
+
+# %%
+# df.groupby(['location', 'range']).median()['depo'].plot()
+# temp.groupby('range').median()['depo'].plot()
+# temp.groupby('range').count()['depo'].plot()
+
+# %%
+df2
+temp2 = df2[(df2['Year'] == 2019) & (df2['Month'] == 1) & (df2['Day'] >= 21)]
+temp2 = temp2.dropna(axis=0)
+
+temp2 = temp2.set_index(temp2.time.dt.time)
+fig, ax = plt.subplots()
+for name, grp in temp2.groupby('Day'):
+    grp['CO'].plot(ax=ax, label=name)
+ax.legend()
+
+# %%
+list_weather = glob.glob('F:/weather/*.csv')
+location_weather = {'hyytiala': 'Hyytiala', 'kuopio': 'Vehmasmaki',
+                    'sodankyla': 'Sodankyla', 'uto': 'Uto'}
+weather = pd.DataFrame()
+for file in list_weather:
+    if 'kumpula' in file:
+        continue
+    df_file = pd.read_csv(file)
+    df_file['location2'] = location_weather[file.split('\\')[-1].split('_')[0]]
+    weather = weather.append(df_file, ignore_index=True)
+
+weather = weather.rename(columns={'Vuosi': 'year', 'Kk': 'month',
+                                  'Pv': 'day', 'Klo': 'time',
+                                  'Suhteellinen kosteus (%)': 'RH',
+                                  'Ilman lämpötila (degC)': 'Temperature'})
+weather[['year', 'month', 'day']] = weather[['year',
+                                             'month', 'day']].astype(str)
+weather['month'] = weather['month'].str.zfill(2)
+weather['day'] = weather['day'].str.zfill(2)
+weather['datetime'] = weather['year'] + weather['month'] + \
+    weather['day'] + weather['time']
+weather['datetime'] = pd.to_datetime(weather['datetime'], format='%Y%m%d%H:%M')
+
+
+df['hour'] = np.floor(df['time'])
+df['minute'] = (df['time'] % 1) * 60
+df['second'] = 0
+df['year'] = df['date'].dt.year
+df['month'] = df['date'].dt.month
+df['day'] = df['date'].dt.day
+
+df['datetime'] = pd.to_datetime(df[['year', 'month', 'day', 'hour', 'minute', 'second']])
+df = df.drop(['year', 'month', 'day', 'hour', 'minute', 'second'], axis=1)
+
+
+weather = weather.set_index('datetime').resample('0.5H').mean()
+weather = weather.reset_index()
+
+
+df = pd.merge(weather, df)
+
+# %%
+bimonthly_ = [np.arange(1, 7).reshape(3, 2),
+              np.arange(7, 13).reshape(3, 2)]
+for ii, bimonthly in enumerate(bimonthly_):
+    fig, ax = plt.subplots(3, 2, figsize=(16, 9), sharey=True)
+    for i, month in enumerate(bimonthly):
+        for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
+            grp_avg = grp.groupby('range')['depo'].mean()
+            grp_count = grp.groupby('range')['depo'].count()
+            grp_avg[grp_count > 0.01 * sum(grp_count)].plot(ax=ax[i, 0], label=loc)
+            ax[i, 0].set_xlim([0, 2500])
+
+            grp_ground = grp[grp['range'] <= 300]
+            y = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10))).mean()['depo']
+            x = np.arange(5, 105, 10)
+            ax[i, 1].plot(x, y)
+            ax[i, 1].set_xlabel('Relative humidity')
+
+        ax[i, 0].set_ylabel('Depo')
+        ax[i, 0].set_title(f'Months: {month}', weight='bold')
+        ax[i, 1].set_title(f'Months: {month}', weight='bold')
+        ax[i, 0].legend()
+    fig.tight_layout()
+    fig.savefig(save_location + f'{ii}_RH_dep_range.png', bbox_inches='tight')
