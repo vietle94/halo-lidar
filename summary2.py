@@ -126,7 +126,7 @@ fig.savefig(save_location + 'month_depo.png', bbox_inches='tight')
 
 # %%
 avg = {}
-X, Y = np.meshgrid(time_edge, month_edge)
+X, Y = np.meshgrid(bin_time, month_edge)
 fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
@@ -136,7 +136,13 @@ for key, grp in df.groupby(['year']):
             g['depo'],
             bins=[bin_time, bin_month],
             statistic=np.nanmean)
-
+        dep_count, _, _, _ = binned_statistic_2d(
+            g['time'],
+            g['month'],
+            g['depo'],
+            bins=[bin_time, bin_month],
+            statistic='count')
+        dep_mean[dep_count < 25] = np.nan
         p = axes[pos[k], y[key]].pcolormesh(X, Y, dep_mean.T, cmap='jet',
                                             vmin=1e-5, vmax=0.3)
         fig.colorbar(p, ax=axes[pos[k], y[key]])
@@ -360,14 +366,22 @@ for ii, bimonthly in enumerate(bimonthly_):
         for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
             grp_avg = grp.groupby('range')['depo'].mean()
             grp_count = grp.groupby('range')['depo'].count()
-            grp_avg[grp_count > 0.01 * sum(grp_count)].plot(ax=ax[i, 0], label=loc)
-            ax[i, 0].set_xlim([0, 2500])
+            grp_std = grp.groupby('range')['depo'].std()
+            grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
+            grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
+            ax[i, 0].errorbar(grp_avg.index + np.random.uniform(-30, 30),
+                              grp_avg, grp_std, label=loc)
+            ax[i, 0].set_xlim([-50, 2500])
+            ax[i, 0].set_xlabel('Range')
 
             grp_ground = grp[grp['range'] <= 300]
-            y = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10))).mean()['depo']
+            y_grp = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10)))
+            y_mean = y_grp['depo'].mean()
+            y_std = y_grp['depo'].std()
             x = np.arange(5, 105, 10)
-            ax[i, 1].plot(x, y)
+            ax[i, 1].errorbar(x + np.random.uniform(-1, 1), y_mean, y_std, label=loc)
             ax[i, 1].set_xlabel('Relative humidity')
+            ax[i, 1].set_xlim([23, 100])
 
         ax[i, 0].set_ylabel('Depo')
         ax[i, 0].set_title(f'Months: {month}', weight='bold')
