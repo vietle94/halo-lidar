@@ -635,6 +635,8 @@ class area_aerosol(area_select):
     def __call__(self, event1, event2):
         super().__call__(event1, event2)
         self.ax2.cla()
+        self.ax3.cla()
+        self.ax4.cla()
         self.t = (self.x >= self.xcord[0]) & (self.x <= self.xcord[1])
         self.range_aerosol = (self.y > self.ycord[0]) & (self.y < self.ycord[1])
         self.co_mean_profile = np.nanmean(self.co[self.t, :], axis=0)
