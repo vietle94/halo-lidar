@@ -14,6 +14,8 @@ my_cmap.set_under('w')
 bin_depo = np.linspace(0, 0.5, 50)
 bin_month = np.arange(0.5, 13, 1)
 bin_time = np.arange(0, 25)
+
+# %%
 save_location = 'F:\\halo\\classifier\\summary\\'
 
 for site in ['46', '54', '33', '53', '34', '32']:
@@ -82,7 +84,7 @@ cbar_max = {'Uto': 600, 'Hyytiala': 600,
             'Vehmasmaki': 400, 'Sodankyla': 400}
 avg = {}
 
-X, Y = np.meshgrid(month_edge, depo_edge)
+X, Y = np.meshgrid(bin_month, bin_depo)
 
 fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
@@ -96,7 +98,7 @@ for key, grp in df.groupby(['year']):
                                             vmin=0.1, vmax=cbar_max[k])
         fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].xaxis.set_ticks([4, 8, 12])
-
+        # H[H<1] = np.nan
         if k not in avg:
             avg[k] = H[:, :, np.newaxis]
         else:
@@ -122,11 +124,11 @@ for key, val in avg.items():
     axes[pos[k], -1].xaxis.set_ticks([4, 8, 12])
 axes[0, -1].set_title('4 years averaged', weight='bold', size=15)
 fig.tight_layout()
-fig.savefig(save_location + 'month_depo.png', bbox_inches='tight')
+# fig.savefig(save_location + 'month_depo.png', bbox_inches='tight')
 
 # %%
 avg = {}
-X, Y = np.meshgrid(bin_time, month_edge)
+X, Y = np.meshgrid(bin_time, bin_month)
 fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
@@ -181,7 +183,7 @@ avg = {}
 cbar_max2 = {'Uto': 300, 'Hyytiala': 400,
              'Vehmasmaki': 300, 'Sodankyla': 200}
 
-X, Y = np.meshgrid(time_edge, month_edge)
+X, Y = np.meshgrid(bin_time, bin_month)
 fig, axes = plt.subplots(4, 5, figsize=(18, 9), sharex=True, sharey=True)
 for key, grp in df.groupby(['year']):
     for k, g in grp.groupby(['location2']):
