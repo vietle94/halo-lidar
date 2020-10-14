@@ -270,52 +270,6 @@ fig.tight_layout(rect=[0, 0, 1, 0.90])
 fig.savefig(save_location + 'auxiliary_hyytiala.png', bbox_inches='tight')
 
 # %%
-temp = df[(df['month'] < 7) & (df['month'] > 3)]
-temp
-fig, ax = plt.subplots(1, 2, figsize=(12, 9), sharey=True, sharex=True)
-for y, grp in temp.groupby('location2'):
-    grp.groupby('range').mean()['depo'].plot(ax=ax[0], label=y)
-ax[0].set_ylabel('Depo')
-ax[0].set_title('Range vs Depo Pol season')
-ax[0].legend()
-
-temp2 = df[(df['month'] < 9) & (df['month'] > 6)]
-temp2
-for y, grp in temp2.groupby('location2'):
-    grp.groupby('range').mean()['depo'].plot(ax=ax[1], label=y)
-ax[1].set_ylabel('Depo')
-ax[1].set_title('Range vs Depo')
-ax[1].legend()
-
-# %%
-# std, hisogram to cut noise
-# every 2 months and with RH
-temp = df[(df['month'] >= 9) | (df['month'] <= 3)]
-temp
-fig, ax = plt.subplots(figsize=(12, 9))
-for y, grp in temp.groupby('location'):
-    grp.groupby('range').mean()['depo'].plot(ax=ax, label=y)
-ax.set_ylabel('Depo')
-ax.set_title('Range vs Depo')
-ax.legend()
-
-# %%
-# df.groupby(['location', 'range']).median()['depo'].plot()
-# temp.groupby('range').median()['depo'].plot()
-# temp.groupby('range').count()['depo'].plot()
-
-# %%
-df2
-temp2 = df2[(df2['Year'] == 2019) & (df2['Month'] == 1) & (df2['Day'] >= 21)]
-temp2 = temp2.dropna(axis=0)
-
-temp2 = temp2.set_index(temp2.time.dt.time)
-fig, ax = plt.subplots()
-for name, grp in temp2.groupby('Day'):
-    grp['CO'].plot(ax=ax, label=name)
-ax.legend()
-
-# %%
 list_weather = glob.glob('F:/weather/*.csv')
 location_weather = {'hyytiala': 'Hyytiala', 'kuopio': 'Vehmasmaki',
                     'sodankyla': 'Sodankyla', 'uto': 'Uto'}
@@ -370,7 +324,7 @@ for ii, bimonthly in enumerate(bimonthly_):
             grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
             grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
             ax[i, 0].errorbar(grp_avg.index + np.random.uniform(-30, 30),
-                              grp_avg, grp_std, label=loc)
+                              grp_avg, grp_std, label=loc, fmt='.')
             ax[i, 0].set_xlim([-50, 2500])
             ax[i, 0].set_xlabel('Range')
 
@@ -379,7 +333,8 @@ for ii, bimonthly in enumerate(bimonthly_):
             y_mean = y_grp['depo'].mean()
             y_std = y_grp['depo'].std()
             x = np.arange(5, 105, 10)
-            ax[i, 1].errorbar(x + np.random.uniform(-1, 1), y_mean, y_std, label=loc)
+            ax[i, 1].errorbar(x + np.random.uniform(-1, 1), y_mean, y_std,
+                              label=loc, fmt='.')
             ax[i, 1].set_xlabel('Relative humidity')
             ax[i, 1].set_xlim([23, 100])
 
