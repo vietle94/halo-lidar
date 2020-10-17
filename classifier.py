@@ -16,12 +16,11 @@ from scipy.stats import binned_statistic_2d
 
 # %%
 data = hd.getdata('F:/halo/46/depolarization')
-snr = glob.glob('F:/halo/46/depolarization/snr/*_noise.csv')
 classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180509'
+date = '20180415'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -160,7 +159,7 @@ if (df.data['classifier'] == 10).any():
     time_dbscan = time_dbscan[classifier == 10].reshape(-1, 1)
     height_dbscan = height_dbscan[classifier == 10].reshape(-1, 1)
     X = np.hstack([time_dbscan, height_dbscan])
-    db = DBSCAN(eps=3, min_samples=1, n_jobs=-1).fit(X)
+    db = DBSCAN(eps=3, min_samples=25, n_jobs=-1).fit(X)
 
     v_dbscan = v_save[classifier == 10]
     range_dbscan = range_save[classifier == 10]
@@ -173,7 +172,9 @@ if (df.data['classifier'] == 10).any():
 
     lab = db.labels_.copy()
     for key, val in v_dict.items():
-        if (val < -0.5):
+        if key == -1:
+            lab[db.labels_ == key] = 40
+        elif (val < -0.5):
             lab[db.labels_ == key] = 20
         elif r_dict[key] == min(df.data['range']):
             lab[db.labels_ == key] = 10
@@ -185,21 +186,38 @@ if (df.data['classifier'] == 10).any():
     df.data['classifier'][df.data['classifier'] == 10] = lab
 
 # %%
-ground = df.data['classifier'] == 20
-ground[:, 3:] = False
-rain = df.data['classifier'] == 20
-for _ in range(1500):
-    ground_max = maximum_filter(ground, size=3)
-    ground_rain = ground_max * rain
-    if np.sum(ground_rain) == np.sum(ground):
-        break
-    ground = ground_rain
-df.data['classifier'][ground] = 21
+# Separate ground rain
+if (df.data['classifier'] == 20).any():
+    classifier = df.data['classifier'].ravel()
+    time_dbscan = np.repeat(np.arange(df.data['time'].size),
+                            df.data['beta_raw'].shape[1])
+    height_dbscan = np.tile(np.arange(df.data['range'].size),
+                            df.data['beta_raw'].shape[0])
+
+    time_dbscan = time_dbscan[classifier == 20].reshape(-1, 1)
+    height_dbscan = height_dbscan[classifier == 20].reshape(-1, 1)
+    X = np.hstack([time_dbscan, height_dbscan])
+    db = DBSCAN(eps=3, min_samples=1, n_jobs=-1).fit(X)
+
+    range_dbscan = range_save[classifier == 20]
+
+    r_dict = {}
+    for i in np.unique(db.labels_):
+        r_dict[i] = np.nanmin(range_dbscan[db.labels_ == i])
+
+    lab = db.labels_.copy()
+    for key, val in r_dict.items():
+        if r_dict[key] == min(df.data['range']):
+            lab[db.labels_ == key] = 20
+        else:
+            lab[db.labels_ == key] = 30
+
+    df.data['classifier'][df.data['classifier'] == 20] = lab
 
 # %%
 cmap = mpl.colors.ListedColormap(
-    ['white', '#2ca02c', '#808000', '#00ffff', 'blue', 'red', 'gray'])
-boundaries = [0, 10, 11, 20, 21, 30, 40, 50]
+    ['white', '#2ca02c', '#808000', 'blue', 'red', 'gray'])
+boundaries = [0, 10, 11, 20, 30, 40, 50]
 norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
 
 # %%
@@ -279,12 +297,12 @@ cbar.ax.yaxis.set_label_position('left')
 cbar = fig.colorbar(p3, ax=ax5)
 cbar.ax.set_ylabel('Depolarization ratio')
 cbar.ax.yaxis.set_label_position('left')
-cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 20.5, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol', 'Ice clouds',
+cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 
-for i, ax, lab in zip([20, 21, 30], [ax2, ax4, ax6],
-                      ['ice clouds', 'precipitation', 'clouds']):
+for i, ax, lab in zip([20, 30], [ax2, ax4],
+                      ['Precipitation', 'Cloud']):
     ax.set_ylabel(lab)
     if (classifier == i).any():
         depo = depo_save[classifier == i]
@@ -295,17 +313,37 @@ for i, ax, lab in zip([20, 21, 30], [ax2, ax4, ax6],
 bin_time = np.arange(0, 24+0.35, 0.25)
 bin_height = np.arange(0, df.data['range'].max() + 31, 30)
 
-ax8.set_ylabel('aerosol_30min')
-if (classifier // 10 == 1).any():
+mask_elevated_aerosol = classifier == 11
+if (mask_elevated_aerosol).any():
     bin_time1h = np.arange(0, 24+0.5, 0.5)
-    co, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
-                                      time_save[classifier // 10 == 1],
-                                      co_save[classifier // 10 == 1],
+    co, _, _, _ = binned_statistic_2d(range_save[mask_elevated_aerosol],
+                                      time_save[mask_elevated_aerosol],
+                                      co_save[mask_elevated_aerosol],
                                       bins=[bin_height, bin_time1h],
                                       statistic=np.nanmean)
-    cross, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
-                                         time_save[classifier // 10 == 1],
-                                         cross_save[classifier // 10 == 1],
+    cross, _, _, _ = binned_statistic_2d(range_save[mask_elevated_aerosol],
+                                         time_save[mask_elevated_aerosol],
+                                         cross_save[mask_elevated_aerosol],
+                                         bins=[bin_height, bin_time1h],
+                                         statistic=np.nanmean)
+    depo = (cross-1)/(co-1)
+    depo = depo[depo < 0.8]
+    depo = depo[depo > -0.25]
+    ax6.hist(depo, bins=40)
+ax6.set_ylabel('Elevated_aerosol')
+ax8.set_ylabel('Aerosol')
+
+mask_aerosol = classifier == 10
+if (mask_aerosol).any():
+    bin_time1h = np.arange(0, 24+0.5, 0.5)
+    co, _, _, _ = binned_statistic_2d(range_save[mask_aerosol],
+                                      time_save[mask_aerosol],
+                                      co_save[mask_aerosol],
+                                      bins=[bin_height, bin_time1h],
+                                      statistic=np.nanmean)
+    cross, _, _, _ = binned_statistic_2d(range_save[mask_aerosol],
+                                         time_save[mask_aerosol],
+                                         cross_save[mask_aerosol],
                                          bins=[bin_height, bin_time1h],
                                          statistic=np.nanmean)
     depo = (cross-1)/(co-1)
