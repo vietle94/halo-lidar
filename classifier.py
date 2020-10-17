@@ -40,13 +40,9 @@ cross_save = df.data['cross_signal'].flatten()  # Already adjusted with bleed
 
 df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
 
+log_beta = np.log10(df.data['beta_raw'])
 # Aerosol
-aerosol = df.decision_tree(depo_thres=[None, None],
-                           beta_thres=[None, -5.5],
-                           v_thres=[None, None],
-                           depo=df.data['depo_adj'],
-                           beta=np.log10(df.data['beta_raw']),
-                           v=df.data['v_raw'])
+aerosol = log_beta < -5.5
 
 # Small size median filter to remove noise
 aerosol_smoothed = median_filter(aerosol, size=11)
@@ -55,6 +51,8 @@ df.data['classifier'][aerosol_smoothed] = 10
 df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
           ref='co_signal',
           threshold=1 + 3 * df.snr_sd)
+log_beta = np.log10(df.data['beta_raw'])
+
 range_save = np.tile(df.data['range'],
                      df.data['beta_raw'].shape[0])
 
@@ -63,29 +61,19 @@ time_save = np.repeat(df.data['time'],
 v_save = df.data['v_raw'].flatten()  # put here to avoid noisy values at 1sd snr
 
 # Liquid
-liquid = df.decision_tree(depo_thres=[None, None],
-                          beta_thres=[-5.5, None],
-                          v_thres=[None, None],
-                          depo=df.data['depo_adj'],
-                          beta=np.log10(df.data['beta_raw']),
-                          v=df.data['v_raw'])
+liquid = log_beta > -5.5
 
 # maximum filter to increase the size of liquid region
 liquid_max = maximum_filter(liquid, size=5)
 # Median filter to remove background noise
 liquid_smoothed = median_filter(liquid_max, size=13)
+
+# %%
 # use snr threshold
-snr = df.data['co_signal'] > (1 + 3*df.snr_sd)
-lidquid_smoothed = liquid_smoothed * snr
 df.data['classifier'][liquid_smoothed] = 30
 
 # updraft - indication of aerosol zone
-updraft = df.decision_tree(depo_thres=[None, None],
-                           beta_thres=[None, None],
-                           v_thres=[1, None],
-                           depo=df.data['depo_adj'],
-                           beta=np.log10(df.data['beta_raw']),
-                           v=df.data['v_raw'])
+updraft = df.data['v_raw'] > 1
 updraft_smooth = median_filter(updraft, size=3)
 updraft_max = maximum_filter(updraft_smooth, size=91)
 
@@ -93,12 +81,8 @@ updraft_max = maximum_filter(updraft_smooth, size=91)
 updraft_median = median_filter(updraft_max, size=31)
 
 # precipitation < -1 (center of precipitation)
-precipitation_1 = df.decision_tree(depo_thres=[None, None],
-                                   beta_thres=[-7, None],
-                                   v_thres=[None, -1],
-                                   depo=df.data['depo_adj'],
-                                   beta=np.log10(df.data['beta_raw']),
-                                   v=df.data['v_raw'])
+precipitation_1 = (log_beta > -7) & (df.data['v_raw'] < -1)
+
 precipitation_1_median = median_filter(precipitation_1, size=9)
 
 # Only select precipitation outside of aerosol zone
@@ -107,22 +91,12 @@ precipitation_1_median_smooth = median_filter(precipitation_1_ne,
                                               size=3)
 precipitation = precipitation_1_median_smooth
 
-# precipitation < -0.5 (include of precipitation)
-precipitation_1_low = df.decision_tree(depo_thres=[None, None],
-                                       beta_thres=[-7, None],
-                                       v_thres=[None, -0.5],
-                                       depo=df.data['depo_adj'],
-                                       beta=np.log10(df.data['beta_raw']),
-                                       v=df.data['v_raw'])
+# precipitation < -0.5 (include all precipitation)
+precipitation_1_low = (log_beta > -7) & (df.data['v_raw'] < -0.5)
 
 # Avoid ebola infection surrounding updraft
 # Useful to contain error during ebola precipitation
-updraft_ebola = df.decision_tree(depo_thres=[None, None],
-                                 beta_thres=[None, None],
-                                 v_thres=[0.2, None],
-                                 depo=df.data['depo_adj'],
-                                 beta=np.log10(df.data['beta_raw']),
-                                 v=df.data['v_raw'])
+updraft_ebola = df.data['v_raw'] > 0.2
 updraft_ebola_max = maximum_filter(updraft_ebola, size=3)
 
 # Ebola precipitation
