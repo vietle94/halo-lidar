@@ -15,12 +15,12 @@ from scipy.stats import binned_statistic_2d
 %matplotlib qt
 
 # %%
-data = hd.getdata('F:/halo/46/depolarization')
+data = hd.getdata('F:/halo/53/depolarization')
 classifier_folder = 'F:\\halo\\classifier'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-date = '20180415'
+date = '20190531'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -46,6 +46,9 @@ aerosol = log_beta < -5.5
 
 # Small size median filter to remove noise
 aerosol_smoothed = median_filter(aerosol, size=11)
+# Remove thin bridges, better for the clustering
+aerosol_smoothed = median_filter(aerosol_smoothed, size=(15, 1))
+
 df.data['classifier'][aerosol_smoothed] = 10
 
 df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
@@ -113,10 +116,14 @@ df.data['classifier'][precipitation] = 20
 # Remove all aerosol above cloud or precipitation
 mask_aerosol0 = df.data['classifier'] == 10
 for i in np.array([20, 30]):
-    mask = df.data['classifier'] == i
+    if i == 20:
+        mask = df.data['classifier'] == i
+    else:
+        mask = log_beta > -5
+        mask = maximum_filter(mask, size=5)
+        mask = median_filter(mask, size=13)
     mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
-    mask_col = np.nanargmax(df.data['classifier'][mask_row, :] == i,
-                            axis=1)
+    mask_col = np.nanargmax(mask[mask_row, :], axis=1)
     for row, col in zip(mask_row, mask_col):
         mask[row, col:] = True
     mask_undefined = mask * mask_aerosol0
