@@ -609,7 +609,7 @@ class area_select():
 
 class span_select():
 
-    def __init__(self, x, y, ax_in, canvas, orient='horizontal'):
+    def __init__(self, x, y, ax_in, canvas, orient='vertical'):
         self.x, self.y = x, y
         self.ax_in = ax_in
         self.canvas = canvas
@@ -618,9 +618,21 @@ class span_select():
         )
 
     def __call__(self, min, max):
-        self.maskx = (self.x > min) & (self.x < max)
-        self.selected_x = self.x[self.maskx]
-        self.selected_y = self.y[self.maskx]
+        self.masky = (self.y > min) & (self.y < max)
+        self.selected_x = self.x[self.masky]
+        self.selected_y = self.y[self.masky]
+
+
+class span_depo_select(span_select):
+
+    def __init__(self, x, y, ax_in, canvas, orient, depo_sd):
+        super().__init__(x, y, ax_in, canvas, orient)
+        self.depo_sd = depo_sd
+
+    def __call__(self, min, max):
+        super().__call__(min, max)
+        print(f're-selected depo: {np.nanmean(self.selected_x):.3f}')
+        print(f're-selected depo std: {np.nanmean(self.depo_sd[self.masky]):.3f}')
 
 
 class area_aerosol(area_select):
@@ -729,21 +741,20 @@ class span_aerosol(span_select):
               (sigma_co/(co_corrected - 1))**2))
         )
 
-        depo_corrected = (cross_corrected - 1) / \
+        self.depo_corrected = (cross_corrected - 1) / \
             (co_corrected - 1)
 
-        depo_corrected_sd = np.sqrt(
-            (depo_corrected)**2 *
+        self.depo_corrected_sd = np.sqrt(
+            (self.depo_corrected)**2 *
             (
                 (cross_sd_background_bleed/(cross_corrected - 1))**2 +
                 (sigma_co/(co_corrected - 1))**2
             ))
 
-        depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
-        depo_corrected_sd[co_corrected < 1 + 3*co_sd_background] = np.nan
-
-        self.final_depo = np.nanmean(depo_corrected[self.range_aerosol])
-        self.final_depo_sd = np.nanmean(depo_corrected_sd[self.range_aerosol])
+        self.depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
+        self.depo_corrected_sd[co_corrected < 1 + 3*co_sd_background] = np.nan
+        self.final_depo = np.nanmean(self.depo_corrected[self.range_aerosol])
+        self.final_depo_sd = np.nanmean(self.depo_corrected_sd[self.range_aerosol])
         print(f'Depo: {self.final_depo:.3f} with std: {self.final_depo_sd:.3f}')
         self.ax3.plot(self.co_corrected,
                       self.range, '.', label='co_signal', c='red')
@@ -753,13 +764,16 @@ class span_aerosol(span_select):
         self.ax3.legend()
         self.ax3.set_title('Corrected co and cross')
         self.ax3.set_xlabel('SNR')
-        self.ax4.errorbar(depo_corrected,
-                          self.range, xerr=depo_corrected_sd,
+        self.ax4.errorbar(self.depo_corrected,
+                          self.range, xerr=self.depo_corrected_sd,
                           errorevery=1, elinewidth=0.5, fmt='.')
         self.ax4.set_xlabel('Depolarization ratio')
         self.ax4.set_title('Averaged depo profile')
         self.ax4.set_xlim([-0.1, 0.5])
         self.canvas.draw()
+        self.depo_select = span_depo_select(self.depo_corrected, self.range,
+                                            self.ax4, self.canvas, 'vertical',
+                                            self.depo_corrected_sd)
 
 
 class area_snr(area_select):
