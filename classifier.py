@@ -71,8 +71,6 @@ liquid_max = maximum_filter(liquid, size=5)
 # Median filter to remove background noise
 liquid_smoothed = median_filter(liquid_max, size=13)
 
-# %%
-# use snr threshold
 df.data['classifier'][liquid_smoothed] = 30
 
 # updraft - indication of aerosol zone

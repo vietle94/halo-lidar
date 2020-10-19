@@ -65,8 +65,6 @@ for file in files:
     # Median filter to remove background noise
     liquid_smoothed = median_filter(liquid_max, size=13)
 
-    # %%
-    # use snr threshold
     df.data['classifier'][liquid_smoothed] = 30
 
     # updraft - indication of aerosol zone
@@ -194,34 +192,6 @@ for file in files:
         ['white', '#2ca02c', '#808000', 'blue', 'red', 'gray'])
     boundaries = [0, 10, 11, 20, 30, 40, 50]
     norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-
-    # %%
-    fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
-                             figsize=(16, 9))
-    for val, ax, cmap_ in zip([aerosol, aerosol_smoothed,
-                               liquid_smoothed, precipitation_1_median,
-                               updraft_median,
-                               precipitation_1_median_smooth, precipitation_1_low,
-                               updraft_ebola_max, precipitation],
-                              axes.flatten()[2:-1],
-                              [['white', '#2ca02c'], ['white', '#2ca02c'],
-                               ['white', 'red'], ['white', 'blue'],
-                               ['white', '#D2691E'],
-                               ['white', 'blue'], ['white', 'blue'],
-                               ['white', '#D2691E'], ['white', 'blue']]):
-        ax.pcolormesh(df.data['time'], df.data['range'],
-                      val.T, cmap=mpl.colors.ListedColormap(cmap_))
-    axes.flatten()[-1].pcolormesh(df.data['time'], df.data['range'],
-                                  df.data['classifier'].T,
-                                  cmap=cmap, norm=norm)
-    axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
-                          np.log10(df.data['beta_raw']).T,
-                          cmap='jet', vmin=-8, vmax=-4)
-    axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
-                          df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-    fig.tight_layout()
-    fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
-                dpi=150, bbox_inches='tight')
 
     # %%
     classifier = df.data['classifier'].flatten()
