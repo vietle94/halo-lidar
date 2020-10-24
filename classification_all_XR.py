@@ -15,8 +15,9 @@ classifier_folder = 'F:\\halo\\classifier\\32'
 Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 with open('ref_XR2.npy', 'rb') as f:
     ref = np.load(f)
-date = '2019'
-files = [file for file in data if date in file]
+
+files = [file for file in data if pd.to_datetime(
+    file.split('\\')[-1].split('_')[0]) > pd.to_datetime('20170816')]
 for file in files:
     df = hd.halo_data(file)
 
@@ -24,14 +25,11 @@ for file in files:
     df.unmask999()
     df.depo_cross_adj()
 
-    # XR
-    df.data['beta_log'] = np.log10(df.data['beta_raw'])
-    df.data['beta_log'][:, :50] = df.data['beta_log'][:, :50] - ref
-    #
-
-    df.filter(variables=['beta_raw', 'beta_log'],
+    df.filter(variables=['beta_raw'],
               ref='co_signal',
               threshold=1 + df.snr_sd)
+    log_beta = np.log10(df.data['beta_raw'])
+    log_beta[:, :50] = log_beta[:, :50] - ref
 
     # Save before further filtering
     beta_save = df.data['beta_raw'].flatten()
@@ -42,20 +40,21 @@ for file in files:
     df.data['classifier'] = np.zeros(df.data['beta_raw'].shape, dtype=int)
 
     # Aerosol
-    aerosol = df.decision_tree(depo_thres=[None, None],
-                               beta_thres=[None, -5.5],
-                               v_thres=[None, None],
-                               depo=df.data['depo_adj'],
-                               beta=df.data['beta_log'],
-                               v=df.data['v_raw'])
+    aerosol = log_beta < -5.5
 
     # Small size median filter to remove noise
     aerosol_smoothed = median_filter(aerosol, size=11)
+    # Remove thin bridges, better for the clustering
+    aerosol_smoothed = median_filter(aerosol_smoothed, size=(15, 1))
+
     df.data['classifier'][aerosol_smoothed] = 10
 
-    df.filter(variables=['beta_raw', 'v_raw', 'depo_adj', 'beta_log'],
+    df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
               ref='co_signal',
               threshold=1 + 3 * df.snr_sd)
+    log_beta = np.log10(df.data['beta_raw'])
+    log_beta[:, :50] = log_beta[:, :50] - ref
+
     range_save = np.tile(df.data['range'],
                          df.data['beta_raw'].shape[0])
 
@@ -64,29 +63,17 @@ for file in files:
     v_save = df.data['v_raw'].flatten()  # put here to avoid noisy values at 1sd snr
 
     # Liquid
-    liquid = df.decision_tree(depo_thres=[None, None],
-                              beta_thres=[-5.5, None],
-                              v_thres=[None, None],
-                              depo=df.data['depo_adj'],
-                              beta=df.data['beta_log'],
-                              v=df.data['v_raw'])
+    liquid = log_beta > -5.5
 
     # maximum filter to increase the size of liquid region
     liquid_max = maximum_filter(liquid, size=5)
     # Median filter to remove background noise
     liquid_smoothed = median_filter(liquid_max, size=13)
-    # use snr threshold
-    snr = df.data['co_signal'] > (1 + 3*df.snr_sd)
-    lidquid_smoothed = liquid_smoothed * snr
+
     df.data['classifier'][liquid_smoothed] = 30
 
     # updraft - indication of aerosol zone
-    updraft = df.decision_tree(depo_thres=[None, None],
-                               beta_thres=[None, None],
-                               v_thres=[1, None],
-                               depo=df.data['depo_adj'],
-                               beta=df.data['beta_log'],
-                               v=df.data['v_raw'])
+    updraft = df.data['v_raw'] > 1
     updraft_smooth = median_filter(updraft, size=3)
     updraft_max = maximum_filter(updraft_smooth, size=91)
 
@@ -94,12 +81,8 @@ for file in files:
     updraft_median = median_filter(updraft_max, size=31)
 
     # precipitation < -1 (center of precipitation)
-    precipitation_1 = df.decision_tree(depo_thres=[None, None],
-                                       beta_thres=[-7, None],
-                                       v_thres=[None, -1],
-                                       depo=df.data['depo_adj'],
-                                       beta=df.data['beta_log'],
-                                       v=df.data['v_raw'])
+    precipitation_1 = (log_beta > -7) & (df.data['v_raw'] < -1)
+
     precipitation_1_median = median_filter(precipitation_1, size=9)
 
     # Only select precipitation outside of aerosol zone
@@ -109,21 +92,11 @@ for file in files:
     precipitation = precipitation_1_median_smooth
 
     # precipitation < -0.5 (include of precipitation)
-    precipitation_1_low = df.decision_tree(depo_thres=[None, None],
-                                           beta_thres=[-7, None],
-                                           v_thres=[None, -0.5],
-                                           depo=df.data['depo_adj'],
-                                           beta=df.data['beta_log'],
-                                           v=df.data['v_raw'])
+    precipitation_1_low = (log_beta > -7) & (df.data['v_raw'] < -0.5)
 
     # Avoid ebola infection surrounding updraft
     # Useful to contain error during ebola precipitation
-    updraft_ebola = df.decision_tree(depo_thres=[None, None],
-                                     beta_thres=[None, None],
-                                     v_thres=[0.2, None],
-                                     depo=df.data['depo_adj'],
-                                     beta=df.data['beta_log'],
-                                     v=df.data['v_raw'])
+    updraft_ebola = df.data['v_raw'] > 0.2
     updraft_ebola_max = maximum_filter(updraft_ebola, size=3)
 
     # Ebola precipitation
@@ -140,10 +113,14 @@ for file in files:
     # Remove all aerosol above cloud or precipitation
     mask_aerosol0 = df.data['classifier'] == 10
     for i in np.array([20, 30]):
-        mask = df.data['classifier'] == i
+        if i == 20:
+            mask = df.data['classifier'] == i
+        else:
+            mask = log_beta > -5
+            mask = maximum_filter(mask, size=5)
+            mask = median_filter(mask, size=13)
         mask_row = np.argwhere(mask.any(axis=1)).reshape(-1)
-        mask_col = np.nanargmax(df.data['classifier'][mask_row, :] == i,
-                                axis=1)
+        mask_col = np.nanargmax(mask[mask_row, :], axis=1)
         for row, col in zip(mask_row, mask_col):
             mask[row, col:] = True
         mask_undefined = mask * mask_aerosol0
@@ -159,7 +136,7 @@ for file in files:
         time_dbscan = time_dbscan[classifier == 10].reshape(-1, 1)
         height_dbscan = height_dbscan[classifier == 10].reshape(-1, 1)
         X = np.hstack([time_dbscan, height_dbscan])
-        db = DBSCAN(eps=3, min_samples=1, n_jobs=-1).fit(X)
+        db = DBSCAN(eps=3, min_samples=25, n_jobs=-1).fit(X)
 
         v_dbscan = v_save[classifier == 10]
         range_dbscan = range_save[classifier == 10]
@@ -172,7 +149,9 @@ for file in files:
 
         lab = db.labels_.copy()
         for key, val in v_dict.items():
-            if (val < -0.5):
+            if key == -1:
+                lab[db.labels_ == key] = 40
+            elif (val < -0.5):
                 lab[db.labels_ == key] = 20
             elif r_dict[key] == min(df.data['range']):
                 lab[db.labels_ == key] = 10
@@ -183,49 +162,41 @@ for file in files:
 
         df.data['classifier'][df.data['classifier'] == 10] = lab
 
-    ground = df.data['classifier'] == 20
-    ground[:, 3:] = False
-    rain = df.data['classifier'] == 20
-    for _ in range(1500):
-        ground_max = maximum_filter(ground, size=3)
-        ground_rain = ground_max * rain
-        if np.sum(ground_rain) == np.sum(ground):
-            break
-        ground = ground_rain
-    df.data['classifier'][ground] = 21
+    # Separate ground rain
+    if (df.data['classifier'] == 20).any():
+        classifier = df.data['classifier'].ravel()
+        time_dbscan = np.repeat(np.arange(df.data['time'].size),
+                                df.data['beta_raw'].shape[1])
+        height_dbscan = np.tile(np.arange(df.data['range'].size),
+                                df.data['beta_raw'].shape[0])
 
+        time_dbscan = time_dbscan[classifier == 20].reshape(-1, 1)
+        height_dbscan = height_dbscan[classifier == 20].reshape(-1, 1)
+        X = np.hstack([time_dbscan, height_dbscan])
+        db = DBSCAN(eps=3, min_samples=1, n_jobs=-1).fit(X)
+
+        range_dbscan = range_save[classifier == 20]
+
+        r_dict = {}
+        for i in np.unique(db.labels_):
+            r_dict[i] = np.nanmin(range_dbscan[db.labels_ == i])
+
+        lab = db.labels_.copy()
+        for key, val in r_dict.items():
+            if r_dict[key] == min(df.data['range']):
+                lab[db.labels_ == key] = 20
+            else:
+                lab[db.labels_ == key] = 30
+
+        df.data['classifier'][df.data['classifier'] == 20] = lab
+
+    # %%
     cmap = mpl.colors.ListedColormap(
-        ['white', '#2ca02c', '#808000', '#00ffff', 'blue', 'red', 'gray'])
-    boundaries = [0, 10, 11, 20, 21, 30, 40, 50]
+        ['white', '#2ca02c', '#808000', 'blue', 'red', 'gray'])
+    boundaries = [0, 10, 11, 20, 30, 40, 50]
     norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
 
-    fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
-                             figsize=(16, 9))
-    for val, ax, cmap_ in zip([aerosol, aerosol_smoothed,
-                               liquid_smoothed, precipitation_1_median,
-                               updraft_median,
-                               precipitation_1_median_smooth, precipitation_1_low,
-                               updraft_ebola_max, precipitation],
-                              axes.flatten()[2:-1],
-                              [['white', '#2ca02c'], ['white', '#2ca02c'],
-                               ['white', 'red'], ['white', 'blue'],
-                               ['white', '#D2691E'],
-                               ['white', 'blue'], ['white', 'blue'],
-                               ['white', '#D2691E'], ['white', 'blue']]):
-        ax.pcolormesh(df.data['time'], df.data['range'],
-                      val.T, cmap=mpl.colors.ListedColormap(cmap_))
-    axes.flatten()[-1].pcolormesh(df.data['time'], df.data['range'],
-                                  df.data['classifier'].T,
-                                  cmap=cmap, norm=norm)
-    axes[0, 0].pcolormesh(df.data['time'], df.data['range'],
-                          np.log10(df.data['beta_raw']).T,
-                          cmap='jet', vmin=-8, vmax=-4)
-    axes[0, 1].pcolormesh(df.data['time'], df.data['range'],
-                          df.data['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-    fig.tight_layout()
-    fig.savefig(classifier_folder + '/' + df.filename + '_classifier.png',
-                dpi=150, bbox_inches='tight')
-
+    # %%
     classifier = df.data['classifier'].flatten()
     result = pd.DataFrame({'date': df.date,
                            'location': df.location,
@@ -241,6 +212,7 @@ for file in files:
     result.to_csv(classifier_folder + '/' + df.filename + '_classified.csv',
                   index=False)
 
+    # %%
     fig = plt.figure(figsize=(16, 9))
     gs = fig.add_gridspec(4, 2, width_ratios=[5, 4])
     ax1 = fig.add_subplot(gs[0, 0])
@@ -273,12 +245,12 @@ for file in files:
     cbar = fig.colorbar(p3, ax=ax5)
     cbar.ax.set_ylabel('Depolarization ratio')
     cbar.ax.yaxis.set_label_position('left')
-    cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 20.5, 25, 35, 45])
-    cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol', 'Ice clouds',
+    cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 25, 35, 45])
+    cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
                              'Precipitation', 'Clouds', 'Undefined'])
 
-    for i, ax, lab in zip([20, 21, 30], [ax2, ax4, ax6],
-                          ['ice clouds', 'precipitation', 'clouds']):
+    for i, ax, lab in zip([20, 30], [ax2, ax4],
+                          ['Precipitation', 'Cloud']):
         ax.set_ylabel(lab)
         if (classifier == i).any():
             depo = depo_save[classifier == i]
@@ -289,17 +261,37 @@ for file in files:
     bin_time = np.arange(0, 24+0.35, 0.25)
     bin_height = np.arange(0, df.data['range'].max() + 31, 30)
 
-    ax8.set_ylabel('aerosol_30min')
-    if (classifier // 10 == 1).any():
+    mask_elevated_aerosol = classifier == 11
+    if (mask_elevated_aerosol).any():
         bin_time1h = np.arange(0, 24+0.5, 0.5)
-        co, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
-                                          time_save[classifier // 10 == 1],
-                                          co_save[classifier // 10 == 1],
+        co, _, _, _ = binned_statistic_2d(range_save[mask_elevated_aerosol],
+                                          time_save[mask_elevated_aerosol],
+                                          co_save[mask_elevated_aerosol],
                                           bins=[bin_height, bin_time1h],
                                           statistic=np.nanmean)
-        cross, _, _, _ = binned_statistic_2d(range_save[classifier // 10 == 1],
-                                             time_save[classifier // 10 == 1],
-                                             cross_save[classifier // 10 == 1],
+        cross, _, _, _ = binned_statistic_2d(range_save[mask_elevated_aerosol],
+                                             time_save[mask_elevated_aerosol],
+                                             cross_save[mask_elevated_aerosol],
+                                             bins=[bin_height, bin_time1h],
+                                             statistic=np.nanmean)
+        depo = (cross-1)/(co-1)
+        depo = depo[depo < 0.8]
+        depo = depo[depo > -0.25]
+        ax6.hist(depo, bins=40)
+    ax6.set_ylabel('Elevated_aerosol')
+    ax8.set_ylabel('Aerosol')
+
+    mask_aerosol = classifier == 10
+    if (mask_aerosol).any():
+        bin_time1h = np.arange(0, 24+0.5, 0.5)
+        co, _, _, _ = binned_statistic_2d(range_save[mask_aerosol],
+                                          time_save[mask_aerosol],
+                                          co_save[mask_aerosol],
+                                          bins=[bin_height, bin_time1h],
+                                          statistic=np.nanmean)
+        cross, _, _, _ = binned_statistic_2d(range_save[mask_aerosol],
+                                             time_save[mask_aerosol],
+                                             cross_save[mask_aerosol],
                                              bins=[bin_height, bin_time1h],
                                              statistic=np.nanmean)
         depo = (cross-1)/(co-1)
