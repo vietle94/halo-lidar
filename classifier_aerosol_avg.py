@@ -4,6 +4,7 @@ import glob
 from scipy.stats import binned_statistic_2d
 
 # %%
+bin_time = np.arange(0, 24+0.5, 0.5)
 for site in ['46', '54', '33', '53', '34', '32']:
     path = 'F:\\halo\\classifier2\\' + site + '\\'
     list_files = glob.glob(path + '*.csv')
@@ -15,39 +16,32 @@ for site in ['46', '54', '33', '53', '34', '32']:
         df['co_signal'] = df['co_signal'].replace({-999: np.nan})
         df = df[~np.isnan(df['co_signal'])]
 
-        bin_time = np.arange(0, 24+0.5, 0.5)
         bin_range = np.arange(0, np.nanmax(df['range'])+300, 300)
 
-        count_all, _, _, _ = binned_statistic_2d(
-            df['time'],
-            df['range'],
-            df['classifier'],
-            bins=[bin_time, bin_range],
-            statistic='count')
-
-        count_aerosol, _, _, _ = binned_statistic_2d(
+        thres_aerosol, _, _, _ = binned_statistic_2d(
             df['time'],
             df['range'],
             (df['classifier'] // 10 == 1),
             bins=[bin_time, bin_range],
-            statistic=np.sum)
+            statistic=np.nanmean)
 
+        df_aerosol = df[(df['classifier'] // 10 == 1)]
         co_avg, _, _, _ = binned_statistic_2d(
-            df['time'],
-            df['range'],
-            df['co_signal'],
+            df_aerosol['time'],
+            df_aerosol['range'],
+            df_aerosol['co_signal'],
             bins=[bin_time, bin_range],
             statistic=np.nanmean)
 
         cross_avg, _, _, _ = binned_statistic_2d(
-            df['time'],
-            df['range'],
-            df['cross_signal'],
+            df_aerosol['time'],
+            df_aerosol['range'],
+            df_aerosol['cross_signal'],
             bins=[bin_time, bin_range],
             statistic=np.nanmean)
 
         depo_avg = cross_avg/co_avg
-        depo_avg[count_aerosol/count_all < 0.5] = np.nan
+        depo_avg[thres_aerosol < 0.5] = np.nan
         range_save, time_save = np.meshgrid(bin_range[:-1]+150,
                                             bin_time[:-1]+0.25)
         df_save = pd.DataFrame({
