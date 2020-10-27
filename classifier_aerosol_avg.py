@@ -17,7 +17,9 @@ for site in ['46', '54', '33', '53', '34', '32']:
         df = df[~np.isnan(df['co_signal'])]
 
         bin_range = np.arange(0, np.nanmax(df['range'])+300, 300)
-
+        df_aerosol = df[(df['classifier'] // 10 == 1)]
+        if len(df_aerosol.index) == 0:
+            continue
         thres_aerosol, _, _, _ = binned_statistic_2d(
             df['time'],
             df['range'],
@@ -25,7 +27,6 @@ for site in ['46', '54', '33', '53', '34', '32']:
             bins=[bin_time, bin_range],
             statistic=np.nanmean)
 
-        df_aerosol = df[(df['classifier'] // 10 == 1)]
         co_avg, _, _, _ = binned_statistic_2d(
             df_aerosol['time'],
             df_aerosol['range'],
