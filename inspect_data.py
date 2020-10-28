@@ -50,6 +50,10 @@ save_df = pd.DataFrame({'range': p.span_aerosol.range,
                         'co_signal': p.span_aerosol.co_corrected,
                         'cross_signal': p.span_aerosol.cross_corrected,
                         'depo': p.span_aerosol.depo_corrected,
-                        'depo_sd': p.span_aerosol.depo_corrected_sd})
+                        'depo_sd': p.span_aerosol.depo_corrected_sd,
+                        'co_sd': p.span_aerosol.sigma_co,
+                        'cross_sd': p.span_aerosol.sigma_cross,
+                        'date': df.date,
+                        'location': df.location})
 save_df.to_csv(image_folder + df.filename + '_mean_profile.csv',
                index=False)
