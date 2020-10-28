@@ -727,7 +727,7 @@ class span_aerosol(span_select):
         cross_corrected = self.cross/y_cross
         cross_sd_background = np.nanstd(cross/y_cross_background)
         co_sd_background = np.nanstd(co/y_co_background)
-        sigma_co, sigma_cross = co_sd_background, cross_sd_background
+        self.sigma_co, self.sigma_cross = co_sd_background, cross_sd_background
         bleed = self.df.bleed_through_mean
         sigma_bleed = self.df.bleed_through_sd
 
@@ -735,10 +735,10 @@ class span_aerosol(span_select):
             self.df.bleed_through_mean * (co_corrected - 1) + 1
 
         cross_sd_background_bleed = np.sqrt(
-            sigma_cross**2 +
+            self.sigma_cross**2 +
             ((bleed * (co_corrected - 1))**2 *
              ((sigma_bleed/bleed)**2 +
-              (sigma_co/(co_corrected - 1))**2))
+              (self.sigma_co/(co_corrected - 1))**2))
         )
 
         self.depo_corrected = (cross_corrected - 1) / \
@@ -748,7 +748,7 @@ class span_aerosol(span_select):
             (self.depo_corrected)**2 *
             (
                 (cross_sd_background_bleed/(cross_corrected - 1))**2 +
-                (sigma_co/(co_corrected - 1))**2
+                (self.sigma_co/(co_corrected - 1))**2
             ))
 
         self.depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
