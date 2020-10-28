@@ -7,11 +7,16 @@ import glob
 list_files = glob.glob('F:/HYSPLIT/*_mean_profile.csv')
 
 # %%
-date = '2018-04-15'
+date = '2018-07-25'
 list_df = [file for file in list_files if date in file]
 print('\n'.join(list_df))
+
+# [file for file in list_files if (date in file) or
+#  ('2018-07-22' in file) or
+#  ('2018-07-23' in file) or
+#  ('2018-07-24' in file)]
 # %%
-row = 1
+row = 2
 column = 3
 size = (16, 9)
 fig, axes = plt.subplots(row, column, figsize=size, sharey=True, sharex=True)
