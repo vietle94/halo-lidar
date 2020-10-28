@@ -46,7 +46,7 @@ p = hd.area_aerosol(df.data['time'], df.data['range'],
                     fig=fig, ax2=ax2, df=df, ax3=ax3, ax4=ax4)
 
 # %% save result
-fig.savefig(image_folder + df.filename + '.png',
+fig.savefig(image_folder + df.filename + '_h.png',
             bbox_inches='tight')
 # save profile as csv
 save_df = pd.DataFrame({'range': p.span_aerosol.range,
