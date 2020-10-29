@@ -8,7 +8,7 @@ bin_time = np.arange(0, 24+0.5, 0.5)
 for site in ['46', '54', '33', '53', '34', '32']:
     path = 'F:\\halo\\classifier2\\' + site + '\\'
     list_files = glob.glob(path + '*.csv')
-
+    df_save = pd.DataFrame()
     for file in list_files:
         df = pd.read_csv(file)
         date = df['date'][0]
@@ -41,11 +41,11 @@ for site in ['46', '54', '33', '53', '34', '32']:
             bins=[bin_time, bin_range],
             statistic=np.nanmean)
 
-        depo_avg = cross_avg/co_avg
+        depo_avg = (cross_avg-1)/(co_avg-1)
         depo_avg[thres_aerosol < 0.5] = np.nan
         range_save, time_save = np.meshgrid(bin_range[:-1]+150,
                                             bin_time[:-1]+0.25)
-        df_save = pd.DataFrame({
+        df_save0 = pd.DataFrame({
             'depo': depo_avg.flatten(),
             'time': time_save.flatten(),
             'range': range_save.flatten(),
@@ -53,7 +53,7 @@ for site in ['46', '54', '33', '53', '34', '32']:
             'location': location
         })
 
-        df_save.dropna(inplace=True)
-
-        with open(path + '/' 'result.csv', 'a') as f:
-            df_save.to_csv(f, header=f.tell() == 0, index=False)
+        df_save0.dropna(inplace=True)
+        df_save = df_save.append(df_save0, ignore_index=True)
+        print(date + location)
+    df_save.to_csv(path + '/result.csv', index=False)
