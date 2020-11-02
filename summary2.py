@@ -9,6 +9,31 @@ import glob
 %matplotlib qt
 
 # %%
+missing_df = pd.DataFrame({})
+for site in ['46', '54', '33', '53', '34', '32']:
+    path = 'F:\\halo\\classifier2\\' + site + '\\'
+    list_files = glob.glob(path + '*.csv')
+    time_df = pd.DataFrame(
+        {'date': [file.split('\\')[-1][:10] for
+                  file in list_files if 'result' not in file],
+         'location2': [file.split('\\')[-1].split('-')[3] for
+                       file in list_files if 'result' not in file]})
+    time_df['date'] = pd.to_datetime(time_df['date'])
+    time_df['year'] = time_df['date'].dt.year
+    time_df['month'] = time_df['date'].dt.month
+    time_df_count = time_df.groupby(['year', 'month', 'location2']).count()
+    time_df_count = time_df_count.reset_index().rename(columns={'date': 'count'})
+    missing_df = missing_df.append(time_df_count, ignore_index=True)
+missing_df.loc[missing_df['location2'] == 'Kuopio', 'location2'] = 'Hyytiala'
+missing_df = missing_df.set_index(['year', 'month', 'location2'])
+mux = pd.MultiIndex.from_product([missing_df.index.levels[0],
+                                  missing_df.index.levels[1],
+                                  missing_df.index.levels[2]],
+                                 names=['year', 'month', 'location2'])
+missing_df = missing_df.reindex(mux, fill_value=0).reset_index()
+missing_df = missing_df[missing_df['count'] < 15]
+
+# %%
 my_cmap = copy.copy(matplotlib.cm.get_cmap('jet'))
 my_cmap.set_under('w')
 bin_depo = np.linspace(0, 0.5, 50)
@@ -65,8 +90,8 @@ for site in ['46', '54', '33', '53', '34', '32']:
 # %%
 df = pd.DataFrame()
 for site in ['46', '54', '33', '53', '32']:
-    save_location = 'F:\\halo\\classifier\\summary\\'
-    df = df.append(pd.read_csv('F:\\halo\\classifier\\' + site + '\\result.csv'),
+    save_location = 'F:\\halo\\classifier2\\summary\\'
+    df = df.append(pd.read_csv('F:\\halo\\classifier2\\' + site + '\\result.csv'),
                    ignore_index=True)
 
 df['date'] = pd.to_datetime(df['date'])
@@ -77,11 +102,18 @@ df.loc[df['location'] == 'Kuopio-33', 'location'] = 'Hyytiala-33'
 df[['location2', 'ID']] = df['location'].str.split('-', expand=True)
 
 # %%
+df[(df['location2'] == 'Uto') &
+    (df['date'] >= '2019-12-06') &
+    (df['date'] <= '2019-12-10')] = np.nan
+
+# %%
 pos = {'Uto': 3, 'Hyytiala': 2,
        'Vehmasmaki': 1, 'Sodankyla': 0}
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
 cbar_max = {'Uto': 600, 'Hyytiala': 600,
             'Vehmasmaki': 400, 'Sodankyla': 400}
+# cbar_max = {'Uto': 600, 'Hyytiala': 450,
+#             'Vehmasmaki': 330, 'Sodankyla': 260}
 avg = {}
 
 X, Y = np.meshgrid(bin_month, bin_depo)
@@ -93,12 +125,16 @@ for key, grp in df.groupby(['year']):
             g['month'], g['depo'],
             bins=(bin_month, bin_depo)
         )
-
+        miss = missing_df[(missing_df['year'] == key) &
+                          (missing_df['location2'] == k)]['month']
+        if len(miss.index) != 0:
+            for miss_month in miss:
+                H[miss_month-1, :] = np.nan
         p = axes[pos[k], y[key]].pcolormesh(X, Y, H.T, cmap=my_cmap,
                                             vmin=0.1, vmax=cbar_max[k])
         fig.colorbar(p, ax=axes[pos[k], y[key]])
         axes[pos[k], y[key]].xaxis.set_ticks([4, 8, 12])
-        # H[H<1] = np.nan
+
         if k not in avg:
             avg[k] = H[:, :, np.newaxis]
         else:
