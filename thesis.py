@@ -21,6 +21,7 @@ import matplotlib as mpl
 import os
 from scipy.stats import binned_statistic_2d
 from matplotlib.colors import LogNorm
+import calendar
 %matplotlib qt
 
 
@@ -726,8 +727,8 @@ for key, group in depo.groupby('sys'):
 # %%
 missing_df = pd.DataFrame({})
 for site in ['46', '54', '33', '53', '34', '32']:
-    path = 'F:\\halo\\classifier2\\' + site + '\\'
-    list_files = glob.glob(path + '*.csv')
+    path_ = 'F:\\halo\\classifier2\\' + site + '\\'
+    list_files = glob.glob(path_ + '*.csv')
     time_df = pd.DataFrame(
         {'date': [file.split('\\')[-1][:10] for
                   file in list_files if 'result' not in file],
@@ -775,23 +776,18 @@ df[(df['location2'] == 'Uto') &
     (df['date'] <= '2019-12-10')] = np.nan
 
 # %%
-pos = {'Uto': 3, 'Hyytiala': 2,
-       'Vehmasmaki': 1, 'Sodankyla': 0}
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
 cbar_max = {'Uto': 600, 'Hyytiala': 600,
             'Vehmasmaki': 400, 'Sodankyla': 400}
 # cbar_max = {'Uto': 600, 'Hyytiala': 450,
 #             'Vehmasmaki': 330, 'Sodankyla': 260}
-fig_config = {'Uto': 600, 'Hyytiala': 450,
-              'Vehmasmaki': 330, 'Sodankyla': 260}
-
 
 X, Y = np.meshgrid(bin_month, bin_depo)
 for k, grp in df.groupby(['location2']):
     avg = {}
 
     if k == 'Sodankyla':
-        fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
+        fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True)
         axes = axes.flatten()
         axes[2].set_xlabel('Month')
     else:
@@ -842,3 +838,132 @@ for k, grp in df.groupby(['location2']):
         fig.tight_layout()
         fig.savefig(path + '/' + k + '_depo_month.png',
                     bbox_inches='tight')
+
+# %%
+X, Y = np.meshgrid(bin_time, bin_month)
+fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
+avg = {}
+for k, grp in df.groupby(['location2']):
+    for key, g in grp.groupby(['year']):
+        dep_mean, time_edge, month_edge, _ = binned_statistic_2d(
+            g['time'],
+            g['month'],
+            g['depo'],
+            bins=[bin_time, bin_month],
+            statistic=np.nanmean)
+        dep_count, _, _, _ = binned_statistic_2d(
+            g['time'],
+            g['month'],
+            g['depo'],
+            bins=[bin_time, bin_month],
+            statistic='count')
+        dep_mean[dep_count < 25] = np.nan
+        if k not in avg:
+            avg[k] = dep_mean[:, :, np.newaxis]
+        else:
+            avg[k] = np.append(avg[k], dep_mean[:, :, np.newaxis], axis=2)
+
+for (key, val), ax, i in zip(avg.items(), axes.flatten(),
+                             np.arange(4)):
+    p = ax.pcolormesh(X, Y, np.nanmean(val, axis=2).T,
+                      cmap='jet',
+                      vmin=1e-5, vmax=0.3)
+    ax.set_title(key, weight='bold')
+    cbar = fig.colorbar(p, ax=ax)
+    if i in [1, 3]:
+        cbar.ax.set_ylabel('Depolarization ratio')
+
+axes[0, 0].set_ylabel('Month')
+axes[1, 0].set_ylabel('Month')
+axes[1, 0].set_xlabel('Time (hour)')
+axes[1, 1].set_xlabel('Time (hour)')
+
+fig.tight_layout()
+fig.savefig(path + '/' + 'month_time.png',
+            bbox_inches='tight')
+
+# %%
+list_weather = glob.glob('F:/weather/*.csv')
+location_weather = {'hyytiala': 'Hyytiala', 'kuopio': 'Vehmasmaki',
+                    'sodankyla': 'Sodankyla', 'uto': 'Uto'}
+weather = pd.DataFrame()
+for file in list_weather:
+    if 'kumpula' in file:
+        continue
+    df_file = pd.read_csv(file)
+    df_file['location2'] = location_weather[file.split('\\')[-1].split('_')[0]]
+    weather = weather.append(df_file, ignore_index=True)
+
+weather = weather.rename(columns={'Vuosi': 'year', 'Kk': 'month',
+                                  'Pv': 'day', 'Klo': 'time',
+                                  'Suhteellinen kosteus (%)': 'RH',
+                                  'Ilman lämpötila (degC)': 'Temperature'})
+weather[['year', 'month', 'day']] = weather[['year',
+                                             'month', 'day']].astype(str)
+weather['month'] = weather['month'].str.zfill(2)
+weather['day'] = weather['day'].str.zfill(2)
+weather['datetime'] = weather['year'] + weather['month'] + \
+    weather['day'] + weather['time']
+weather['datetime'] = pd.to_datetime(weather['datetime'], format='%Y%m%d%H:%M')
+
+df['hour'] = np.floor(df['time'])
+df['minute'] = (df['time'] % 1) * 60
+df['second'] = 0
+df['year'] = df['date'].dt.year
+df['month'] = df['date'].dt.month
+df['day'] = df['date'].dt.day
+
+df['datetime'] = pd.to_datetime(df[['year', 'month', 'day', 'hour', 'minute', 'second']])
+df = df.drop(['year', 'month', 'day', 'hour', 'minute', 'second'], axis=1)
+
+
+weather = weather.set_index('datetime').resample('0.5H').mean()
+weather = weather.reset_index()
+weather['datetime'] = weather['datetime'] + pd.Timedelta(minutes=15)
+
+df = pd.merge(weather, df)
+
+# %%
+jitter = {'Uto': [-60, -2], 'Hyytiala': [-30, -1],
+          'Vehmasmaki': [0, 0], 'Sodankyla': [30, 1]}
+period_months = np.arange(1, 13).reshape(4, 3)
+month_labs = [calendar.month_abbr[i] for i in np.arange(1, 13)]
+month_labs = ['-'.join(month_labs[ii-3:ii]) for ii in [3, 6, 9, 12]]
+
+
+fig, axes = plt.subplots(2, 2, figsize=(6, 6), sharey=True, sharex=True)
+fig2, axes2 = plt.subplots(2, 2, figsize=(6, 6), sharey=True, sharex=True)
+
+for (i, month), ax, ax2 in zip(enumerate(period_months),
+                               axes.flatten(), axes2.flatten()):
+    for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
+        grp_avg = grp.groupby('range')['depo'].mean()
+        grp_count = grp.groupby('range')['depo'].count()
+        grp_std = grp.groupby('range')['depo'].std()
+        grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
+        grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
+        ax.errorbar(grp_avg.index + jitter[loc][0],
+                    grp_avg, grp_std, label=loc, fmt='.')
+        ax.set_xlim([-50, 2500])
+        grp_ground = grp[grp['range'] <= 300]
+        y_grp = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10)))
+        y_mean = y_grp['depo'].mean()
+        y_std = y_grp['depo'].std()
+        x = np.arange(5, 105, 10)
+        ax2.errorbar(x + jitter[loc][1], y_mean, y_std,
+                     label=loc, fmt='.')
+        ax2.set_xlim([20, 100])
+    if i in [2, 3]:
+        ax.set_xlabel('Range')
+        ax2.set_xlabel('Relative humidity')
+    if i in [0, 2]:
+        ax.set_ylabel('Depo')
+        ax2.set_ylabel('Depo')
+    ax.set_title(month_labs[i], weight='bold')
+    ax2.set_title(month_labs[i], weight='bold')
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', ncol=4)
+handles, labels = ax2.get_legend_handles_labels()
+fig2.legend(handles, labels, loc='upper center', ncol=4)
+fig.savefig(path + '/depo_range.png', bbox_inches='tight')
+fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
