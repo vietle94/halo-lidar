@@ -298,7 +298,7 @@ df = df.drop(['year', 'month', 'day', 'hour', 'minute', 'second'], axis=1)
 
 weather = weather.set_index('datetime').resample('0.5H').mean()
 weather = weather.reset_index()
-
+weather['datetime'] = weather['datetime'] + pd.Timedelta(minutes=15)
 
 df = pd.merge(weather, df)
 
