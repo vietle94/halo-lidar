@@ -29,8 +29,6 @@ import calendar
 path = r'C:\Users\vietl\Desktop\Thesis\Img'
 
 # %%
-
-# %%
 mat = np.array([
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 1, 0, 0, 0, 0, 1, 1, 0, 0],
@@ -91,6 +89,20 @@ df.unmask999()
 df.depo_cross_adj()
 
 # %%
+m_ = ((df.data['time'] > 5.70) &
+      (df.data['time'] < 5.85)) | ((df.data['time'] > 6.20) &
+                                   (df.data['time'] < 6.6))
+m_ = m_ | ((df.data['time'] > 17.7) &
+           (df.data['time'] < 17.9)) | ((df.data['time'] > 7.02) &
+                                        (df.data['time'] < 7.1))
+
+temp_co = df.data['co_signal'].copy()
+lol = np.isnan(np.log10(df.data['beta_raw']))
+lol[~m_, :] = False
+temp_co[lol] = np.nan
+
+
+# %%
 fig, axes = plt.subplots(3, 1, sharex=True, sharey=True, figsize=(6, 5))
 p = axes[0].pcolormesh(df.data['time'], df.data['range'],
                        np.log10(df.data['beta_raw']).T, cmap='jet',
@@ -108,7 +120,7 @@ cbar.ax.set_ylabel('Velocity [' + df.units.get('v_raw', None) + ']', rotation=90
 axes[1].set_ylabel('Height (km)', weight='bold')
 
 p = axes[2].pcolormesh(df.data['time'], df.data['range'],
-                       df.data['co_signal'].T, cmap='jet',
+                       temp_co.T, cmap='jet',
                        vmin=0.995, vmax=1.005)
 cbar = fig.colorbar(p, ax=axes[2], fraction=0.05)
 cbar.ax.set_ylabel('co-SNR + 1', rotation=90)
@@ -144,8 +156,8 @@ df.data['classifier'][aerosol_smoothed] = 10
 
 # %%
 cmap = mpl.colors.ListedColormap(
-    ['white', '#2ca02c', '#808000', 'blue', 'red', 'gray'])
-boundaries = [0, 10, 11, 20, 30, 40, 50]
+    ['white', '#2ca02c', 'blue', 'red', 'gray'])
+boundaries = [0, 10, 20, 30, 40, 50]
 norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
 fig, ax = plt.subplots(figsize=(6, 2))
 p = ax.pcolormesh(df.data['time'], df.data['range'],
@@ -154,8 +166,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
 ax.set_ylabel('Height (km)', weight='bold')
 ax.set_xlabel('Time (h)', weight='bold')
-cbar = fig.colorbar(p, ax=ax, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 fig.tight_layout()
 fig.savefig(path + '/algorithm_aerosol.png', bbox_inches='tight')
@@ -191,8 +203,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
 ax.set_ylabel('Height (km)', weight='bold')
 ax.set_xlabel('Time (h)', weight='bold')
-cbar = fig.colorbar(p, ax=ax, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 fig.tight_layout()
 fig.savefig(path + '/algorithm_cloud.png', bbox_inches='tight')
@@ -237,8 +249,8 @@ for i in range(1500):
                              temp.T, cmap=cmap, norm=norm)
         ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
         ax[0].set_ylabel('Height (km)', weight='bold')
-        cbar = fig.colorbar(p, ax=ax[0], ticks=[5, 10.5, 15, 25, 35, 45])
-        cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+        cbar = fig.colorbar(p, ax=ax[0], ticks=[5, 15, 25, 35, 45])
+        cbar.ax.set_yticklabels(['Background', 'Aerosol',
                                  'Precipitation', 'Clouds', 'Undefined'])
     prep_1_max = maximum_filter(precipitation, size=3)
     prep_1_max *= ~updraft_ebola_max  # Avoid updraft area
@@ -251,8 +263,8 @@ temp[precipitation] = 20
 p = ax[1].pcolormesh(df.data['time'], df.data['range'],
                      temp.T, cmap=cmap, norm=norm)
 ax[1].yaxis.set_major_formatter(hd.m_km_ticks())
-cbar = fig.colorbar(p, ax=ax[1], ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax[1], ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 ax[1].set_ylabel('Height (km)', weight='bold')
 ax[1].set_xlabel('Time (h)', weight='bold')
@@ -286,8 +298,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
 ax.set_ylabel('Height (km)', weight='bold')
 ax.set_xlabel('Time (h)', weight='bold')
-cbar = fig.colorbar(p, ax=ax, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 fig.tight_layout()
 fig.savefig(path + '/algorithm_attenuation.png', bbox_inches='tight')
@@ -323,7 +335,7 @@ if (df.data['classifier'] == 10).any():
         elif r_dict[key] == min(df.data['range']):
             lab[db.labels_ == key] = 10
         elif (val > -0.2):
-            lab[db.labels_ == key] = 11
+            lab[db.labels_ == key] = 10
         else:
             lab[db.labels_ == key] = 40
 
@@ -337,8 +349,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
 ax.set_ylabel('Height (km)', weight='bold')
 ax.set_xlabel('Time (h)', weight='bold')
-cbar = fig.colorbar(p, ax=ax, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 fig.tight_layout()
 fig.savefig(path + '/algorithm_aerosol_finetuned.png', bbox_inches='tight')
@@ -380,8 +392,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
 ax.set_ylabel('Height (km)', weight='bold')
 ax.set_xlabel('Time (h)', weight='bold')
-cbar = fig.colorbar(p, ax=ax, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 fig.tight_layout()
 fig.savefig(path + '/algorithm_ground_precipitation.png', bbox_inches='tight')
@@ -391,12 +403,10 @@ fig.savefig(path + '/algorithm_ground_precipitation.png', bbox_inches='tight')
 ###############################################################
 
 data = hd.getdata('F:/halo/46/depolarization')
-classifier_folder = 'F:\\halo\\classifier'
-Path(classifier_folder).mkdir(parents=True, exist_ok=True)
 
 # %%
-# date = '20180415'
-date = '20180611'
+date = '20180415'
+# date = '20180611'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -534,7 +544,7 @@ if (df.data['classifier'] == 10).any():
         elif r_dict[key] == min(df.data['range']):
             lab[db.labels_ == key] = 10
         elif (val > -0.2):
-            lab[db.labels_ == key] = 11
+            lab[db.labels_ == key] = 10
         else:
             lab[db.labels_ == key] = 40
 
@@ -571,8 +581,8 @@ if (df.data['classifier'] == 20).any():
 
 # %%
 cmap = mpl.colors.ListedColormap(
-    ['white', '#2ca02c', '#808000', 'blue', 'red', 'gray'])
-boundaries = [0, 10, 11, 20, 30, 40, 50]
+    ['white', '#2ca02c', 'blue', 'red', 'gray'])
+boundaries = [0, 10, 20, 30, 40, 50]
 norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
 
 # %%
@@ -600,8 +610,8 @@ cbar.ax.set_ylabel('Velocity [' + df.units.get('v_raw', None) + ']', rotation=90
 cbar = fig.colorbar(p3, ax=ax5)
 cbar.ax.set_ylabel('Depolarization ratio')
 # cbar.ax.yaxis.set_label_position('left')
-cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 10.5, 15, 25, 35, 45])
-cbar.ax.set_yticklabels(['Background', 'Aerosol', 'Elevated aerosol',
+cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 15, 25, 35, 45])
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
 ax7.set_xlabel('Time UTC [hour]', weight='bold')
 
@@ -611,7 +621,7 @@ fig.savefig(path + '/algorithm_' + df.filename +
 
 
 ##############################################
-# %%
+# %% depo cloud base hist, ts
 ##############################################
 
 # Define csv directory path
@@ -702,14 +712,14 @@ for key, group in depo.groupby('sys'):
         mask = (temp < 0.4) & (temp > -0.05)
     else:
         mask = (temp < 0.2) & (temp > -0.05)
-    fig6, ax = plt.subplots(figsize=(6, 4))
+    fig6, ax = plt.subplots(figsize=(6, 3))
     temp.loc[mask].hist(bins=50)
     ax.set_xlabel('Depolarization ratio')
 
     fig6.savefig(path + '/' + key + '_depo_hist.png',
                  bbox_inches='tight')
 
-    fig7, ax = plt.subplots(figsize=(6, 4))
+    fig7, ax = plt.subplots(figsize=(6, 3))
     group_ = group.groupby('date').depo
     ax.errorbar(group['date'].unique(), group_.mean(), yerr=group_.std(),
                 ls='none', marker='.', linewidth=0.5, markersize=5)
@@ -967,3 +977,74 @@ handles, labels = ax2.get_legend_handles_labels()
 fig2.legend(handles, labels, loc='upper center', ncol=4)
 fig.savefig(path + '/depo_range.png', bbox_inches='tight')
 fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+
+##############################################
+# %% snr cloud base
+##############################################
+
+# %%
+# Specify data folder path
+data_folder = r'F:\halo\32\depolarization'
+
+# %%
+# Get a list of all files in data folder
+data = hd.getdata(data_folder)
+
+# %%
+# pick date of data
+pick_date = '20160223'
+data_indices = hd.getdata_date(data, pick_date, data_folder)
+df = hd.halo_data(data[data_indices])
+print(df.filename)
+# Change masking missing values from -999 to NaN
+df.unmask999()
+# Remove bottom 3 height layers
+df.filter_height()
+
+df.filter(variables=['beta_raw', 'depo_raw'],
+          ref='co_signal',
+          threshold=1 + 3*df.snr_sd)
+
+# %%
+fig, ax = plt.subplots(1, 2, figsize=(6, 4), sharey=True)
+time = (17.645 <= df.data['time']) & (df.data['time'] <= 17.646)
+range_mask = df.data['range'] < 1000
+snr = df.data['co_signal'][time, range_mask]
+depo = df.data['depo_raw'][time, range_mask]
+ax[1].scatter(snr.ravel(), df.data['range'][range_mask], c=snr)
+ax[0].scatter(depo.ravel(), df.data['range'][range_mask], c=snr)
+ax[0].set_ylabel('Range [m.a.g.l]')
+ax[0].set_xlabel('Depolarization ratio')
+ax[1].set_xlabel('co-SNR')
+fig.tight_layout()
+fig.savefig(path + '/cloud_base_SNR.png', bbox_inches='tight')
+
+##############################################
+# %% snr ts
+##############################################
+
+# %%
+csv_path = r'F:\halo\32\depolarization\snr'
+# Collect csv file in csv directory
+data_list = glob.glob(csv_path + '/*_noise.csv')
+# %%
+noise = pd.concat([pd.read_csv(f) for f in data_list],
+                  ignore_index=True)
+noise = noise.astype({'year': int, 'month': int, 'day': int})
+noise['time'] = pd.to_datetime(noise[['year', 'month', 'day']]).dt.date
+name = noise['location'][0] + '-' + str(int(noise['systemID'][0]))
+
+# %%
+# Calculate metrics
+groupby = noise.groupby('time')['noise']
+sd = groupby.std()
+mean = groupby.mean()
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.plot(sd, '.', markersize=0.5)
+ax.set_ylabel('Standard deviation of SNR')
+ax.set_ylim([0, 0.0025])
+ax.tick_params(axis='x', labelrotation=45)
+fig.tight_layout()
+fig.savefig(path + '/snr_ts.png', bbox_inches='tight')
