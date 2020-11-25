@@ -111,21 +111,21 @@ axes[1].yaxis.set_major_formatter(hd.m_km_ticks())
 axes[0].set_xlim([0, 24])
 cbar = fig.colorbar(p, ax=axes[0], fraction=0.05)
 cbar.ax.set_ylabel('Beta [' + df.units.get('beta_raw', None) + ']', rotation=90)
-axes[0].set_ylabel('Height (km)', weight='bold')
+axes[0].set_ylabel('Range [km, a.g.l]')
 p = axes[1].pcolormesh(df.data['time'], df.data['range'],
                        df.data['v_raw'].T, cmap='jet',
                        vmin=-2, vmax=2)
 cbar = fig.colorbar(p, ax=axes[1], fraction=0.05)
 cbar.ax.set_ylabel('Velocity [' + df.units.get('v_raw', None) + ']', rotation=90)
-axes[1].set_ylabel('Height (km)', weight='bold')
+axes[1].set_ylabel('Range [km, a.g.l]')
 
 p = axes[2].pcolormesh(df.data['time'], df.data['range'],
                        temp_co.T, cmap='jet',
                        vmin=0.995, vmax=1.005)
 cbar = fig.colorbar(p, ax=axes[2], fraction=0.05)
 cbar.ax.set_ylabel('co-SNR + 1', rotation=90)
-axes[2].set_ylabel('Height (km)', weight='bold')
-axes[2].set_xlabel('Time (h)', weight='bold')
+axes[2].set_ylabel('Range [km, a.g.l]')
+axes[2].set_xlabel('Time [UTC - hour]')
 fig.tight_layout()
 fig.savefig(path + '/raw_data.png', bbox_inches='tight')
 
@@ -164,8 +164,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
                   df.data['classifier'].T,
                   cmap=cmap, norm=norm)
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
-ax.set_ylabel('Height (km)', weight='bold')
-ax.set_xlabel('Time (h)', weight='bold')
+ax.set_ylabel('Range [km, a.g.l]')
+ax.set_xlabel('Time [UTC - hour]')
 cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
@@ -201,8 +201,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
                   df.data['classifier'].T,
                   cmap=cmap, norm=norm)
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
-ax.set_ylabel('Height (km)', weight='bold')
-ax.set_xlabel('Time (h)', weight='bold')
+ax.set_ylabel('Range [km, a.g.l]')
+ax.set_xlabel('Time [UTC - hour]')
 cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
@@ -248,7 +248,7 @@ for i in range(1500):
         p = ax[0].pcolormesh(df.data['time'], df.data['range'],
                              temp.T, cmap=cmap, norm=norm)
         ax[0].yaxis.set_major_formatter(hd.m_km_ticks())
-        ax[0].set_ylabel('Height (km)', weight='bold')
+        ax[0].set_ylabel('Range [km, a.g.l]')
         cbar = fig.colorbar(p, ax=ax[0], ticks=[5, 15, 25, 35, 45])
         cbar.ax.set_yticklabels(['Background', 'Aerosol',
                                  'Precipitation', 'Clouds', 'Undefined'])
@@ -266,8 +266,8 @@ ax[1].yaxis.set_major_formatter(hd.m_km_ticks())
 cbar = fig.colorbar(p, ax=ax[1], ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
-ax[1].set_ylabel('Height (km)', weight='bold')
-ax[1].set_xlabel('Time (h)', weight='bold')
+ax[1].set_ylabel('Range [km, a.g.l]')
+ax[1].set_xlabel('Time [UTC - hour]')
 fig.tight_layout()
 fig.savefig(path + '/algorithm_precipitation.png', bbox_inches='tight')
 
@@ -296,8 +296,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
                   df.data['classifier'].T,
                   cmap=cmap, norm=norm)
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
-ax.set_ylabel('Height (km)', weight='bold')
-ax.set_xlabel('Time (h)', weight='bold')
+ax.set_ylabel('Range [km, a.g.l]')
+ax.set_xlabel('Time [UTC - hour]')
 cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
@@ -347,8 +347,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
                   df.data['classifier'].T,
                   cmap=cmap, norm=norm)
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
-ax.set_ylabel('Height (km)', weight='bold')
-ax.set_xlabel('Time (h)', weight='bold')
+ax.set_ylabel('Range [km, a.g.l]')
+ax.set_xlabel('Time [UTC - hour]')
 cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
@@ -390,8 +390,8 @@ p = ax.pcolormesh(df.data['time'], df.data['range'],
                   df.data['classifier'].T,
                   cmap=cmap, norm=norm)
 ax.yaxis.set_major_formatter(hd.m_km_ticks())
-ax.set_ylabel('Height (km)', weight='bold')
-ax.set_xlabel('Time (h)', weight='bold')
+ax.set_ylabel('Range [km, a.g.l]')
+ax.set_xlabel('Time [UTC - hour]')
 cbar = fig.colorbar(p, ax=ax, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
@@ -405,8 +405,8 @@ fig.savefig(path + '/algorithm_ground_precipitation.png', bbox_inches='tight')
 data = hd.getdata('F:/halo/46/depolarization')
 
 # %%
-date = '20180415'
-# date = '20180611'
+# date = '20180415'
+date = '20180611'
 file = [file for file in data if date in file][0]
 df = hd.halo_data(file)
 
@@ -599,7 +599,7 @@ p4 = ax7.pcolormesh(df.data['time'], df.data['range'],
                     cmap=cmap, norm=norm)
 for ax in [ax1, ax3, ax5, ax7]:
     ax.yaxis.set_major_formatter(hd.m_km_ticks())
-    ax.set_ylabel('Height [km, a.g.l]')
+    ax.set_ylabel('Range [km, a.g.l]')
 
 cbar = fig.colorbar(p1, ax=ax1)
 cbar.ax.set_ylabel('Beta [' + df.units.get('beta_raw', None) + ']', rotation=90)
@@ -613,7 +613,7 @@ cbar.ax.set_ylabel('Depolarization ratio')
 cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 15, 25, 35, 45])
 cbar.ax.set_yticklabels(['Background', 'Aerosol',
                          'Precipitation', 'Clouds', 'Undefined'])
-ax7.set_xlabel('Time UTC [hour]', weight='bold')
+ax7.set_xlabel('Time [UTC - hour]')
 
 fig.tight_layout()
 fig.savefig(path + '/algorithm_' + df.filename +
@@ -964,11 +964,11 @@ for (i, month), ax, ax2 in zip(enumerate(period_months),
                      label=loc, fmt='.')
         ax2.set_xlim([20, 100])
     if i in [2, 3]:
-        ax.set_xlabel('Range')
+        ax.set_xlabel('Range [km, a.g.l]')
         ax2.set_xlabel('Relative humidity')
     if i in [0, 2]:
-        ax.set_ylabel('Depo')
-        ax2.set_ylabel('Depo')
+        ax.set_ylabel('Depolarization ratio')
+        ax2.set_ylabel('Depolarization ratio')
     ax.set_title(month_labs[i], weight='bold')
     ax2.set_title(month_labs[i], weight='bold')
 handles, labels = ax.get_legend_handles_labels()
@@ -1048,3 +1048,43 @@ ax.set_ylim([0, 0.0025])
 ax.tick_params(axis='x', labelrotation=45)
 fig.tight_layout()
 fig.savefig(path + '/snr_ts.png', bbox_inches='tight')
+
+##############################################
+# %% snr ts
+##############################################
+
+data = hd.getdata('F:/halo/32/depolarization')
+
+# %%
+date = '20190405'
+file = [file for file in data if date in file][0]
+df = hd.halo_data(file)
+
+df.filter_height()
+df.unmask999()
+df.depo_cross_adj()
+
+# %%
+with open('ref_XR2.npy', 'rb') as f:
+    ref = np.load(f)
+df.filter(variables=['beta_raw'],
+          ref='co_signal',
+          threshold=1 + 3*df.snr_sd)
+# %%
+log_beta = np.log10(df.data['beta_raw'])
+log_beta2 = log_beta.copy()
+log_beta2[:, :50] = log_beta2[:, :50] - ref
+
+# %%
+fig, ax = plt.subplots(2, 1, figsize=(6, 4), sharex=True)
+for ax_, beta in zip(ax.flatten(), [log_beta, log_beta2]):
+    p = ax_.pcolormesh(df.data['time'], df.data['range'],
+                       beta.T, cmap='jet', vmin=-8, vmax=-4)
+    cbar = fig.colorbar(p, ax=ax_)
+    cbar.ax.set_ylabel('Attenuated backscatter')
+    ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+    ax_.set_ylabel('Range [km, a.g.l]')
+ax_.set_xlabel('Time [UTC - hour]')
+fig.tight_layout()
+fig.savefig(path + '/XR_correction_' + df.filename +
+            '.png', bbox_inches='tight')
