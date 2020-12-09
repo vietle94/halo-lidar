@@ -757,6 +757,7 @@ mux = pd.MultiIndex.from_product([missing_df.index.levels[0],
                                   missing_df.index.levels[2]],
                                  names=['year', 'month', 'location2'])
 missing_df = missing_df.reindex(mux, fill_value=0).reset_index()
+missing_df_all = missing_df.copy()
 missing_df = missing_df[missing_df['count'] < 15]
 
 # %%
@@ -785,6 +786,24 @@ df[(df['location2'] == 'Uto') &
     (df['date'] >= '2019-12-06') &
     (df['date'] <= '2019-12-10')] = np.nan
 
+# %%
+df_miss = df.merge(missing_df_all, 'outer')
+df_miss.dropna(inplace=True)
+df_miss = df_miss[df_miss['count'] >= 15]
+fig, ax = plt.subplots(figsize=(6, 4))
+for k, grp in df_miss.groupby(['location2']):
+    grp.resample('M', on='date')['depo'].median().plot(ax=ax, label=k)
+ax.set_ylabel('Depolarization ratio')
+fig.legend(ncol=4, loc='upper center')
+ax.set_xlabel('')
+ax.grid(which='major', axis='x')
+fig.savefig(path + '/depo_median_month.png',
+            bbox_inches='tight')
+
+
+# %%
+df[df['location2'] == 'Sodankyla']
+df[df['location2'] == 'Sodankyla'].resample('M', on='date')['depo'].median().plot()
 # %%
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
 cbar_max = {'Uto': 600, 'Hyytiala': 600,
