@@ -1107,3 +1107,143 @@ ax_.set_xlabel('Time [UTC - hour]')
 fig.tight_layout()
 fig.savefig(path + '/XR_correction_' + df.filename +
             '.png', bbox_inches='tight')
+
+# %%
+
+
+def mk_groups(data):
+    try:
+        newdata = data.items()
+    except:
+        return
+
+    thisgroup = []
+    groups = []
+    for key, value in newdata:
+        newgroups = mk_groups(value)
+        if newgroups is None:
+            thisgroup.append((key, value))
+        else:
+            thisgroup.append((key, len(newgroups[-1])))
+            if groups:
+                groups = [g + n for n, g in zip(newgroups, groups)]
+            else:
+                groups = newgroups
+    return [thisgroup] + groups
+
+
+def add_line(ax, ypos, xpos):
+    line = plt.Line2D(xpos, ypos,
+                      transform=ax.transAxes, color='black')
+    line.set_clip_on(False)
+    ax.add_line(line)
+
+
+def label_group_bar(ax, data):
+    groups = mk_groups(data)
+    xy = groups.pop()
+    y, xx = zip(*xy)
+    x = [i[0] for i in xx]
+    xsd = [i[1] for i in xx]
+    # y, x = zip(*xy)
+    ly = len(y)
+    yticks = range(1, ly + 1)
+
+    ax.errorbar(x, yticks, xerr=xsd, fmt='.')
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(y)
+    ax.set_ylim(.5, ly + .5)
+    ax.set_xlim(0, .4)
+    ax.xaxis.grid(True)
+    # ax.yaxis.grid(True)
+
+    scale = 1. / ly
+    for pos in range(ly + 1):
+        add_line(ax, [pos * scale, pos * scale], [-.12, 0])
+    ypos = -.2
+    level = 2
+    while groups:
+        group = groups.pop()
+        print(group)
+        pos = 0
+        for label, rpos in group:
+            print(label)
+            lxpos = (pos + .5 * rpos) * scale
+            if level == 1:
+                ax.text(ypos-.15, lxpos, label,
+                        ha='center', transform=ax.transAxes, va='center',
+                        weight='bold', size=9)
+                add_line(ax, [pos * scale, pos * scale], [ypos - .2, ypos+.1])
+            else:
+                ax.text(ypos-.02, lxpos, label, ha='center',
+                        transform=ax.transAxes, va='center')
+                add_line(ax, [pos * scale, pos * scale], [ypos - .1, ypos+.1])
+            pos += rpos
+        add_line(ax, [pos * scale, pos * scale], [ypos - .2, ypos+.1])
+        ypos -= .1
+        level -= 1
+
+
+data = {'Vakkari\n et al. (2020)':
+        {'Saharan dust':
+         {'355nm': (0.19, 0.008),
+          '532nm': (0.23, 0.008),
+          '1565nm': (0.29, 0.008)},
+         'Egyption dust':
+         {'355nm': (0.36, 0.01),
+          '532nm': (0.34, 0.002),
+          '1565nm': (0.30, 0.005)},
+             'Turkish dust':
+         {'355nm': (0.31, 0.006),
+          '532nm': (0.33, 0.005),
+          '1565nm': (0.32, 0.008)}
+         },
+        'Haarig \n et al. (2017)':
+            {'Saharan dust':
+             {'355nm': (0.252, 0.03),
+              '532nm': (0.28, 0.02),
+              '1064nm': (0.225, 0.022)}
+             },
+        'Burton \n et al. (2015)':
+            {'Saharan dust':
+             {'355nm': (0.246, 0.0018),
+              '532nm': (0.304, 0.005),
+              '710nm': (0.270, 0.005)},
+             'Mexican dust':
+             {'355nm': (0.243, 0.046),
+              '532nm': (0.373, 0.014),
+              '710nm': (0.383, 0.006)},
+             },
+        'Freudenthaler \n et al. (2009)':
+            {'Saharan dust':
+             {'532nm': (0.31, 0.03),
+              '1064nm': (0.27, 0.04)}
+             },
+        'Groß \n et al. (2011)':
+            {'marine':
+             {'355nm': (0.02, 0.01),
+              '532nm': (0.02, 0.02)}
+             },
+        'Vakkari \net al. (2020)':
+            {'polluted \n marine':
+             {'355nm': (0.03, 0.01),
+              '532nm': (0.015, 0.002),
+              '1565nm': (0.009, 0.003)}
+             },
+        'Vakkari \n et al.(2020)':
+            {'spruce + birch \n pollen':
+             {'532nm': (0.236, 0.009),
+              '1565nm': (0.269, 0.005)}
+             },
+        'Bohlmann \n et al. (2019)':
+            {'birch pollen':
+             {'532nm': (0.1, 0.06)},
+             'spruce + birch \n pollen':
+             {'532nm': (0.26, 0.07)}
+             }
+        }
+fig, ax = plt.subplots(figsize=(9, 12))
+label_group_bar(ax, data)
+fig.subplots_adjust(left=0.2)
+fig.tight_layout()
+data
