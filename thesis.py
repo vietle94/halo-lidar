@@ -1,3 +1,5 @@
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 import copy
 import matplotlib
 import numpy as np
@@ -1255,7 +1257,21 @@ data = {'Vakkari\n et al. (2020)':
         }
 fig, ax = plt.subplots(figsize=(9, 12))
 label_group_bar(ax, data)
+ax.xaxis.set_tick_params(labeltop='on')
+wave_color = {'355nm': my_cmap(0), '532nm': my_cmap(0.25), '710nm': my_cmap(0.5),
+              '1064nm': my_cmap(0.75), '1565nm': my_cmap(0.99)}
+legend_elements = [Line2D([], [], label='355nm', color=my_cmap(0), linewidth=1.5, marker='o',
+                          markerfacecolor=my_cmap(0), markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='532nm', color=my_cmap(0.25), linewidth=1.5, marker='o',
+                          markerfacecolor=my_cmap(0.25), markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='710nm', color=my_cmap(0.5), linewidth=1.5, marker='o',
+                          markerfacecolor=my_cmap(0.5), markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='1064nm', color=my_cmap(0.75), linewidth=1.5, marker='o',
+                          markerfacecolor=my_cmap(0.75), markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='1565nm', color=my_cmap(0.99), linewidth=1.5, marker='o',
+                          markerfacecolor=my_cmap(0.99), markeredgewidth=0, markersize=7)]
+fig.legend(handles=legend_elements, loc='right')
+add_line(ax, [1/29*20, 1/29*20], [0, 1])
+add_line(ax, [1/29*25, 1/29*25], [0, 1])
 fig.subplots_adjust(left=0.2)
 fig.tight_layout()
-
-# %%
