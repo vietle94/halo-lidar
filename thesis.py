@@ -1140,16 +1140,19 @@ def add_line(ax, ypos, xpos):
 
 
 def label_group_bar(ax, data):
+    color_err = ['white', '#2ca02c', 'blue', 'red', 'gray']
     groups = mk_groups(data)
     xy = groups.pop()
     y, xx = zip(*xy)
     x = [i[0] for i in xx]
     xsd = [i[1] for i in xx]
-    # y, x = zip(*xy)
     ly = len(y)
     yticks = range(1, ly + 1)
+    print(x, y)
 
-    ax.errorbar(x, yticks, xerr=xsd, fmt='.')
+    ax.errorbar(x, yticks, xerr=xsd, fmt='none',
+                ecolor=color_error_bar)
+    ax.scatter(x, yticks, c=color_error_bar, s=30)
     ax.set_yticks(yticks)
     ax.set_yticklabels(y)
     ax.set_ylim(.5, ly + .5)
@@ -1164,10 +1167,8 @@ def label_group_bar(ax, data):
     level = 2
     while groups:
         group = groups.pop()
-        print(group)
         pos = 0
         for label, rpos in group:
-            print(label)
             lxpos = (pos + .5 * rpos) * scale
             if level == 1:
                 ax.text(ypos-.15, lxpos, label,
@@ -1183,6 +1184,16 @@ def label_group_bar(ax, data):
         ypos -= .1
         level -= 1
 
+
+my_cmap = plt.cm.get_cmap('viridis')
+wave_color = {'355nm': my_cmap(0), '532nm': my_cmap(0.25), '710nm': my_cmap(0.5),
+              '1064nm': my_cmap(0.75), '1565nm': my_cmap(0.99)}
+color_error_bar = []
+for k1, i1 in data.items():
+    for k2, i2 in i1.items():
+        for k3, i3 in i2.items():
+            color_error_bar.append(wave_color[k3])
+color_error_bar
 
 data = {'Vakkari\n et al. (2020)':
         {'Saharan dust':
@@ -1246,4 +1257,5 @@ fig, ax = plt.subplots(figsize=(9, 12))
 label_group_bar(ax, data)
 fig.subplots_adjust(left=0.2)
 fig.tight_layout()
-data
+
+# %%
