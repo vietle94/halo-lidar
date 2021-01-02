@@ -1,3 +1,4 @@
+import datetime
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import copy
@@ -802,11 +803,49 @@ ax.grid(which='major', axis='x')
 fig.savefig(path + '/depo_median_month.png',
             bbox_inches='tight')
 
+# %%
+season = {'Oct-Apr': [10, 11, 12, 1, 2, 3, 4],
+          'May': [5],
+          'Jun': [6],
+          'Jul-Sep': [7, 8, 9]}
+
+depo_season = {}
+for k, grp in df.groupby(['location2']):
+    depo_season[k] = {}
+    for sea in season:
+        temp = grp.loc[grp['month'].isin(season[sea]), 'depo']
+        # temp = temp[temp > 0]
+        # temp = temp[temp < 0.5]
+        mean_ = temp.mean()
+        sd_ = temp.std()
+        depo_season[k][sea] = (mean_, sd_)
 
 # %%
-df[df['location2'] == 'Sodankyla']
-df[df['location2'] == 'Sodankyla'].resample('M', on='date')['depo'].median().plot()
+depo_season
+
 # %%
+jitter = {}
+for place, v in zip(['Uto', 'Hyytiala', 'Vehmasmaki', 'Sodankyla'],
+                    np.linspace(-0.15, 0.15, 4)):
+    jitter[place] = v
+fig, ax = plt.subplots(figsize=(6, 4))
+for k, grp in df.groupby('location2'):
+    dep = grp.groupby(grp.date.dt.month)['depo']
+    dep_mean = dep.mean()
+    dep_std = dep.std()
+    ax.errorbar(dep_mean.index + jitter[k], dep_mean, yerr=dep_std, label=k,
+                fmt='--', elinewidth=1)
+ax.set_ylabel('Depolarization ratio')
+ticklabels = [datetime.date(1900, item, 1).strftime('%b') for item in np.arange(1, 13, 3)]
+ax.set_xticks(np.arange(1, 13, 3))
+ax.set_xticklabels(ticklabels)
+ax.grid(axis='x', which='major', linewidth=0.5, c='silver')
+fig.legend(ncol=4, loc='upper center')
+fig.savefig(path + '/depo_mean_month_avg.png',
+            bbox_inches='tight')
+
+# %%
+
 y = {2016: 0, 2017: 1, 2018: 2, 2019: 3}
 cbar_max = {'Uto': 600, 'Hyytiala': 600,
             'Vehmasmaki': 400, 'Sodankyla': 400}
@@ -857,7 +896,6 @@ for k, grp in df.groupby(['location2']):
             avg[k] = np.append(avg[k], H[:, :, np.newaxis], axis=2)
 
     for key, val in avg.items():
-
         p = axes[-1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
                                 cmap=my_cmap,
                                 vmin=0.1, vmax=cbar_max[key])
@@ -869,6 +907,62 @@ for k, grp in df.groupby(['location2']):
         fig.tight_layout()
         fig.savefig(path + '/' + k + '_depo_month.png',
                     bbox_inches='tight')
+
+# %% Plot percent per month
+# X, Y = np.meshgrid(bin_month, bin_depo)
+# for k, grp in df.groupby(['location2']):
+#     avg = {}
+#
+#     if k == 'Sodankyla':
+#         fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True)
+#         axes = axes.flatten()
+#         axes[2].set_xlabel('Month')
+#     else:
+#         fig = plt.figure(figsize=(6, 6))
+#         gs = fig.add_gridspec(3, 4)
+#         ax1 = fig.add_subplot(gs[0, :2])
+#         ax2 = fig.add_subplot(gs[0, 2:], sharey=ax1)
+#         ax1.axes.xaxis.set_ticklabels([])
+#         ax2.axes.xaxis.set_ticklabels([])
+#         ax3 = fig.add_subplot(gs[1, :2], sharey=ax1)
+#         ax3.set_xlabel('Month')
+#         ax4 = fig.add_subplot(gs[1, 2:])
+#         ax4.set_xlabel('Month')
+#         ax5 = fig.add_subplot(gs[2, 1:3])
+#         axes = [ax1, ax2, ax3, ax4, ax5]
+#     for (key, g), ax in zip(grp.groupby(['year']), axes):
+#         H, month_edge, depo_edge = np.histogram2d(
+#             g['month'], g['depo'],
+#             bins=(bin_month, bin_depo)
+#         )
+#         miss = missing_df[(missing_df['year'] == key) &
+#                           (missing_df['location2'] == k)]['month']
+#         if len(miss.index) != 0:
+#             for miss_month in miss:
+#                 H[miss_month-1, :] = np.nan
+#
+#         H = H/(H.sum(axis=1).reshape((-1, 1)))
+#         p = ax.pcolormesh(X, Y, H.T, cmap=my_cmap, vmin=0.001, vmax=0.2)
+#         fig.colorbar(p, ax=ax)
+#         ax.xaxis.set_ticks([4, 8, 12])
+#         ax.set_ylabel('Depolarization ratio')
+#         ax.set_title(int(key), weight='bold')
+#
+#         if k not in avg:
+#             avg[k] = H[:, :, np.newaxis]
+#         else:
+#             avg[k] = np.append(avg[k], H[:, :, np.newaxis], axis=2)
+#
+#     for key, val in avg.items():
+#         p = axes[-1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
+#                                 cmap=my_cmap,
+#                                 vmin=0.001, vmax=0.2)
+#         axes[-1].xaxis.set_ticks([4, 8, 12])
+#         axes[-1].set_ylabel('Depolarization ratio')
+#         axes[-1].set_xlabel('Month')
+#         axes[-1].set_title('Averaged', weight='bold')
+#         fig.colorbar(p, ax=axes[-1])
+#         fig.tight_layout()
 
 # %%
 X, Y = np.meshgrid(bin_time, bin_month)
@@ -1150,11 +1244,10 @@ def label_group_bar(ax, data):
     xsd = [i[1] for i in xx]
     ly = len(y)
     yticks = range(1, ly + 1)
-    print(x, y)
 
     ax.errorbar(x, yticks, xerr=xsd, fmt='none',
                 ecolor=color_error_bar)
-    ax.scatter(x, yticks, c=color_error_bar, s=30)
+    ax.scatter(x[:-2], yticks[:-2], c=color_error_bar[:-2], s=30)
     ax.set_yticks(yticks)
     ax.set_yticklabels(y)
     ax.set_ylim(.5, ly + .5)
@@ -1188,14 +1281,8 @@ def label_group_bar(ax, data):
 
 
 my_cmap = plt.cm.get_cmap('viridis')
-wave_color = {'355nm': my_cmap(0), '532nm': my_cmap(0.25), '710nm': my_cmap(0.5),
-              '1064nm': my_cmap(0.75), '1565nm': my_cmap(0.99)}
-color_error_bar = []
-for k1, i1 in data.items():
-    for k2, i2 in i1.items():
-        for k3, i3 in i2.items():
-            color_error_bar.append(wave_color[k3])
-color_error_bar
+wave_color = {'355nm': my_cmap(0.99), '532nm': my_cmap(0.75), '710nm': my_cmap(0.5),
+              '1064nm': my_cmap(0.25), '1565nm': my_cmap(0)}
 
 data = {'Vakkari\n et al. (2020)':
         {'Saharan dust':
@@ -1253,25 +1340,107 @@ data = {'Vakkari\n et al. (2020)':
              {'532nm': (0.1, 0.06)},
              'spruce + birch \n pollen':
              {'532nm': (0.26, 0.07)}
+             },
+        'Groß \n et al. (2012)':
+            {'volcanic ash':
+             {'355nm': (0.365, 0.015),
+              '532nm': (0.365, 0.015)}
              }
         }
-fig, ax = plt.subplots(figsize=(9, 12))
+
+color_error_bar = []
+for k1, i1 in data.items():
+    for k2, i2 in i1.items():
+        for k3, i3 in i2.items():
+            color_error_bar.append(wave_color[k3])
+
+
+fig, ax = plt.subplots(figsize=(9, 13))
 label_group_bar(ax, data)
 ax.xaxis.set_tick_params(labeltop='on')
-wave_color = {'355nm': my_cmap(0), '532nm': my_cmap(0.25), '710nm': my_cmap(0.5),
-              '1064nm': my_cmap(0.75), '1565nm': my_cmap(0.99)}
-legend_elements = [Line2D([], [], label='355nm', color=my_cmap(0), linewidth=1.5, marker='o',
-                          markerfacecolor=my_cmap(0), markeredgewidth=0, markersize=7),
-                   Line2D([], [], label='532nm', color=my_cmap(0.25), linewidth=1.5, marker='o',
-                          markerfacecolor=my_cmap(0.25), markeredgewidth=0, markersize=7),
-                   Line2D([], [], label='710nm', color=my_cmap(0.5), linewidth=1.5, marker='o',
-                          markerfacecolor=my_cmap(0.5), markeredgewidth=0, markersize=7),
-                   Line2D([], [], label='1064nm', color=my_cmap(0.75), linewidth=1.5, marker='o',
-                          markerfacecolor=my_cmap(0.75), markeredgewidth=0, markersize=7),
-                   Line2D([], [], label='1565nm', color=my_cmap(0.99), linewidth=1.5, marker='o',
-                          markerfacecolor=my_cmap(0.99), markeredgewidth=0, markersize=7)]
-fig.legend(handles=legend_elements, loc='right')
-add_line(ax, [1/29*20, 1/29*20], [0, 1])
-add_line(ax, [1/29*25, 1/29*25], [0, 1])
+
+legend_elements = [Line2D([], [], label='355nm', color=wave_color['355nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['355nm'], markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='532nm', color=wave_color['532nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['532nm'], markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='710nm', color=wave_color['710nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['710nm'], markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='1064nm', color=wave_color['1064nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['1064nm'], markeredgewidth=0, markersize=7),
+                   Line2D([], [], label='1565nm', color=wave_color['1565nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['1565nm'], markeredgewidth=0, markersize=7)]
+fig.legend(handles=legend_elements, ncol=5, loc='upper center')
+add_line(ax, [1/31*20, 1/31*20], [0, 1])
+add_line(ax, [1/31*25, 1/31*25], [0, 1])
+add_line(ax, [1/31*29, 1/31*29], [0, 1])
 fig.subplots_adjust(left=0.2)
-fig.tight_layout()
+fig.tight_layout(rect=(0, 0, 1, 0.98))
+fig.savefig(path + '/ref_depo.png', bbox_inches='tight')
+
+# %%
+depo_season
+for place in depo_season:
+    for months, v in depo_season[place].items():
+        depo_season[place][months] = {'1565nm': v}
+
+
+# %%
+
+
+def label_group_bar(ax, data):
+    color_err = ['white', '#2ca02c', 'blue', 'red', 'gray']
+    groups = mk_groups(data)
+    xy = groups.pop()
+    y, xx = zip(*xy)
+    x = [i[0] for i in xx]
+    xsd = [i[1] for i in xx]
+    ly = len(y)
+    yticks = range(1, ly + 1)
+
+    ax.errorbar(x, yticks, xerr=xsd, fmt='none',
+                ecolor=wave_color['1565nm'])
+    ax.scatter(x, yticks, color=wave_color['1565nm'], s=30)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(y)
+    ax.set_ylim(.5, ly + .5)
+    ax.set_xlim(0, .4)
+    ax.xaxis.grid(True)
+    # ax.yaxis.grid(True)
+
+    scale = 1. / ly
+    for pos in range(ly + 1):
+        add_line(ax, [pos * scale, pos * scale], [-.12, 0])
+    ypos = -.2
+    level = 2
+    while groups:
+        group = groups.pop()
+        pos = 0
+        for label, rpos in group:
+            lxpos = (pos + .5 * rpos) * scale
+            if level == 1:
+                ax.text(ypos-.15, lxpos, label,
+                        ha='center', transform=ax.transAxes, va='center',
+                        weight='bold', size=9)
+                add_line(ax, [pos * scale, pos * scale], [ypos - .2, ypos+.1])
+            else:
+                ax.text(ypos-.02, lxpos, label, ha='center',
+                        transform=ax.transAxes, va='center')
+                add_line(ax, [pos * scale, pos * scale], [ypos - .1, ypos+.1])
+            pos += rpos
+        add_line(ax, [pos * scale, pos * scale], [ypos - .2, ypos+.1])
+        ypos -= .1
+        level -= 1
+
+
+fig, ax = plt.subplots(figsize=(9, 13))
+label_group_bar(ax, depo_season)
+ax.xaxis.set_tick_params(labeltop='on')
+legend_elements = [Line2D([], [], label='1565nm', color=wave_color['1565nm'], linewidth=1.5, marker='o',
+                          markerfacecolor=wave_color['1565nm'], markeredgewidth=0, markersize=7)]
+fig.legend(handles=legend_elements, loc='upper center')
+add_line(ax, [1/16*4, 1/16*4], [0, 1])
+add_line(ax, [1/16*8, 1/16*8], [0, 1])
+add_line(ax, [1/16*12, 1/16*12], [0, 1])
+fig.subplots_adjust(left=0.2)
+fig.tight_layout(rect=(0, 0, 1, 0.98))
+fig.savefig(path + '/ref_depo_result.png', bbox_inches='tight')
