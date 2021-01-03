@@ -1055,20 +1055,24 @@ period_months = np.arange(1, 13).reshape(4, 3)
 month_labs = [calendar.month_abbr[i] for i in np.arange(1, 13)]
 month_labs = ['-'.join(month_labs[ii-3:ii]) for ii in [3, 6, 9, 12]]
 
+# period_months = np.array([[7, 8, 9], [10, 11, 12, 1, 2, 3, 4], [5], [6]])
+# month_labs = ['Jul-Sep', 'Oct-Apr', 'May', 'June']
 
-fig, axes = plt.subplots(2, 2, figsize=(6, 6), sharey=True, sharex=True)
-fig2, axes2 = plt.subplots(2, 2, figsize=(6, 6), sharey=True, sharex=True)
+fig, axes = plt.subplots(2, 2, figsize=(6, 5), sharey=True, sharex=True)
+fig2, axes2 = plt.subplots(2, 2, figsize=(6, 5), sharey=True, sharex=True)
 
 for (i, month), ax, ax2 in zip(enumerate(period_months),
                                axes.flatten(), axes2.flatten()):
-    for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
+    # for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
+    for loc, grp in df[df.datetime.dt.month.isin(month)].groupby('location2'):
         grp_avg = grp.groupby('range')['depo'].mean()
         grp_count = grp.groupby('range')['depo'].count()
         grp_std = grp.groupby('range')['depo'].std()
         grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
         grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
         ax.errorbar(grp_avg.index + jitter[loc][0],
-                    grp_avg, grp_std, label=loc, fmt='.')
+                    grp_avg, grp_std, label=loc,
+                    fmt='--', elinewidth=1)
         ax.set_xlim([-50, 2500])
         grp_ground = grp[grp['range'] <= 300]
         y_grp = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10)))
@@ -1076,7 +1080,7 @@ for (i, month), ax, ax2 in zip(enumerate(period_months),
         y_std = y_grp['depo'].std()
         x = np.arange(5, 105, 10)
         ax2.errorbar(x + jitter[loc][1], y_mean, y_std,
-                     label=loc, fmt='.')
+                     label=loc, fmt='--', elinewidth=1)
         ax2.set_xlim([20, 100])
     if i in [2, 3]:
         ax.set_xlabel('Range [km, a.g.l]')
@@ -1090,8 +1094,65 @@ handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='upper center', ncol=4)
 handles, labels = ax2.get_legend_handles_labels()
 fig2.legend(handles, labels, loc='upper center', ncol=4)
+fig.tight_layout(rect=(0, 0, 1, 0.9))
+fig2.tight_layout(rect=(0, 0, 1, 0.9))
 fig.savefig(path + '/depo_range.png', bbox_inches='tight')
 fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+
+# %%
+jitter = {'Uto': [-60, -0.03], 'Hyytiala': [-30, -0.01],
+          'Vehmasmaki': [0, 0.01], 'Sodankyla': [30, 0.03]}
+period_months = np.arange(1, 13).reshape(4, 3)
+month_labs = [calendar.month_abbr[i] for i in np.arange(1, 13)]
+month_labs = ['-'.join(month_labs[ii-3:ii]) for ii in [3, 6, 9, 12]]
+# period_months = np.array([[7, 8, 9], [10, 11, 12, 1, 2, 3, 4], [5], [6]])
+# month_labs = ['Jul-Sep', 'Oct-Apr', 'May', 'June']
+
+fig, axes = plt.subplots(2, 2, figsize=(6, 5), sharey=True, sharex=True)
+fig2, axes2 = plt.subplots(2, 2, figsize=(6, 5), sharey=True, sharex=True)
+
+for (i, month), ax, ax2 in zip(enumerate(period_months),
+                               axes.flatten(), axes2.flatten()):
+    # for loc, grp in df[(df.datetime.dt.month >= month[0]) & (df.datetime.dt.month <= month[1])].groupby('location2'):
+    for loc, grp in df[df.datetime.dt.month.isin(month)].groupby('location2'):
+        grp_grp = grp.groupby(pd.cut(grp['depo'], np.arange(0, 0.5, 0.05)))
+        grp_avg = grp_grp['range'].mean()
+        grp_count = grp_grp['range'].count()
+        grp_std = grp_grp['range'].std()
+        grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
+        grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
+        x = np.arange(0.025, 0.025 + 0.05*len(grp_avg), 0.05)
+        ax.errorbar(grp_avg, x[:len(grp_avg)] + jitter[loc][1], xerr=grp_std, label=loc,
+                    fmt='--', elinewidth=1)
+        ax.set_xlim([-50, 2500])
+        grp_ground = grp[grp['range'] <= 300]
+        y_grp = grp_ground.groupby(pd.cut(grp_ground['depo'], np.arange(0, 0.5, 0.05)))
+        y_mean = y_grp['RH'].mean()
+        y_std = y_grp['RH'].std()
+        x = np.arange(0, 0.45, 0.05) + 0.025
+        ax2.errorbar(y_mean, x + jitter[loc][1], xerr=y_std,
+                     label=loc, fmt='--', elinewidth=1)
+        ax2.set_ylim([0, 0.5])
+    if i in [2, 3]:
+        ax.set_xlabel('Range [km, a.g.l]')
+        ax2.set_xlabel('Relative humidity')
+    if i in [0, 2]:
+        ax.set_ylabel('Depolarization ratio')
+        ax2.set_ylabel('Depolarization ratio')
+    ax.set_title(month_labs[i], weight='bold')
+    ax2.set_title(month_labs[i], weight='bold')
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', ncol=4)
+handles, labels = ax2.get_legend_handles_labels()
+fig2.legend(handles, labels, loc='upper center', ncol=4)
+fig.tight_layout(rect=(0, 0, 1, 0.9))
+fig2.tight_layout(rect=(0, 0, 1, 0.9))
+# fig.savefig(path + '/depo_range.png', bbox_inches='tight')
+# fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+
+# %%
+fig, ax = plt.subplots()
+ax.errorbar(np.arange(9), y_mean)
 
 ##############################################
 # %% snr cloud base
