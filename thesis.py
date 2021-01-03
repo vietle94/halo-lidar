@@ -1440,6 +1440,12 @@ fig.savefig(path + '/ref_depo.png', bbox_inches='tight')
 
 # %%
 depo_season
+depo_season2 = {}
+depo_season2['Uto'] = depo_season['Uto']
+depo_season2['Hyytiala'] = depo_season['Hyytiala']
+depo_season2['Vehmasmaki'] = depo_season['Vehmasmaki']
+depo_season2['Sodankyla'] = depo_season['Sodankyla']
+depo_season = depo_season2
 for place in depo_season:
     for months, v in depo_season[place].items():
         depo_season[place][months] = {'1565nm': v}
