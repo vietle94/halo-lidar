@@ -1511,3 +1511,47 @@ add_line(ax, [1/16*12, 1/16*12], [0, 1])
 fig.subplots_adjust(left=0.2)
 fig.tight_layout(rect=(0, 0, 1, 0.98))
 fig.savefig(path + '/ref_depo_result.png', bbox_inches='tight')
+
+# %%
+
+data = hd.getdata('F:/halo/46/depolarization')
+
+# %%
+date = '20180611'
+file = [file for file in data if date in file][0]
+df = hd.halo_data(file)
+
+df.filter_height()
+df.unmask999()
+df.depo_cross_adj()
+df.filter(variables=['beta_raw', 'v_raw', 'cross_signal', 'depo_raw'],
+          ref='co_signal', threshold=1+3*df.snr_sd)
+df.data['co_signal'][df.data['co_signal'] < 0.995] = np.nan
+
+# %%
+fig, axes = plt.subplots(figsize=(6, 2))
+p = axes.pcolormesh(df.data['time'], df.data['range'],
+                    np.log10(df.data['beta_raw']).T, cmap='jet',
+                    vmin=-8, vmax=-4)
+axes.set_xlim([0, 24])
+cbar = fig.colorbar(p, ax=axes, fraction=0.05)
+cbar.ax.set_ylabel('Beta [' + df.units.get('beta_raw', None) + ']', rotation=90)
+axes.set_ylabel('Range [km, a.g.l]')
+axes.yaxis.set_major_formatter(hd.m_km_ticks())
+axes.set_xlabel('Time [UTC - hour]')
+fig.tight_layout()
+fig.savefig(path + '/raw_beta.png', bbox_inches='tight')
+
+# %%
+fig, axes = plt.subplots(figsize=(6, 2))
+p = axes.pcolormesh(df.data['time'], df.data['range'],
+                    df.data['v_raw'].T, cmap='jet',
+                    vmin=-2, vmax=2)
+axes.set_xlim([0, 24])
+cbar = fig.colorbar(p, ax=axes, fraction=0.05)
+cbar.ax.set_ylabel('Velocity [' + df.units.get('v_raw', None) + ']', rotation=90)
+axes.set_ylabel('Range [km, a.g.l]')
+axes.yaxis.set_major_formatter(hd.m_km_ticks())
+axes.set_xlabel('Time [UTC - hour]')
+fig.tight_layout()
+fig.savefig(path + '/raw_v.png', bbox_inches='tight')
