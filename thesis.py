@@ -854,25 +854,11 @@ cbar_max = {'Uto': 600, 'Hyytiala': 600,
 
 X, Y = np.meshgrid(bin_month, bin_depo)
 for k, grp in df.groupby(['location2']):
-    avg = {}
-
+    fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True)
+    axes = axes.flatten()
     if k == 'Sodankyla':
-        fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True)
-        axes = axes.flatten()
-        axes[2].set_xlabel('Month')
-    else:
-        fig = plt.figure(figsize=(6, 6))
-        gs = fig.add_gridspec(3, 4)
-        ax1 = fig.add_subplot(gs[0, :2])
-        ax2 = fig.add_subplot(gs[0, 2:], sharey=ax1)
-        ax1.axes.xaxis.set_ticklabels([])
-        ax2.axes.xaxis.set_ticklabels([])
-        ax3 = fig.add_subplot(gs[1, :2], sharey=ax1)
-        ax3.set_xlabel('Month')
-        ax4 = fig.add_subplot(gs[1, 2:])
-        ax4.set_xlabel('Month')
-        ax5 = fig.add_subplot(gs[2, 1:3])
-        axes = [ax1, ax2, ax3, ax4, ax5]
+        fig.delaxes(axes[0])
+        axes = axes[1:]
     for (key, g), ax in zip(grp.groupby(['year']), axes):
         H, month_edge, depo_edge = np.histogram2d(
             g['month'], g['depo'],
@@ -889,21 +875,6 @@ for k, grp in df.groupby(['location2']):
         ax.xaxis.set_ticks([4, 8, 12])
         ax.set_ylabel('Depolarization ratio')
         ax.set_title(int(key), weight='bold')
-
-        if k not in avg:
-            avg[k] = H[:, :, np.newaxis]
-        else:
-            avg[k] = np.append(avg[k], H[:, :, np.newaxis], axis=2)
-
-    for key, val in avg.items():
-        p = axes[-1].pcolormesh(X, Y, np.nanmean(val, axis=2).T,
-                                cmap=my_cmap,
-                                vmin=0.1, vmax=cbar_max[key])
-        axes[-1].xaxis.set_ticks([4, 8, 12])
-        axes[-1].set_ylabel('Depolarization ratio')
-        axes[-1].set_xlabel('Month')
-        axes[-1].set_title('Averaged', weight='bold')
-        fig.colorbar(p, ax=axes[-1])
         fig.tight_layout()
         fig.savefig(path + '/' + k + '_depo_month.png',
                     bbox_inches='tight')
@@ -947,7 +918,7 @@ for (key, val), ax in zip(avg.items(), axes.flatten()):
     ax.set_title(key, weight='bold')
     fig.colorbar(p, ax=ax)
     fig.tight_layout()
-fig.savefig(path + '/' + k + '_depo_month_avg.png',
+fig.savefig(path + '/all_depo_month_avg.png',
             bbox_inches='tight')
 
 
