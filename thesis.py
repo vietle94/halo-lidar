@@ -1,3 +1,6 @@
+import matplotlib.dates as mdates
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 import datetime
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -733,6 +736,26 @@ for key, group in depo.groupby('sys'):
 
     plt.close('all')
 
+# %%
+for key, group in depo.groupby('sys'):
+    # Co-cross histogram
+    if key == 'Uto-32XR':
+        fig6, ax = plt.subplots(figsize=(6, 3))
+        temp = group['depo'][group['co_signal'] < 7]
+        mask = (temp < 0.2) & (temp > -0.05)
+        temp.loc[mask].hist(bins=50, label='co_SNR < 6', alpha=0.8)
+        temp = group['depo'][group['co_signal'] > 7]
+        mask = (temp < 0.2) & (temp > -0.05)
+        temp.loc[mask].hist(bins=50, label='co_SNR > 6', alpha=0.8)
+        ax.legend()
+        ax.set_xlim([-0.05, 0.1])
+        ax.set_xlabel('Depolarization ratio')
+        fig6.tight_layout()
+
+        fig6.savefig(path + '/' + 'saturation_Uto_32_hist.png',
+                     bbox_inches='tight')
+
+
 ##############################################
 # %%
 ##############################################
@@ -1030,7 +1053,7 @@ for (i, month), ax, ax2 in zip(enumerate(period_months),
         grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
         ax.errorbar(grp_avg.index + jitter[loc][0],
                     grp_avg, grp_std, label=loc,
-                    fmt='--', elinewidth=1)
+                    fmt='.', elinewidth=1)
         ax.set_xlim([-50, 2500])
         grp_ground = grp[grp['range'] <= 300]
         y_grp = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 110, 10)))
@@ -1038,10 +1061,11 @@ for (i, month), ax, ax2 in zip(enumerate(period_months),
         y_std = y_grp['depo'].std()
         x = np.arange(5, 105, 10)
         ax2.errorbar(x + jitter[loc][1], y_mean, y_std,
-                     label=loc, fmt='--', elinewidth=1)
+                     label=loc, fmt='.', elinewidth=1)
         ax2.set_xlim([20, 100])
     if i in [2, 3]:
         ax.set_xlabel('Range [km, a.g.l]')
+        ax.xaxis.set_major_formatter(hd.m_km_ticks())
         ax2.set_xlabel('Relative humidity')
     if i in [0, 2]:
         ax.set_ylabel('Depolarization ratio')
@@ -1054,8 +1078,35 @@ handles, labels = ax2.get_legend_handles_labels()
 fig2.legend(handles, labels, loc='upper center', ncol=4)
 fig.tight_layout(rect=(0, 0, 1, 0.9))
 fig2.tight_layout(rect=(0, 0, 1, 0.9))
-fig.savefig(path + '/depo_range.png', bbox_inches='tight')
-fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+# fig.savefig(path + '/depo_range.png', bbox_inches='tight')
+# fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+
+# %%
+
+
+def regress(data, yvar, xvars):
+    Y = data[yvar]
+    X = data[xvars]
+    X['intercept'] = 1.
+    result = sm.OLS(Y, X).fit()
+    return [np.around(i, digit) for i, digit in zip([result.params[0], result.pvalues[0], result.rsquared],
+                                                    [3, 5, 3])]
+
+
+temp = df.copy()
+temp['range'] = temp['range']/1000
+temp.dropna(inplace=True)
+for (i, month) in enumerate(period_months):
+    print(month,
+          temp[temp.datetime.dt.month.isin(month)].groupby('location2').apply(regress, 'depo', ['range']))
+
+
+# %%
+temp['RH'] = temp['RH']/10
+
+for (i, month) in enumerate(period_months):
+    print(month,
+          temp[temp.datetime.dt.month.isin(month)].groupby('location2').apply(regress, 'depo', ['RH']))
 
 # %%
 jitter = {'Uto': [-60, -0.03], 'Hyytiala': [-30, -0.01],
@@ -1092,7 +1143,7 @@ for (i, month), ax, ax2 in zip(enumerate(period_months),
                      label=loc, fmt='--', elinewidth=1)
         ax2.set_ylim([0, 0.5])
     if i in [2, 3]:
-        ax.set_xlabel('Range [km, a.g.l]')
+        ax.set_xlabel('Range [m, a.g.l]')
         ax2.set_xlabel('Relative humidity')
     if i in [0, 2]:
         ax.set_ylabel('Depolarization ratio')
@@ -1299,11 +1350,11 @@ def label_group_bar(ax, data):
         level -= 1
 
 
-my_cmap = plt.cm.get_cmap('viridis')
+my_cmap = plt.cm.get_cmap('jet')
 wave_color = {'355nm': my_cmap(0.99), '532nm': my_cmap(0.75), '710nm': my_cmap(0.5),
               '1064nm': my_cmap(0.25), '1565nm': my_cmap(0)}
 
-data = {'Vakkari\n et al. (2020)':
+data = {'Vakkari \net al. (2020)':
         {'Saharan dust':
          {'355nm': (0.19, 0.008),
           '532nm': (0.23, 0.008),
@@ -1343,7 +1394,7 @@ data = {'Vakkari\n et al. (2020)':
              {'355nm': (0.02, 0.01),
               '532nm': (0.02, 0.02)}
              },
-        'Vakkari \net al. (2020)':
+        'Vakkari \n et al. (2020)':
             {'polluted \n marine':
              {'355nm': (0.03, 0.01),
               '532nm': (0.015, 0.002),
@@ -1397,6 +1448,207 @@ fig.tight_layout(rect=(0, 0, 1, 0.98))
 fig.savefig(path + '/ref_depo.png', bbox_inches='tight')
 
 # %%
+data = {'Vakkari \n et al. (2020)':
+        {'Saharan dust':
+         {'355nm': (0.19, 0.008),
+          '532nm': (0.23, 0.008),
+          '1565nm': (0.29, 0.008)},
+         'Egyption dust':
+         {'355nm': (0.36, 0.01),
+          '532nm': (0.34, 0.002),
+          '1565nm': (0.30, 0.005)},
+             'Turkish dust':
+         {'355nm': (0.31, 0.006),
+          '532nm': (0.33, 0.005),
+          '1565nm': (0.32, 0.008)},
+         'polluted \n marine':
+         {'355nm': (0.03, 0.01),
+          '532nm': (0.015, 0.002),
+          '1565nm': (0.009, 0.003)},
+         'spruce + birch \n pollen':
+         {'532nm': (0.236, 0.009),
+          '1565nm': (0.269, 0.005)}
+         },
+        'Haarig \n et al. (2017)':
+            {'Saharan dust':
+             {'355nm': (0.252, 0.03),
+              '532nm': (0.28, 0.02),
+              '1064nm': (0.225, 0.022)}
+             },
+        'Haarig \n et al. (2018)':
+            {'Stratosphere smoke':
+             {'355nm': (0.224, 0.015),
+              '532nm': (0.184, 0.006),
+              '1064nm': (0.043, 0.007)},
+             'Troposphere smoke':
+             {'355nm': (0.021, 0.040),
+              '532nm': (0.029, 0.015),
+              '1064nm': (0.009, 0.008)}
+             },
+        'Pereia \n et al. (2014)':
+            {'Troposphere smoke':
+             {'532nm': (0.05, 0.01)}
+             },
+        'Baars \n et al. (2013)':
+            {'Troposphere smoke':
+             {'355nm': (0.025, 0.01)}
+             },
+        'Burton \n et al. (2015)':
+            {'Saharan dust':
+             {'355nm': (0.246, 0.0018),
+              '532nm': (0.304, 0.005),
+              '710nm': (0.270, 0.005)},
+             'Mexican dust':
+             {'355nm': (0.243, 0.046),
+              '532nm': (0.373, 0.014),
+              '710nm': (0.383, 0.006)},
+             'Stratosphere smoke':
+                {'355nm': (0.203, 0.036),
+                 '532nm': (0.093, 0.015),
+                 '1064nm': (0.018, 0.002)}},
+        'Freudenthaler \n et al. (2009)':
+            {'Saharan dust':
+             {'532nm': (0.31, 0.03),
+              '1064nm': (0.27, 0.04)}
+             },
+        'Groß \n et al. (2011)':
+            {'marine':
+             {'355nm': (0.02, 0.01),
+              '532nm': (0.02, 0.02)}
+             },
+        'Bohlmann \n et al. (2019)':
+            {'birch pollen':
+             {'532nm': (0.1, 0.06)},
+             'spruce + birch \n pollen':
+             {'532nm': (0.26, 0.07)}
+             },
+        'Groß \n et al. (2012)':
+            {'volcanic ash':
+             {'355nm': (0.365, 0.015),
+              '532nm': (0.365, 0.015)}
+             }
+        }
+
+# %%
+dust = []
+pollen = []
+marine = []
+ash = []
+smoke = []
+for k1, v1 in data.items():
+    for k2, v2 in v1.items():
+        if 'dust' in k2:
+            dust.append({k1 + ' - ' + k2: v2})
+        elif 'pollen' in k2:
+            pollen.append({k1 + ' - ' + k2: v2})
+        elif 'marine' in k2:
+            marine.append({k1 + ' - ' + k2: v2})
+        elif 'ash' in k2:
+            ash.append({k1 + ' - ' + k2: v2})
+        elif 'smoke' in k2:
+            smoke.append({k1 + ' - ' + k2: v2})
+        else:
+            print('nooooooooo')
+
+# %%
+fig, axes = plt.subplots(6, 1, figsize=(5, 15))
+axes = axes.flatten()
+for type, ax in zip([dust, pollen, marine, ash, smoke], axes):
+    for i in type:
+        x = []
+        y = []
+        yerr = []
+        for author, vi in i.items():
+            for wa, vii in vi.items():
+                x.append(int(wa[:-2]))
+                y.append(vii[0])
+                yerr.append(vii[1])
+            author = author.replace(' \n', '')
+            ax.errorbar(np.array(x), y, yerr=yerr, fmt='.-',
+                        elinewidth=1, label=author)
+    ax.legend()
+    ax.tick_params(axis='x', bottom=False)
+    ax.set_ylabel('Depolarization ratio')
+    ax.set_ylim([-0.07, 0.4])
+    ax.set_xlim([300, 1600])
+    ax.set_xticks([355, 532, 710, 1064, 1565])
+    ax.legend(bbox_to_anchor=(1.01, 1.05), loc="upper left")
+
+grp = df.groupby('location2')['depo']
+x = 1565 + np.array([-20, -7, 7, 20])
+for xx, mean, std, (lab, v) in zip(x, grp.mean(), grp.std(), grp):
+    axes[-1].errorbar(xx, mean, std, elinewidth=1, fmt='.-', label=lab)
+axes[-1].set_xticks([355, 532, 710, 1064, 1565])
+axes[-1].set_xlabel('Wavelength (nm)')
+axes[-1].legend(bbox_to_anchor=(1.01, 1.05), loc="upper left")
+axes[-1].set_ylabel('Depolarization ratio')
+axes[-2].set_ylabel('Depolarization ratio')
+axes[-1].set_ylim([-0.07, 0.4])
+axes[-1].set_xlim([300, 1600])
+axes[-1].tick_params(axis='x', bottom=False)
+fig.subplots_adjust(hspace=0.3)
+fig.savefig(path + '/depo_vs_wave.png', bbox_inches='tight')
+
+# %%
+auth = {i: ma for i, ma in zip(data,
+                               ['.', 'v', 's',
+                                'p', 'H', '*',
+                                'D'])}
+auth
+
+color_ = [co for co in wave_color.values()]
+color_
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 7))
+# wave = {'355nm': 355, '532nm': 1, '710nm': 2, '1064nm': 3, '1565nm': 4}
+for type, colo in zip([dust, pollen, marine, ash], [co for co in wave_color.values()]):
+    for i in type:
+        x = []
+        y = []
+        yerr = []
+        for author, vi in i.items():
+            for wa, vii in vi.items():
+                x.append(int(wa[:-2]))
+                y.append(vii[0])
+                yerr.append(vii[1])
+            ran = np.random.randint(-20, 20)
+            ax.errorbar(np.array(x)+ran, y, yerr=yerr, color=colo, fmt='--', elinewidth=1)
+            ax.scatter(np.array(x)+ran, y, color=colo, marker=auth[author])
+
+grp = df.groupby('location2')['depo']
+x = 1565 + np.array([-20, -7, 7, 20])
+for xx, mean, std, marker in zip(x, grp.mean(),
+                                 grp.std(), [r'$\alpha$', r'$\beta$',
+                                             r'$\gamma$', r'$\delta$']):
+    ax.errorbar(xx, mean, std, marker=marker, elinewidth=1, color='darkblue')
+ax.set_xticks([355, 532, 710, 1064, 1565])
+ax.set_ylabel('Depolarization ratio')
+ax.set_xlabel('Wavelength (nm)')
+ax.tick_params(axis='x', bottom=False)
+
+auth_ = {'Vakkari et al. (2020) - dust': ['.', color_[0]],
+         'Haarig et al. (2017) - dust': ['v', color_[0]],
+         'Burton et al. (2015) - dust': ['s', color_[0]],
+         'Freudenthaler et al. (2009) - dust': ['p', color_[0]],
+         'Groß et al. (2011) - marine': ['H', color_[2]],
+         'Vakkari et al. (2020) - marine': ['.', color_[2]],
+         'Vakkari et al. (2020) - pollen': ['.', color_[1]],
+         'Bohlmann et al. (2019) - pollen': ['*', color_[1]],
+         'Groß et al. (2012) - volcanic ash': ['D', color_[3]]}
+
+for (gr, v), mark in zip(grp, [r'$\alpha$', r'$\beta$',
+                               r'$\gamma$', r'$\delta$']):
+    auth_[gr] = [mark, 'darkblue']
+
+legend_elements = [Line2D([], [], label=k, color=i[1], linewidth=1.5, marker=i[0],
+                          markerfacecolor=i[1], markeredgewidth=0, markersize=7) for k, i in auth_.items()]
+fig.legend(handles=legend_elements, ncol=2, loc='lower center')
+fig.tight_layout(rect=(0, 0.25, 1, 1))
+fig.savefig(path + '/depo_vs_wave.png', bbox_inches='tight')
+
+# %%
+
 depo_season
 depo_season2 = {}
 depo_season2['Uto'] = depo_season['Uto']
@@ -1513,3 +1765,71 @@ axes.yaxis.set_major_formatter(hd.m_km_ticks())
 axes.set_xlabel('Time [UTC - hour]')
 fig.tight_layout()
 fig.savefig(path + '/raw_v.png', bbox_inches='tight')
+
+# %%
+list_weather = glob.glob('F:/weather/*.csv')
+location_weather = {'hyytiala': 'Hyytiala', 'kuopio': 'Vehmasmaki',
+                    'sodankyla': 'Sodankyla', 'uto': 'Uto'}
+weather = pd.DataFrame()
+for file in list_weather:
+    if 'kumpula' in file:
+        continue
+    df_file = pd.read_csv(file)
+    df_file['location2'] = location_weather[file.split('\\')[-1].split('_')[0]]
+    weather = weather.append(df_file, ignore_index=True)
+
+weather = weather.rename(columns={'Vuosi': 'year', 'Kk': 'month',
+                                  'Pv': 'day', 'Klo': 'time',
+                                  'Suhteellinen kosteus (%)': 'RH',
+                                  'Ilman lämpötila (degC)': 'Temperature'})
+weather[['year', 'month', 'day']] = weather[['year',
+                                             'month', 'day']].astype(str)
+weather['month'] = weather['month'].str.zfill(2)
+weather['day'] = weather['day'].str.zfill(2)
+weather['datetime'] = weather['year'] + weather['month'] + \
+    weather['day'] + weather['time']
+weather['datetime'] = pd.to_datetime(weather['datetime'], format='%Y%m%d%H:%M')
+weather['date_plot'] = weather['datetime'].dt.strftime('%m-%d')
+weather = weather.set_index('datetime')
+
+# %%
+fig, axes = plt.subplots(4, 1, figsize=(6, 8), sharex=True, sharey=True)
+for (k, g), ax in zip(weather.groupby('location2'), axes.flatten()):
+    ax.plot(g.resample('MS').mean()['Temperature'])
+    ax.grid()
+    ax.set_title(k)
+
+fig.subplots_adjust(hspace=0.3)
+
+# %%
+hyy = weather.loc[weather['location2'] == 'Hyytiala']
+
+# %%
+hyy.groupby(['year', 'month'])['Temperature'].mean().plot()
+
+# %%
+myFmt = mdates.DateFormatter('%m')
+
+fig, ax = plt.subplots()
+for (k, g), _ in zip(hyy.groupby('year'), np.arange(4)):
+    ax.plot(g['date_plot'], g.Temperature, label=k)
+ax.legend()
+ax.xaxis.set_major_formatter(myFmt)
+
+# %%
+fig, axes = plt.subplots(2, 2, figsize=(7, 5),
+                         sharex=True, sharey=True)
+for (k, g), ax in zip(weather.groupby('location2'), axes.flatten()):
+    pv = pd.pivot_table(g, index=g.index.month, columns=g.index.year,
+                        values='Temperature', aggfunc='mean')
+    pv = pv.iloc[:, :-1]
+    pv.plot(ax=ax, legend=None)
+    ax.set_title(k)
+    ax.set_xlabel('Month')
+    ax.xaxis.set_ticks_position('none')
+    ax.set_xticks([1, 3, 5, 7, 9, 11])
+    ax.grid()
+    ax.set_ylabel('Temperature')
+axes[0, 1].legend(title='Year', bbox_to_anchor=(1.01, 1.05), loc="upper left")
+fig.tight_layout()
+fig.savefig(path + '/temperature.png', bbox_inches='tight')
