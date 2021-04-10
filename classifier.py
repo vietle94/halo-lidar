@@ -1,3 +1,4 @@
+import xarray as xr
 import matplotlib.colors as colors
 from sklearn.cluster import DBSCAN
 import seaborn as sns
@@ -336,3 +337,37 @@ ax7.set_xlabel('Time UTC [hour]', weight='bold')
 fig.tight_layout()
 fig.savefig(classifier_folder + '/' + df.filename + '_hist.png',
             dpi=150, bbox_inches='tight')
+
+
+# %% Despite the inefficient of loading data again, xarray is better at saving .nc files
+dff = xr.open_dataset(file)
+
+new_classifier = np.empty((df.data['time'].size, 3), dtype='int32')
+new_classifier.fill(40)
+dff['classified'] = (['time', 'range'],
+                     np.concatenate((new_classifier, df.data['classifier']), axis=1))
+
+new_depo = np.empty((df.data['time'].size, 3), dtype='float32')
+new_depo.fill(-99)
+dff['depo_bleed_corrected'] = (['time', 'range'],
+                               np.concatenate((new_depo, df.data['depo_adj']), axis=1))
+
+new_depo_sd = np.empty((df.data['time'].size, 3), dtype='float32')
+new_depo_sd.fill(-99)
+dff['depo_bleed_sd'] = (['time', 'range'],
+                        np.concatenate((new_depo_sd, df.data['depo_adj_sd']), axis=1))
+
+dff.attrs['classified'] = "Clasification algorithm by Vietle at github.com/vietle94/halo-lidar"
+dff.attrs['bleed_corrected'] = "Bleed through corrected for depolarization ratio, see Vietle thesis"
+
+dff.classified.attrs = {'units': ' ',
+                        'long_name': 'Classified mask',
+                        'comments': '0: Background, 10: Aerosol, 20: Precipitation, 30: Clouds, 40: Undefined'}
+dff.depo_bleed_corrected.attrs = {'units': ' ',
+                                  'long_name': 'Depolarization ratio (bleed through corrected)',
+                                  'comments': 'Bleed through corrected'}
+dff.depo_bleed_sd.attrs = {'units': ' ',
+                           'long_name': 'Standard deviation of depolarization ratio (bleed through corrected)',
+                           'comments': 'Bleed through corrected'}
+
+dff.to_netcdf(classifier_folder + '/' + df.filename + '_classified.nc', format='NETCDF3_CLASSIC')
