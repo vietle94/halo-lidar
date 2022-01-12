@@ -117,7 +117,7 @@ result = pd.DataFrame.from_dict({
     'depo': depo_save,  # depo value
 })
 
-with open('F:/halo/summary/result.csv', 'w') as f:
+with open('F:/halo/paper/depo_cloudbase/result.csv', 'w') as f:
     result.to_csv(f, header=f.tell() == 0, index=False)
 
 # # %%
@@ -140,15 +140,15 @@ with open('F:/halo/summary/result.csv', 'w') as f:
 #
 # # %%
 # fig, axes = plt.subplots(3, 2, figsize=(12, 9), sharex=True)
-# df = pd.read_csv('F:/halo/summary/result.csv')
+# df = pd.read_csv('F:/halo/paper/depo_cloudbase/result.csv')
 # for (systemID, group), ax in zip(df.groupby('systemID'), axes.flatten()[1:]):
 #     if systemID == 32:
 #         axes[0, 0].hist(group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
-#             group[['year', 'month', 'day']]) < '2018-01-01')], bins=20)
+#             group[['year', 'month', 'day']]) < '2017-11-22')], bins=20)
 #         axes[0, 0].set_title('32', weight='bold')
 #
 #         axes[0, 1].hist(group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
-#             group[['year', 'month', 'day']]) >= '2018-01-01')], bins=20)
+#             group[['year', 'month', 'day']]) >= '2017-11-22')], bins=20)
 #         axes[0, 1].set_title('32XR', weight='bold')
 #     else:
 #         ax.hist(group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1)], bins=20)
