@@ -9,6 +9,8 @@ threshold = -5
 time_save = []
 range_save = []
 depo_save = []
+co_save = []
+cross_save = []
 year = []
 month = []
 day = []
@@ -39,8 +41,15 @@ for site in ['32', '33', '46', '53', '54']:
         for i in range(len(df_)):
             mask_time = df.data['time'] == df_['time'][i]
             mask_range = df.data['range'] <= df_['range'][i]
+
             depo_profile = df.data['depo_raw'][mask_time, mask_range]
+            co_profile = df.data['co_signal'][mask_time, mask_range]
+            cross_profile = df.data['cross_signal'][mask_time, mask_range]
+
             depo_below_cloud = depo_profile[width:]
+            co_below_cloud = co_profile[width:]
+            cross_below_cloud = cross_profile[width:]
+
             range_below_cloud = df.data['range'][mask_range][width:]
 
             # check for monotonically increasing
@@ -50,14 +59,21 @@ for site in ['32', '33', '46', '53', '54']:
 
             beta_below_cloud = df.data['beta_raw'][mask_time, mask_range][width:]
             m_ = np.log10(beta_below_cloud) > threshold
-            depo_below_cloud2 = depo_below_cloud[(m_) & (~np.isnan(depo_below_cloud))]
-            range_below_cloud = range_below_cloud[(m_) & (~np.isnan(depo_below_cloud))]
+            m2_ = (m_) & (~np.isnan(depo_below_cloud))
+
+            depo_below_cloud2 = depo_below_cloud[m2_]
+            co_below_cloud2 = co_below_cloud[m2_]
+            cross_below_cloud2 = cross_below_cloud[m2_]
+
+            range_below_cloud = range_below_cloud[m2_]
 
             if len(depo_below_cloud2) > 0:
                 i_min = np.argmin(depo_below_cloud2)
                 time_save.append(df_['time'][i])
                 range_save.append(range_below_cloud[i_min])
                 depo_save.append(depo_below_cloud2[i_min])
+                co_save.append(co_below_cloud2[i_min])
+                cross_save.append(cross_below_cloud2[i_min])
                 year.append(df_['year'][0])
                 month.append(df_['month'][0])
                 day.append(df_['day'][0])
@@ -115,6 +131,8 @@ result = pd.DataFrame.from_dict({
     'time': time_save,  # time as hour
     'range': range_save,  # range
     'depo': depo_save,  # depo value
+    'co_signal': co_save,
+    'cross_signal': cross_save
 })
 
 with open('F:/halo/paper/depo_cloudbase/result.csv', 'w') as f:
