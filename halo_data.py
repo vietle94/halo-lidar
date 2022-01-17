@@ -48,6 +48,8 @@ class halo_data:
         self.date = '-'.join([str(ele).zfill(2) for ele in name[:-2]])
         self.location = '-'.join([str(ele).zfill(2) for ele in name[-2:]])
         self.filename = self.date + '-' + self.location
+        delta_t = self.data['time'][1:] - self.data['time'][:-1]
+        self.integration_time = (np.median(delta_t)/2)*3600
 
         if '32' in self.location:
             for period in summary_info['32']:
