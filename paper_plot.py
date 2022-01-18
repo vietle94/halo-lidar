@@ -232,7 +232,8 @@ axes[1].axhline(y=table.iloc[i_plot]['range'], linestyle='--')
 axes[1].set_xlabel('$SNR_{co}$')
 # axes[1].set_ylabel('Height (km)')
 
-axes[2].plot(np.log10(beta_profile_plot), df.data['range'][mask_range_plot], '.')
+axes[2].plot(beta_profile_plot, df.data['range'][mask_range_plot], '.')
+axes[2].set_xscale('log')
 axes[2].axhline(y=table.iloc[i_plot]['range'], linestyle='--')
 # axes[2].set_xlim([-8, -4])
 axes[2].set_xlabel(r'$\beta\quad[Mm^{-1}]$')
@@ -259,7 +260,7 @@ p = ax.pcolormesh(X, Y, H.T, norm=LogNorm())
 ax.set_xlabel('co_SNR')
 ax.set_ylabel('cross_SNR')
 colorbar = fig5.colorbar(p, ax=ax)
-colorbar.ax.set_ylabel('Number of observations')
+colorbar.ax.set_ylabel('N')
 ax.plot(co_cross_data['co_signal'] - 1,
         (co_cross_data['co_signal'] - 1) * 0.01,
         # label=r'$\frac{cross\_SNR}{co\_SNR} = 0.01$',
