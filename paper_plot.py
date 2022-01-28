@@ -214,7 +214,6 @@ fig, axes = plt.subplots(3, 2, figsize=(9, 6), sharex=True)
 table = pd.read_csv('F:/halo/paper/depo_cloudbase/result.csv')
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 mean = []
-median = []
 std = []
 id = []
 x_axis = np.linspace(-0.01, 0.1, 100)
@@ -224,123 +223,81 @@ for (systemID, group), ax, name in zip(table.groupby('systemID'),
     if systemID == 32:
         x = group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
             group[['year', 'month', 'day']]) < '2017-11-22')]
-        y_, x_, _ = axes[0, 0].hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        axes[0, 0].text(0.6, 0.95, textstr, transform=axes[0, 0].transAxes,
-                        verticalalignment='top', bbox=props)
+        axes[0, 0].hist(x, bins=80)
 
-        # gmm = GaussianMixture(n_components=2, max_iter=1000)
-        # gmm.fit(x.values.reshape(-1, 1))
-        # smean = gmm.means_.ravel()
-        # sstd = np.sqrt(gmm.covariances_).ravel()
-        # sweight = np.sqrt(gmm.weights_).ravel()
-        # sort_idx = np.argsort(smean)
-        # smean = smean[sort_idx]
-        # sstd = sstd[sort_idx]
-        # sweight = sweight[sort_idx]
-        # axes[0, 0].set_title('Distribution of depo at cloud base, ' + f'\n\
-        # left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
-        # y = stats.norm.pdf(x_axis, smean[0], sstd[0])
-        # axes[0, 0].plot(x_axis, y)
-        #
-        # y1 = stats.norm.pdf(x_axis, smean[1], sstd[1])
-        # axes[0, 0].plot(x_axis, y1)
-        expected = (0.01055434, 0.00694231, 250, 0.04292838, 0.01806932, 125)
-        params, cov = curve_fit(bimodal, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        axes[0, 0].plot(x_, bimodal(x_, *params))
-        axes[0, 0].set_title(f'Left peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
+        gmm = GaussianMixture(n_components=2, max_iter=10000)
+        gmm.fit(x.values.reshape(-1, 1))
+        smean = gmm.means_.ravel()
+        sstd = np.sqrt(gmm.covariances_).ravel()
+        sort_idx = np.argsort(smean)
+        smean = smean[sort_idx]
+        sstd = sstd[sort_idx]
+        textstr = '\n'.join((
+            r'$\mu=%.3f$' % (smean[0], ),
+            r'$\sigma=%.3f$' % (sstd[0], )))
+        mean.append(smean[0])
+        std.append(sstd[0])
+        id.append(systemID)
+        axes[0, 0].text(0.7, 0.95, textstr, transform=axes[0, 0].transAxes,
+                        verticalalignment='top', bbox=props)
 
         x = group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
             group[['year', 'month', 'day']]) >= '2017-11-22')]
-        y_, x_, _ = axes[0, 1].hist(x, bins=100)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
+        axes[0, 1].hist(x, bins=80)
 
-        axes[0, 1].text(0.6, 0.95, textstr, transform=axes[0, 1].transAxes,
+        gmm = GaussianMixture(n_components=1, max_iter=10000)
+        gmm.fit(x.values.reshape(-1, 1))
+        smean = gmm.means_.ravel()
+        sstd = np.sqrt(gmm.covariances_).ravel()
+        sort_idx = np.argsort(smean)
+        smean = smean[sort_idx]
+        sstd = sstd[sort_idx]
+        textstr = '\n'.join((
+            r'$\mu=%.3f$' % (smean[0], ),
+            r'$\sigma=%.3f$' % (sstd[0], )))
+        mean.append(smean[0])
+        std.append(sstd[0])
+        id.append(systemID)
+        axes[0, 1].text(0.7, 0.95, textstr, transform=axes[0, 1].transAxes,
                         verticalalignment='top', bbox=props)
-        expected = (0.01055434, 0.00694231, 250)
-        params, cov = curve_fit(gauss, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        axes[0, 1].plot(x_, gauss(x_, *params))
-        axes[0, 1].set_title(f'Peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        # axes[0, 1].set_title('Uto-32XR', weight='bold')
-    elif systemID == 46:
+    elif systemID in [46, 33]:
         x = group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1)]
-        y_, x_, _ = ax.hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        ax.text(0.6, 0.95, textstr, transform=ax.transAxes,
-                verticalalignment='top', bbox=props)
+        ax.hist(x, bins=80)
 
-        # gmm = GaussianMixture(n_components=2, max_iter=1000)
-        # gmm.fit(x.values.reshape(-1, 1))
-        # smean = gmm.means_.ravel()
-        # sstd = np.sqrt(gmm.covariances_).ravel()
-        # sweight = np.sqrt(gmm.weights_).ravel()
-        # sort_idx = np.argsort(smean)
-        # smean = smean[sort_idx]
-        # sstd = sstd[sort_idx]
-        # sweight = sweight[sort_idx]
-        # ax.set_title('Distribution of depo at cloud base, ' + f'\n\
-        # left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
-        # y = stats.norm.pdf(x_axis, smean[0], sstd[0])
-        # ax.plot(x_axis, y)
-        #
-        # y1 = stats.norm.pdf(x_axis, smean[1], sstd[1])
-        # ax.plot(x_axis, y1)
-        expected = (0.01055434, 0.00694231, 250, 0.04292838, 0.01806932, 125)
-        params, cov = curve_fit(bimodal, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        ax.plot(x_, bimodal(x_, *params))
-        ax.set_title(f'Left peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
+        gmm = GaussianMixture(n_components=2, max_iter=10000)
+        gmm.fit(x.values.reshape(-1, 1))
+        smean = gmm.means_.ravel()
+        sstd = np.sqrt(gmm.covariances_).ravel()
+        sort_idx = np.argsort(smean)
+        smean = smean[sort_idx]
+        sstd = sstd[sort_idx]
+
+        textstr = '\n'.join((
+            r'$\mu=%.3f$' % (smean[0], ),
+            r'$\sigma=%.3f$' % (sstd[0], )))
+        mean.append(smean[0])
+        std.append(sstd[0])
+        id.append(systemID)
+        ax.text(0.7, 0.95, textstr, transform=ax.transAxes,
+                verticalalignment='top', bbox=props)
     else:
         x = group['depo'][(group['depo'] > -0.01) & (group['depo'] < 0.1)]
-        y_, x_, _ = ax.hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-
+        ax.hist(x, bins=80)
+        gmm = GaussianMixture(n_components=1, max_iter=10000)
+        gmm.fit(x.values.reshape(-1, 1))
+        smean = gmm.means_.ravel()
+        sstd = np.sqrt(gmm.covariances_).ravel()
+        sort_idx = np.argsort(smean)
+        smean = smean[sort_idx]
+        sstd = sstd[sort_idx]
         textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-
-        ax.text(0.6, 0.95, textstr, transform=ax.transAxes,
-                verticalalignment='top', bbox=props)
-        y = stats.norm.pdf(x_axis, np.median(x[x < 0.02]), np.std(x[x < 0.02]))
-        # ax.plot(x_axis, y)
-        # ax.set_title(name, weight='bold')
-        expected = (0.01055434, 0.00694231, 250)
-        params, cov = curve_fit(gauss, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        ax.plot(x_, gauss(x_, *params))
-        ax.set_title(f'Peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-        mean.append(np.mean(x))
-        std.append(np.std(x))
+            r'$\mu=%.3f$' % (smean[0], ),
+            r'$\sigma=%.3f$' % (sstd[0], )))
+        mean.append(smean[0])
+        std.append(sstd[0])
         id.append(systemID)
-        median.append(np.median(x))
+        ax.text(0.7, 0.95, textstr, transform=ax.transAxes,
+                verticalalignment='top', bbox=props)
 for n, ax in enumerate(axes.flatten()):
     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
             transform=ax.transAxes, size=12)
@@ -348,175 +305,17 @@ for n, ax in enumerate(axes.flatten()):
 axes.flatten()[-2].set_xlabel('$\delta$')
 axes.flatten()[-1].set_xlabel('$\delta$')
 fig.subplots_adjust(hspace=0.5, wspace=0.3)
-fig.savefig('F:/halo/paper/figures/depo_cloudbase2.png', dpi=150,
+fig.savefig('F:/halo/paper/figures/depo_cloudbase.png', dpi=150,
             bbox_inches='tight')
 
 # %%
-site_names = ['Uto-32', 'Uto-32XR', 'Hyytiala-33',
-              'Hyytiala-46', 'Vehmasmaki-53', 'Sodankyla-54']
-fig, axes = plt.subplots(3, 2, figsize=(9, 6), sharex=True)
-table = pd.read_csv('F:/halo/paper/depo_cloudbase/result.csv')
-props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-mean = []
-median = []
-std = []
-id = []
-x_axis = np.linspace(-0.01, 0.1, 100)
-for (systemID, group), ax, name in zip(table.groupby('systemID'),
-                                       axes.flatten()[1:],
-                                       site_names[1:]):
-    if systemID == 32:
-        x = group[(pd.to_datetime(
-            group[['year', 'month', 'day']]) < '2017-11-22')]
-        x = (x['cross_signal'] - 1)/(x['co_signal'] - 1)
-        y_, x_, _ = axes[0, 0].hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        axes[0, 0].text(0.6, 0.95, textstr, transform=axes[0, 0].transAxes,
-                        verticalalignment='top', bbox=props)
-
-        # gmm = GaussianMixture(n_components=2, max_iter=1000)
-        # gmm.fit(x.values.reshape(-1, 1))
-        # smean = gmm.means_.ravel()
-        # sstd = np.sqrt(gmm.covariances_).ravel()
-        # sweight = np.sqrt(gmm.weights_).ravel()
-        # sort_idx = np.argsort(smean)
-        # smean = smean[sort_idx]
-        # sstd = sstd[sort_idx]
-        # sweight = sweight[sort_idx]
-        # axes[0, 0].set_title('Distribution of depo at cloud base, ' + f'\n\
-        # left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
-        # y = stats.norm.pdf(x_axis, smean[0], sstd[0])
-        # axes[0, 0].plot(x_axis, y)
-        #
-        # y1 = stats.norm.pdf(x_axis, smean[1], sstd[1])
-        # axes[0, 0].plot(x_axis, y1)
-        expected = (0.01055434, 0.00694231, 250, 0.04292838, 0.01806932, 125)
-        params, cov = curve_fit(bimodal, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        axes[0, 0].plot(x_, bimodal(x_, *params))
-        axes[0, 0].set_title(f'Left peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-
-        x = group[(pd.to_datetime(
-            group[['year', 'month', 'day']]) >= '2017-11-22')]
-        x = (x['cross_signal'] - 1)/(x['co_signal'] - 1)
-
-        y_, x_, _ = axes[0, 1].hist(x, bins=100)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-
-        axes[0, 1].text(0.6, 0.95, textstr, transform=axes[0, 1].transAxes,
-                        verticalalignment='top', bbox=props)
-        expected = (0.01055434, 0.00694231, 250)
-        params, cov = curve_fit(gauss, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        axes[0, 1].plot(x_, gauss(x_, *params))
-        axes[0, 1].set_title(f'Peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        # axes[0, 1].set_title('Uto-32XR', weight='bold')
-    elif systemID == 46:
-        x = group
-        x = (x['cross_signal'] - 1)/(x['co_signal'] - 1)
-
-        y_, x_, _ = ax.hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-        ax.text(0.6, 0.95, textstr, transform=ax.transAxes,
-                verticalalignment='top', bbox=props)
-
-        # gmm = GaussianMixture(n_components=2, max_iter=1000)
-        # gmm.fit(x.values.reshape(-1, 1))
-        # smean = gmm.means_.ravel()
-        # sstd = np.sqrt(gmm.covariances_).ravel()
-        # sweight = np.sqrt(gmm.weights_).ravel()
-        # sort_idx = np.argsort(smean)
-        # smean = smean[sort_idx]
-        # sstd = sstd[sort_idx]
-        # sweight = sweight[sort_idx]
-        # ax.set_title('Distribution of depo at cloud base, ' + f'\n\
-        # left peak is {smean[0]:.4f} $\pm$ {sstd[0]:.4f}', weight='bold')
-        # y = stats.norm.pdf(x_axis, smean[0], sstd[0])
-        # ax.plot(x_axis, y)
-        #
-        # y1 = stats.norm.pdf(x_axis, smean[1], sstd[1])
-        # ax.plot(x_axis, y1)
-        expected = (0.01055434, 0.00694231, 250, 0.04292838, 0.01806932, 125)
-        params, cov = curve_fit(bimodal, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        ax.plot(x_, bimodal(x_, *params))
-        ax.set_title(f'Left peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-    else:
-        x = group
-        x = (x['cross_signal'] - 1)/(x['co_signal'] - 1)
-
-        y_, x_, _ = ax.hist(x, bins=80)
-        x_ = (x_[1:]+x_[:-1])/2
-
-        textstr = '\n'.join((
-            r'$\mu=%.3f$' % (np.mean(x), ),
-            r'$\mathrm{median}=%.3f$' % (np.median(x), ),
-            r'$\sigma=%.3f$' % (np.std(x), )))
-
-        ax.text(0.6, 0.95, textstr, transform=ax.transAxes,
-                verticalalignment='top', bbox=props)
-        y = stats.norm.pdf(x_axis, np.median(x[x < 0.02]), np.std(x[x < 0.02]))
-        # ax.plot(x_axis, y)
-        # ax.set_title(name, weight='bold')
-        expected = (0.01055434, 0.00694231, 250)
-        params, cov = curve_fit(gauss, x_, y_, expected)
-        sigma = np.sqrt(np.diag(cov))
-        ax.plot(x_, gauss(x_, *params))
-        ax.set_title(f'Peak is {params[0]:.3f} $\pm$ {params[1]:.3f}')
-        mean.append(np.mean(x))
-        std.append(np.std(x))
-        id.append(systemID)
-        median.append(np.median(x))
-for n, ax in enumerate(axes.flatten()):
-    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-            transform=ax.transAxes, size=12)
-    ax.set_ylabel('N')
-axes.flatten()[-2].set_xlabel('$\delta$')
-axes.flatten()[-1].set_xlabel('$\delta$')
-fig.subplots_adjust(hspace=0.5, wspace=0.3)
-# fig.savefig('F:/halo/paper/figures/depo_cloudbase2.png', dpi=150,
-#             bbox_inches='tight')
-
-
-# %%
-
-
-def gauss(x, mu, sigma, A):
-    return A*np.exp(-(x-mu)**2/2/sigma**2)
-
-
-def bimodal(x, mu1, sigma1, A1, mu2, sigma2, A2):
-    return gauss(x, mu1, sigma1, A1)+gauss(x, mu2, sigma2, A2)
-
-
-# %%
+# i_plot = 209474
+# i_plot = np.random.randint(0, len(table))
+# i_plot = np.random.choice(table[table['systemID'] == 46].index.values)
 # i_plot = 119216
-i_plot = 235144
+# i_plot = 235144
+# i_plot = 206803
+i_plot = 206807
 site = str(int(table.iloc[i_plot]['systemID']))
 if site == '32':
     data = hd.getdata('F:/halo/' + site + '/depolarization/normal') + \
@@ -537,7 +336,7 @@ df.filter(variables=['beta_raw', 'depo_raw'],
 # mask_range_plot = (df.data['range'] <= table.iloc[i_plot]['range'] + 100) & (
 #     df.data['range'] >= table.iloc[i_plot]['range'] - 100)
 cloud_base_height = table.iloc[i_plot]['range']
-mask_range_plot = (df.data['range'] <= cloud_base_height + 300)
+mask_range_plot = (df.data['range'] <= cloud_base_height + 150)
 mask_time_plot = df.data['time'] == table.iloc[i_plot]['time']
 depo_profile_plot = df.data['depo_raw'][mask_time_plot,
                                         mask_range_plot]
@@ -546,30 +345,49 @@ co_signal_profile_plot = df.data['co_signal'][mask_time_plot,
 beta_profile_plot = df.data['beta_raw'][mask_time_plot,
                                         mask_range_plot]
 
-fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(10, 4), sharey=True)
 
 for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
                         ['$\delta$', '$SNR_{co}$', r'$\beta\quad[Mm^{-1}]$']):
     for h, leg in zip([df.data['range'] <= cloud_base_height,
                        df.data['range'] == cloud_base_height,
                        (cloud_base_height < df.data['range']) &
-                       (df.data['range'] <= cloud_base_height + 300)],
+                       (df.data['range'] <= cloud_base_height + 150)],
                       ['Aerosol', 'Cloud base', 'In-cloud']):
         ax.plot(df.data[var][mask_time_plot, h],
                 df.data['range'][h], '.', label=leg)
     ax.grid()
     # ax.axhline(y=cloud_base_height, linestyle='--', color='grey')
     ax.set_xlabel(lab)
+axes[2].set_xscale('log')
 axes[0].set_xlim([-0.05, 0.1])
+# axes[2].set_xlim([1e-8, 1e-3])
 axes[0].set_ylabel('Height [m]')
-ax.set_xscale('log')
+
 for n, ax in enumerate(axes.flatten()):
     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
             transform=ax.transAxes, size=12)
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower center', ncol=3)
 fig.subplots_adjust(bottom=0.2)
-fig.savefig('F:/halo/paper/figures/' + df.filename + '_depo_profile.png')
+print(df.filename)
+fig.savefig('F:/halo/paper/figures/' + df.filename + '_depo_profile.png',
+            bbox_inches='tight')
+
+# %%
+fig1, ax1 = plt.subplots()
+ax1.plot(df.data[var][mask_time_plot, df.data['range'] <= cloud_base_height - 150],
+         df.data['range'][df.data['range'] <= cloud_base_height - 150], '.', label='xxx')
+ax1.plot(df.data[var][mask_time_plot, df.data['range'] == cloud_base_height],
+         df.data['range'][df.data['range'] == cloud_base_height], '.', label='yyy')
+ax1.plot(df.data[var][mask_time_plot,
+                      (df.data['range'] > cloud_base_height) &
+                      (df.data['range'] <= cloud_base_height + 150)],
+         df.data['range'][(df.data['range'] > cloud_base_height) &
+                          (df.data['range'] <= cloud_base_height + 150)], '.',
+         label='yyy')
+ax1.set_xscale('log')
+
 
 # %%
 table32 = table[(table['systemID'] == 32) & (pd.to_datetime(
@@ -663,18 +481,16 @@ for (systemID, group), ax, name in zip(table.groupby('systemID'),
         axes[0, 0].set_ylabel('$SNR_{cross}$')
         colorbar = fig.colorbar(p, ax=axes[0, 0])
         colorbar.ax.set_ylabel('N')
-        axes[0, 0].set_title('Uto-32' + f' with gof = {gof:.3f}')
-        axes[0, 0].plot(co_cross_data['co_signal'] - 1,
-                        (co_cross_data['co_signal'] - 1) * m + b,
-                        label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
-                        linewidth=0.5)
-        axes[0, 0].plot(co_cross_data['co_signal'] - 1,
-                        (co_cross_data['co_signal'] - 1) *
-                        reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
-                        label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
-                        linewidth=0.5)
-        axes[0, 0].legend(loc='upper left')
-        print(np.min((co_cross_data['cross_signal']-1)))
+        axes[0, 0].set_title('Uto-32')
+        # axes[0, 0].plot(co_cross_data['co_signal'] - 1,
+        #                 (co_cross_data['co_signal'] - 1) * m + b,
+        #                 label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
+        #                 linewidth=0.5)
+        # axes[0, 0].plot(co_cross_data['co_signal'] - 1,
+        #                 (co_cross_data['co_signal'] - 1) *
+        #                 reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
+        #                 label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
+        #                 linewidth=0.5)
 
         x = group[(pd.to_datetime(
             group[['year', 'month', 'day']]) >= '2017-11-22')]
@@ -697,20 +513,18 @@ for (systemID, group), ax, name in zip(table.groupby('systemID'),
         p = axes[0, 1].pcolormesh(X, Y, H.T, norm=LogNorm())
         axes[0, 1].set_xlabel('$SNR_{co}$')
         axes[0, 1].set_ylabel('$SNR_{cross}$')
-        axes[0, 1].set_title(name + f' with gof = {gof:.3f}')
+        axes[0, 1].set_title(name)
         colorbar = fig.colorbar(p, ax=axes[0, 1])
         colorbar.ax.set_ylabel('N')
-        axes[0, 1].plot(co_cross_data['co_signal'] - 1,
-                        (co_cross_data['co_signal'] - 1) * m + b,
-                        label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
-                        linewidth=0.5)
-        axes[0, 1].plot(co_cross_data['co_signal'] - 1,
-                        (co_cross_data['co_signal'] - 1) *
-                        reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
-                        label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
-                        linewidth=0.5)
-        axes[0, 1].legend(loc='upper left')
-        print(np.min((co_cross_data['cross_signal']-1)))
+        # axes[0, 1].plot(co_cross_data['co_signal'] - 1,
+        #                 (co_cross_data['co_signal'] - 1) * m + b,
+        #                 label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
+        #                 linewidth=0.5)
+        # axes[0, 1].plot(co_cross_data['co_signal'] - 1,
+        #                 (co_cross_data['co_signal'] - 1) *
+        #                 reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
+        #                 label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
+        #                 linewidth=0.5)
 
     else:
         co_cross_data = group[['co_signal', 'cross_signal']].dropna()
@@ -732,23 +546,21 @@ for (systemID, group), ax, name in zip(table.groupby('systemID'),
         p = ax.pcolormesh(X, Y, H.T, norm=LogNorm())
         ax.set_xlabel('$SNR_{co}$')
         ax.set_ylabel('$SNR_{cross}$')
-        ax.set_title(name + f' with gof = {gof:.3f}')
+        ax.set_title(name)
         colorbar = fig.colorbar(p, ax=ax)
         colorbar.ax.set_ylabel('N')
-        ax.plot(co_cross_data['co_signal'] - 1,
-                (co_cross_data['co_signal'] - 1) * m + b,
-                label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
-                linewidth=0.5)
-        ax.plot(co_cross_data['co_signal'] - 1,
-                (co_cross_data['co_signal'] - 1) *
-                reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
-                label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
-                linewidth=0.5)
-        ax.legend(loc='upper left')
-        print(np.min((co_cross_data['cross_signal']-1)))
+        # ax.plot(co_cross_data['co_signal'] - 1,
+        #         (co_cross_data['co_signal'] - 1) * m + b,
+        #         label=fr'$cross\_SNR = {m:.3f} * co\_SNR {b:.3f}$',
+        #         linewidth=0.5)
+        # ax.plot(co_cross_data['co_signal'] - 1,
+        #         (co_cross_data['co_signal'] - 1) *
+        #         reg.coef_.flatten()[0] + reg.intercept_.flatten()[0],
+        #         label=fr'$cross\_SNR = {reg.coef_.flatten()[0]:.3f} * co\_SNR$ {reg.intercept_.flatten()[0]:.3f}',
+        #         linewidth=0.5)
 for ax in axes.flatten():
     ax.set_xlim([-0.1, 8])
-    ax.set_ylim([-0.01, 0.2])
+    ax.set_ylim([-0.01, 0.8])
 fig.savefig('co_cross.png', bbox_inches='tight')
 # %%
 
