@@ -1813,8 +1813,21 @@ avg = df[['co_signal', 'cross_signal_bleed']].resample(time='60min').mean(dim='t
 
 co = avg['co_signal'][0, :].values - 1
 cross = avg['cross_signal_bleed'][0, :].values - 1
-plt.plot(co - cross)
-cross
+
+# %%
+
+
+def wavelet_denoising(x, wavelet='db4', level=1):
+    coeff = pywt.wavedec(x, wavelet, mode="symmetric")
+    sigma = (1/0.6745) * madev(coeff[-level])
+    # uthresh = sigma * np.sqrt(2 * np.log(len(x)))
+    uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+    coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+    return pywt.waverec(coeff, wavelet, mode='symmetric')
+
+# %%
+
+
 # %%
 fig, ax = plt.subplots(1, 6, sharey=True, sharex=True)
 for i in range(6):
@@ -1968,3 +1981,63 @@ ax.plot(df['range'], np.convolve(np.convolve(co-1, gaus, 'same'), [0, 1, -1, 0],
 # %%
 plt.plot(np.convolve(co-1, [0, 1, -1, 0]))
 plt.plot(co-1)
+
+# %%
+coef = pywt.wavedec(co, 'sym6', level=1)
+threshold = np.median(np.abs(coef[1]))/0.6745 * np.sqrt(2 * len(coef[1]))
+coef[1:] = (pywt.threshold(i, value=threshold, mode="soft") for i in coef[1:])
+reconstructed_signal = pywt.waverec(coef, 'sym6')
+
+# %%
+plt.plot(reconstructed_signal)
+plt.plot(co)
+reconstructed_signal.size
+co.size
+
+# %%
+
+
+def madev(d, axis=None):
+    """ Mean absolute deviation of a signal """
+    return np.mean(np.absolute(d - np.mean(d, axis)), axis)
+
+
+def wavelet_denoising(x, wavelet='db4', level=1):
+    coeff = pywt.wavedec(x, wavelet, mode="symmetric")
+    sigma = (1/0.6745) * madev(coeff[-level])
+    # uthresh = sigma * np.sqrt(2 * np.log(len(x)))
+    uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+    coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+    return pywt.waverec(coeff, wavelet, mode='symmetric')
+
+
+# %%
+# for wav in pywt.wavelist():
+for wav in ['sym5', 'db7', 'db5', 'bior4.4']:
+    try:
+        filtered = wavelet_denoising(co, wavelet=wav, level=1)
+    except:
+        pass
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(co, label='Raw')
+    plt.plot(filtered, label='Filtered')
+    plt.axhline(y=0)
+
+    plt.ylim([-0.0002, 0.0003])
+    plt.legend()
+    plt.title(f"DWT Denoising with {wav} Wavelet", size=15)
+    plt.show()
+
+# %%
+
+filtered = wavelet_denoising(co, wavelet='bior4.4', level=1)
+plt.figure(figsize=(10, 6))
+plt.plot(co, label='Raw')
+plt.plot(filtered, label='Filtered')
+plt.axhline(y=6e-5)
+
+plt.ylim([-0.0002, 0.0003])
+plt.legend()
+plt.title(f"DWT Denoising with {wav} Wavelet", size=15)
+plt.show()
