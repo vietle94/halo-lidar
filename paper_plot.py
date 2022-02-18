@@ -34,6 +34,7 @@ import xarray as xr
 import string
 import scipy.stats as stats
 from netCDF4 import Dataset
+import pywt
 %matplotlib qt
 
 # %%
@@ -1808,7 +1809,20 @@ df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-04-15-Hyytiala-46_classifi
 df = bleed_through(df)
 
 # %%
-time_mask = df['time'].dt.hour < 7
+avg = df[['co_signal', 'cross_signal_bleed']].resample(time='60min').mean(dim='time')
+
+co = avg['co_signal'][0, :].values - 1
+cross = avg['cross_signal_bleed'][0, :].values - 1
+plt.plot(co - cross)
+cross
+# %%
+fig, ax = plt.subplots(1, 6, sharey=True, sharex=True)
+for i in range(6):
+    ax[i].plot(avg['co_signal'][i, :].values, df['range'])
+    ax[i].plot(avg['cross_signal_bleed'][0, :].values, df['range'])
+
+# %%
+time_mask = df['time'].dt.hour < 1
 co = np.nanmean(df['co_signal'][time_mask, :], axis=0)
 cross = np.nanmean(df['cross_signal'][time_mask, :], axis=0)
 classified = np.sum(df['classified'][time_mask, :], axis=0)
@@ -1827,11 +1841,15 @@ y_cross = c + b*df['range'] + a*(df['range']**2)
 y_cross_background = c + b*selected_range + a*(selected_range**2)
 
 # %%
-fig, axes = plt.subplots(1, 2, sharex=True, sharey=True,
+fig, axes = plt.subplots(1, 3, sharex=True, sharey=True,
                          figsize=(9, 4))
 
 axes[0].plot(co, df['range'], '.', label='$SNR_{co}$')
 axes[0].plot(cross, df['range'], '.', label='$SNR_{cross}$')
+
+axes[2].plot(selected_co, selected_range, '+', label='$SNR_{co}$')
+axes[2].plot(selected_cross, selected_range, '+', label='$SNR_{cross}$')
+
 axes[0].plot(y_co, df['range'], label='Fitted $SNR_{co}$')
 axes[0].plot(y_cross, df['range'], label='Fitted $SNR_{cross}$')
 
@@ -1879,3 +1897,74 @@ ax.legend()
 ax.set_xlabel('$\delta$')
 ax.set_ylabel('N')
 fig.savefig('temp.png', bbox_inches='tight')
+
+# %%
+
+
+def gaussian(x, s):
+    return 1./np.sqrt(2. * np.pi * s**2) * np.exp(-x**2 / (2. * s**2))
+
+
+# %%
+gaus = np.array([gaussian(x, 1) for x in range(-13, 14, 1)])
+
+# %%
+coef = pywt.wavedec(np.convolve(co, gaus, 'same'), 'haar', level=1)
+fig, ax = plt.subplots(len(coef) + 1, 1, figsize=(9, 6))
+ax[0].plot(co)
+ax[1].plot(pywt.idwt(coef[0], None, 'haar'))
+for i in range(1, len(coef)):
+    ax[i+1].plot(pywt.idwt(None, coef[i], 'haar'))
+
+
+# %%
+
+
+def lowpassfilter(signal, thresh=0.63, wavelet="haar"):
+    thresh = thresh*np.nanmax(signal)
+    coeff = pywt.wavedec(signal, wavelet, mode="per")
+    coeff[1:] = (pywt.threshold(i, value=thresh, mode="soft") for i in coeff[1:])
+    reconstructed_signal = pywt.waverec(coeff, wavelet, mode="per")
+    return reconstructed_signal
+
+# def lowpassfilter(signal, thresh = 0.63, wavelet="haar"):
+#     thresh = thresh*np.nanstd(signal)
+#     coeff = pywt.wavedec(signal, wavelet, mode="per" )
+#     coeff[1:] = (pywt.threshold(i, value=thresh, mode="soft" ) for i in coeff[1:])
+#     reconstructed_signal = pywt.waverec(coeff, wavelet, mode="per" )
+#     return reconstructed_signal
+
+
+fig, ax = plt.subplots(figsize=(12, 8))
+ax.plot(co-1, color="b", alpha=0.5, label='original signal')
+rec = lowpassfilter(co-1, 0.1)
+ax.plot(rec, 'k', label='DWT smoothing}', linewidth=2)
+ax.legend()
+ax.set_title('Removing High Frequency Noise with DWT', fontsize=18)
+ax.set_ylabel('Signal Amplitude', fontsize=16)
+ax.set_xlabel('Sample No', fontsize=16)
+plt.show()
+
+# %%
+fig, ax = plt.subplots()
+ax.plot(df['range'], co-1)
+ax.plot(df['range'], np.convolve(co-1, [0, 1, -1, 0], 'same'))
+
+# %%
+
+
+def gaussian(x, s):
+    return 1./np.sqrt(2. * np.pi * s**2) * np.exp(-x**2 / (2. * s**2))
+
+
+# %%
+gaus = np.array([gaussian(x, 1) for x in range(-3, 4, 1)])
+fig, ax = plt.subplots()
+ax.plot(df['range'], co-1)
+ax.plot(df['range'], np.convolve(co-1, gaus, 'same'))
+ax.plot(df['range'], np.convolve(np.convolve(co-1, gaus, 'same'), [0, 1, -1, 0], 'same'))
+
+
+# %%
+plt.plot(np.convolve(co-1, [0, 1, -1, 0]))
+plt.plot(co-1)
