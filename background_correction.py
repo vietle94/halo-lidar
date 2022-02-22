@@ -89,131 +89,9 @@ def bleed_through(df):
     return df
 
 
-def wavelet_denoising(x, wavelet='db4', level=1):
-    coeff = pywt.wavedec(x, wavelet, mode="zero", level=level)
-    # sigma = (1/0.6745) * madev(coeff[-level])
-    # uthresh = sigma * np.sqrt(2 * np.log(len(x)))
-    uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
-    coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
-    return pywt.waverec(coeff, wavelet, mode='zero')
-
-
-def myfit(x, y):
-    def funcQuad(tpl, x): return tpl[0]*x**2+tpl[1]*x+tpl[2]
-    def ErrorFunc(tpl, x, y): return funcQuad(tpl, x)-y
-    # tplInitial contains the "first guess" of the parameters
-    tplInitial1 = (-1.2708297058552918e-11, 1.6427829364388585e-07, 0.9995122044314318)
-    # leastsq finds the set of parameters in the tuple tpl that minimizes
-    # ErrorFunc=yfit-yExperimental
-    tplFinal1 = least_squares(ErrorFunc, tplInitial1[:], loss='soft_l1', f_scale=0.1, args=(x, y))
-    # y_fit = funcQuad(tplFinal1, x)
-    return tplFinal1.x
-
-
 # %%
 df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-04-15-Hyytiala-46_classified.nc')
 df = bleed_through(df)
-
-# %%
-total_depo = np.array([])
-total_depo_corrected = np.array([])
-filter_aerosol = df.classified == 10
-wavelet = 'db7'
-avg = df[['co_signal', 'cross_signal_bleed']].resample(time='60min').mean(dim='time')
-avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
-for time in range(24):
-    co = avg['co_signal'][time, :].values
-    cross = avg['cross_signal_bleed'][time, :].values
-
-    filtered = wavelet_denoising(co-1, wavelet=wavelet, level=2) + 1
-    filtered = filtered[:len(co)]
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(co, label='Raw')
-    ax.plot(filtered, label='Filtered')
-    ax.axhline(y=1+6e-5)
-    ax.set_ylim([-0.0004+1, 0.0006+1])
-
-    ax.legend()
-    ax.set_title(f"DWT Denoising with {wavelet} Wavelet", size=15)
-    fig.savefig('F:/halo/paper/figures/background_correction/denoise_' + str(time),
-                bbox_inches='tight')
-
-    background = filtered < 1+6e-5
-
-    selected_range = df['range'][background]
-    selected_co = co[background]
-    selected_cross = cross[background]
-
-    a, b, c = myfit(selected_range, selected_co)
-    y_co = c + b*df['range'] + a*(df['range']**2)
-    y_co_background = c + b*selected_range + a*(selected_range**2)
-
-    a, b, c = myfit(selected_range, selected_cross)
-    y_cross = c + b*df['range'] + a*(df['range']**2)
-    y_cross_background = c + b*selected_range + a*(selected_range**2)
-
-    fig, axes = plt.subplots(1, 3, sharex=True, sharey=True,
-                             figsize=(9, 4))
-
-    axes[0].plot(co, df['range'], '.', label='$SNR_{co}$')
-    axes[0].plot(cross, df['range'], '.', label='$SNR_{cross}$')
-
-    axes[2].plot(selected_co, selected_range, '+', label='$SNR_{co}$')
-    axes[2].plot(selected_cross, selected_range, '+', label='$SNR_{cross}$')
-
-    axes[0].plot(y_co, df['range'], label='Fitted $SNR_{co}$')
-    axes[0].plot(y_cross, df['range'], label='Fitted $SNR_{cross}$')
-
-    axes[1].plot((co)/y_co, df['range'], '.', label='Corrected $SNR_{co}$')
-    axes[1].plot((cross)/y_cross, df['range'], '.', label='Corrected $SNR_{cross}$')
-
-    axes[0].set_xlim([0.9995, 1.001])
-    axes[0].yaxis.set_major_formatter(hd.m_km_ticks())
-    axes[0].set_ylabel('Height a.g.l [km]')
-    for ax in axes.flatten():
-        ax.tick_params(axis='x', labelrotation=45)
-        ax.legend()
-        ax.set_xlabel('SNR')
-    fig.savefig('F:/halo/paper/figures/background_correction/correction_' + str(time),
-                bbox_inches='tight')
-
-    mask = (avg.aerosol_percentage[time, :] > 0.8) & (avg.range < 2000)
-    depo = (cross - 1) / (co - 1)
-    depo = depo[mask]
-    depo_corrected = (cross/y_cross - 1) / (co/y_co - 1)
-    depo_corrected = depo_corrected[mask]
-    total_depo = np.append(depo, total_depo)
-    total_depo_corrected = np.append(depo_corrected.values, total_depo_corrected)
-
-# %%
-fig, ax = plt.subplots(figsize=(6, 4), sharex=True, sharey=True)
-ax.hist(total_depo[(total_depo < 0.5) & (total_depo > -0.1)], label='Not corrected depo', bins=20)
-ax.hist(total_depo_corrected[(total_depo_corrected < 0.5) & (total_depo_corrected > -0.1)],
-        alpha=0.5, label='Corrected depo', bins=20)
-ax.legend()
-ax.set_xlim([-0.01, 0.2])
-ax.set_xlabel('$\delta$')
-ax.set_ylabel('N')
-fig.savefig('F:/halo/paper/figures/background_correction/summary', bbox_inches='tight')
-
-# %%
-for wav in pywt.wavelist():
-    # for wav in ['sym5', 'db7', 'db5', 'bior4.4']:
-    try:
-        filtered = wavelet_denoising(co-1, wavelet=wav, level=2)+1
-    except:
-        pass
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(co, label='Raw')
-    plt.ylim([-0.0004+1, 0.0006+1])
-    plt.plot(filtered, label='Filtered')
-    # plt.axhline(y=0)
-    plt.axhline(y=1 + 6e-5)
-    # plt.ylim([-0.0002, 0.0003])
-    plt.legend()
-    plt.title(f"DWT Denoising with {wav} Wavelet", size=15)
-    plt.show()
 
 # %%
 time = 0
@@ -280,8 +158,8 @@ for time in range(24):
 
     ax.legend()
     ax.set_title(f"SWT Denoising with {wavelet} Wavelet", size=15)
-    fig.savefig('F:/halo/paper/figures/background_correction2/denoise_' + str(time),
-                bbox_inches='tight')
+    # fig.savefig('F:/halo/paper/figures/background_correction2/denoise_' + str(time),
+    #             bbox_inches='tight')
 
     background = filtered < 1+6e-5
 
@@ -319,8 +197,8 @@ for time in range(24):
         ax.tick_params(axis='x', labelrotation=45)
         ax.legend()
         ax.set_xlabel('SNR')
-    fig.savefig('F:/halo/paper/figures/background_correction2/correction_' + str(time),
-                bbox_inches='tight')
+    # fig.savefig('F:/halo/paper/figures/background_correction2/correction_' + str(time),
+    #             bbox_inches='tight')
 
     mask = (avg.aerosol_percentage[time, :] > 0.8) & (avg.range < 2000)
     co[mask]
@@ -498,3 +376,5 @@ for ax in axes.flatten():
     ax.tick_params(axis='x', labelrotation=45)
     ax.legend()
     ax.set_xlabel('SNR')
+
+# %%
