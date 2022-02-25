@@ -4,97 +4,85 @@ import matplotlib.pyplot as plt
 import glob
 from pathlib import Path
 import pandas as pd
+from matplotlib.widgets import RectangleSelector, SpanSelector
+from matplotlib.ticker import FuncFormatter
+from matplotlib.widgets import Button
+import xarray as xr
+import json
+import pywt
 %matplotlib qt
 
-# %%
-data = hd.getdata('F:/halo/33/depolarization')
-image_folder = 'F:/HYSPLIT/new/'
-Path(image_folder).mkdir(parents=True, exist_ok=True)
+
+def bleed_through(df):
+    # Correction for bleed through and remove all observations below 90m
+    with open('summary_info.json', 'r') as file:
+        summary_info = json.load(file)
+    df = df.where(df.range > 90, drop=True)
+    file_date = '-'.join([str(int(df.attrs[ele])).zfill(2) for
+                          ele in ['year', 'month', 'day']])
+    file_location = '-'.join([df.attrs['location'], str(int(df.attrs['systemID']))])
+    df.attrs['file_name'] = file_date + '-' + file_location
+
+    if '32' in file_location:
+        for period in summary_info['32']:
+            if (period['start_date'] <= file_date) & \
+                    (file_date <= period['end_date']):
+                df.attrs['background_snr_sd'] = period['snr_sd']
+                df.attrs['bleed_through_mean'] = period['bleed_through']['mean']
+                df.attrs['bleed_through_sd'] = period['bleed_through']['sd']
+    else:
+        id = str(int(df.attrs['systemID']))
+        df.attrs['background_snr_sd'] = summary_info[id]['snr_sd']
+        df.attrs['bleed_through_mean'] = summary_info[id]['bleed_through']['mean']
+        df.attrs['bleed_through_sd'] = summary_info[id]['bleed_through']['sd']
+    bleed = df.attrs['bleed_through_mean']
+    sigma_bleed = df.attrs['bleed_through_sd']
+    sigma_co, sigma_cross = df.attrs['background_snr_sd'], df.attrs['background_snr_sd']
+
+    df['cross_signal_bleed'] = (['time', 'range'], ((df['cross_signal'] - 1) -
+                                                    bleed * (df['co_signal'] - 1) + 1).data)
+
+    df['cross_signal_bleed_sd'] = np.sqrt(
+        sigma_cross**2 +
+        ((bleed * (df['co_signal'] - 1))**2 *
+         ((sigma_bleed/bleed)**2 +
+          (sigma_co/(df['co_signal'] - 1))**2))
+    )
+    df['depo_bleed'] = (df['cross_signal_bleed'] - 1) / \
+        (df['co_signal'] - 1)
+
+    df['depo_bleed_sd'] = np.sqrt(
+        (df['depo_bleed'])**2 *
+        (
+            (df['cross_signal_bleed_sd']/(df['cross_signal_bleed'] - 1))**2 +
+            (sigma_co/(df['co_signal']-1))**2
+        ))
+    return df
+
 
 # %%
-date = '20160508'
-file = [file for file in data if date in file][0]
-df = hd.halo_data(file)
+df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-04-15-Hyytiala-46_classified.nc')
+df = bleed_through(df)
 
-df.filter_height()
-df.unmask999()
+filter_aerosol = df.classified == 10
+wavelet = 'bior2.6'
+avg = df[['co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
+avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
+bleed_mean = df.attrs['bleed_through_mean']
+bleed_sd = df.attrs['bleed_through_sd']
 
 # %%
-fig = plt.figure(figsize=(18, 9))
-ax1 = fig.add_subplot(211)
-ax2 = fig.add_subplot(234)
-ax3 = fig.add_subplot(235, sharey=ax2)
-ax4 = fig.add_subplot(236, sharey=ax2)
-c = ax1.pcolormesh(df.data['time'], df.data['range'],
-                   np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
-cbar = fig.colorbar(c, ax=ax1, fraction=0.01)
-cbar.ax.set_ylabel('Beta', rotation=90)
-cbar.ax.yaxis.set_label_position('left')
-ax1.set_title(df.filename, weight='bold', size=22)
-ax1.set_xlabel('Time (h)')
-ax1.set_xlim([0, 24])
-ax1.set_ylim([0, None])
-ax1.set_ylabel('Height (km)')
-ax1.yaxis.set_major_formatter(hd.m_km_ticks())
-fig.tight_layout()
-fig.subplots_adjust(bottom=0.1, hspace=0.3)
-p = hd.area_aerosol(df.data['time'], df.data['range'],
-                    df.data['depo_raw'].T, ax_in=ax1,
-                    fig=fig, ax2=ax2, df=df, ax3=ax3, ax4=ax4)
+fig = plt.figure(figsize=(16, 9))
+ax1 = fig.add_subplot(221)
+ax2 = fig.add_subplot(222, sharex=ax1, sharey=ax1)
+ax3 = fig.add_subplot(223)
+ax4 = fig.add_subplot(224, sharex=ax3)
+p = area_aerosol(fig, ax1, ax2, ax3, ax4, avg, bleed_mean, bleed_sd,
+                 r'F:\halo\paper\figures\background_compare/compare_', 23)
 
-# %% save result
-fig.savefig(image_folder + df.filename + '.png',
+# %%
+fig.savefig(r'F:\halo\paper\figures\background_compare/compare_' + str(p.t),
             bbox_inches='tight')
-# save profile as csv
-save_df = pd.DataFrame({'range': p.span_aerosol.range,
-                        'co_signal': p.span_aerosol.co_corrected,
-                        'cross_signal': p.span_aerosol.cross_corrected,
-                        'depo': p.span_aerosol.depo_corrected,
-                        'depo_sd': p.span_aerosol.depo_corrected_sd,
-                        'co_sd': p.span_aerosol.sigma_co,
-                        'cross_sd': p.span_aerosol.sigma_cross,
-                        'date': df.date,
-                        'location': df.location})
-save_df.to_csv(image_folder + df.filename + '_mean_profile.csv',
-               index=False)
-
-# %%
-# %%
-
-
-class area_select():
-
-    def __init__(self, x, y, z, ax_in, fig):
-        self.x, self.y, self.z = x, y, z
-        self.ax_in = ax_in
-        self.canvas = fig.canvas
-        self.fig = fig
-        self.selector = RectangleSelector(
-            self.ax_in,
-            self,
-            useblit=True,  # Process much faster,
-            interactive=True  # Keep the drawn box on screen
-        )
-
-    def __call__(self, event1, event2):
-        self.mask = self.inside(event1, event2)
-        self.area = self.z[self.mask]
-        self.range = self.y[self.maskrange]
-        self.time = self.x[self.masktime]
-        print(f'Chosen {len(self.area.flatten())} values')
-
-    def inside(self, event1, event2):
-        """
-        Returns a boolean mask of the points inside the rectangle defined by
-        event1 and event2
-        """
-        self.xcord = [event1.xdata, event2.xdata]
-        self.ycord = [event1.ydata, event2.ydata]
-        x0, x1 = sorted(self.xcord)
-        y0, y1 = sorted(self.ycord)
-        self.masktime = (self.x > x0) & (self.x < x1)  # remove bracket ()
-        self.maskrange = (self.y > y0) & (self.y < y1)
-        return np.ix_(self.maskrange, self.masktime)
 
 # %%
 
@@ -119,15 +107,18 @@ class span_select():
 
 class span_aerosol(span_select):
 
-    def __init__(self, x, y, ax_in, canvas, orient, cross, range_aerosol, df,
-                 ax3, ax4):
+    def __init__(self, x, y, ax_in, canvas, orient, cross, range_aerosol,
+                 ax2, ax3, ax4, bleed_mean, bleed_sd):
         super().__init__(x, y, ax_in, canvas, orient)
-        self.range_aerosol, self.df = range_aerosol, df
+        self.range_aerosol = range_aerosol
         self.co, self.range, self.cross = x, y, cross
         self.co_all = np.array([])
         self.cross_all = np.array([])
         self.range_all = np.array([])
+        self.ax2 = ax2
         self.ax3, self.ax4 = ax3, ax4
+        self.bleed_mean = bleed_mean
+        self.bleed_sd = bleed_sd
 
     def __call__(self, min, max):
         self.min = min
@@ -159,20 +150,20 @@ class span_aerosol(span_select):
         y_cross = c + b*self.range + a*(self.range**2)
         y_cross_background = c + b*x_co + a*(x_co**2)
 
-        self.ax_in.plot(y_co, self.range, c='red')
-        self.ax_in.plot(y_cross, self.range, c='blue')
-
+        self.ax_in.plot(y_co, self.range, c='red', label='eye-fit co')
+        self.ax_in.plot(y_cross, self.range, c='blue', label='eye-fit cross')
+        self.ax_in.legend()
         co_corrected = self.co/y_co
         self.co_corrected = co_corrected
         cross_corrected = self.cross/y_cross
         cross_sd_background = np.nanstd(cross/y_cross_background)
         co_sd_background = np.nanstd(co/y_co_background)
         self.sigma_co, self.sigma_cross = co_sd_background, cross_sd_background
-        bleed = self.df.bleed_through_mean
-        sigma_bleed = self.df.bleed_through_sd
+        bleed = self.bleed_mean
+        sigma_bleed = self.bleed_sd
 
         self.cross_corrected = (cross_corrected - 1) - \
-            self.df.bleed_through_mean * (co_corrected - 1) + 1
+            bleed * (co_corrected - 1) + 1
 
         cross_sd_background_bleed = np.sqrt(
             self.sigma_cross**2 +
@@ -191,137 +182,156 @@ class span_aerosol(span_select):
                 (self.sigma_co/(co_corrected - 1))**2
             ))
 
-        self.depo_corrected[co_corrected < 1 + 3*co_sd_background] = np.nan
-        self.depo_corrected_sd[co_corrected < 1 + 3*co_sd_background] = np.nan
-        self.final_depo = np.nanmean(self.depo_corrected[self.range_aerosol])
-        self.final_depo_sd = np.nanmean(self.depo_corrected_sd[self.range_aerosol])
-        print(f'Depo: {self.final_depo:.3f} with std: {self.final_depo_sd:.3f}')
-        self.ax3.plot(self.co_corrected,
-                      self.range, '.', label='co_signal', c='red')
-        self.ax3.plot(self.cross_corrected,
-                      self.range, '.', label='cross_signal', c='blue')
-        self.ax3.set_xlim([0.9995, 1.003])
+        self.ax3.plot(((self.cross - 1)/(self.co - 1))[self.range_aerosol],
+                      self.range[self.range_aerosol], '.',
+                      label='Original depo')
         self.ax3.legend()
-        self.ax3.set_title('Corrected co and cross')
-        self.ax3.set_xlabel('SNR')
-        self.ax4.errorbar(self.depo_corrected,
-                          self.range, xerr=self.depo_corrected_sd,
-                          errorevery=1, elinewidth=0.5, fmt='.')
-        self.ax4.set_xlabel('Depolarization ratio')
-        self.ax4.set_title('Averaged depo profile')
-        self.ax4.set_xlim([-0.1, 0.5])
+        self.ax3.set_xlim([-0.1, 0.4])
+        self.ax3.set_xlabel(r'$\delta$')
+        self.ax3.set_ylabel('Height [km]')
+        self.ax3.yaxis.set_major_formatter(m_km_ticks())
+        self.ax4.errorbar(self.depo_corrected[self.range_aerosol],
+                          self.range[self.range_aerosol],
+                          xerr=self.depo_corrected_sd[self.range_aerosol],
+                          errorevery=1, elinewidth=0.5, fmt='.', label='Eye-corrected depo')
+
+        # Wavelet
+        coeff = pywt.swt(np.pad(self.co-1, (0, 67), 'constant',
+                                constant_values=(0, 0)),
+                         'bior2.6', level=5)
+        uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+        coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+        filtered = pywt.iswt(coeff, wavelet) + 1
+        filtered = filtered[:len(self.co)]
+        background = filtered < 1+6e-5
+
+        selected_range = self.range[background]
+        selected_co = self.co[background]
+        selected_cross = self.cross[background]
+
+        a, b, c = np.polyfit(selected_range, selected_co, deg=2)
+        y_co = c + b*self.range + a*(self.range**2)
+        y_co_background = c + b*selected_range + a*(selected_range**2)
+
+        a, b, c = np.polyfit(selected_range, selected_cross, deg=2)
+        y_cross = c + b*self.range + a*(self.range**2)
+        y_cross_background = c + b*selected_range + a*(selected_range**2)
+
+        self.ax2.plot(y_co, self.range, c='red', label='wavelet-fit co')
+        self.ax2.plot(y_cross, self.range, c='blue', label='wavelet-fit cross')
+        self.ax2.legend()
+        co_corrected = self.co/y_co
+        self.co_corrected = co_corrected
+        cross_corrected = self.cross/y_cross
+        cross_sd_background = np.nanstd(selected_cross/y_cross_background)
+        co_sd_background = np.nanstd(selected_co/y_co_background)
+        self.sigma_co, self.sigma_cross = co_sd_background, cross_sd_background
+        bleed = self.bleed_mean
+        sigma_bleed = self.bleed_sd
+
+        self.cross_corrected = (cross_corrected - 1) - \
+            bleed * (co_corrected - 1) + 1
+
+        cross_sd_background_bleed = np.sqrt(
+            self.sigma_cross**2 +
+            ((bleed * (co_corrected - 1))**2 *
+             ((sigma_bleed/bleed)**2 +
+              (self.sigma_co/(co_corrected - 1))**2))
+        )
+
+        self.depo_corrected = (cross_corrected - 1) / \
+            (co_corrected - 1)
+
+        self.depo_corrected_sd = np.sqrt(
+            (self.depo_corrected)**2 *
+            (
+                (cross_sd_background_bleed/(cross_corrected - 1))**2 +
+                (self.sigma_co/(co_corrected - 1))**2
+            ))
+
+        self.ax4.errorbar(self.depo_corrected[self.range_aerosol],
+                          self.range[self.range_aerosol],
+                          xerr=self.depo_corrected_sd[self.range_aerosol],
+                          errorevery=1, elinewidth=0.5, fmt='.',
+                          label='Wavelet-corrected depo')
+        self.ax4.legend()
+        self.ax4.set_ylabel('Height [km]')
+        self.ax4.yaxis.set_major_formatter(m_km_ticks())
+        self.ax4.set_xlabel(r'$\delta$')
         self.canvas.draw()
-        self.depo_select = span_depo_select(self.depo_corrected, self.range,
-                                            self.ax4, self.canvas, 'vertical',
-                                            self.depo_corrected_sd)
 
 
 # %%
-class area_aerosol(area_select):
+class area_aerosol():
 
-    def __init__(self, x, y, z, ax_in, fig, ax2, df, ax3, ax4):
-        super().__init__(x, y, z, ax_in, fig)
-        self.df = df
-        self.co = self.df.data['co_signal']
-        self.cross = self.df.data['cross_signal']
+    def __init__(self, fig, ax1, ax2, ax3, ax4, avg, bleed_mean, bleed_sd,
+                 save_path, t):
+        self.save_path = save_path
+        self.co = avg['co_signal']
+        self.cross = avg['cross_signal']
+        self.range = avg['range']
+        self.aerosol_percentage = avg['aerosol_percentage']
+        self.ax1 = ax1
         self.ax2, self.ax3, self.ax4 = ax2, ax3, ax4
-
-    def __call__(self, event1, event2):
-        super().__call__(event1, event2)
-        self.ax2.cla()
-        self.ax3.cla()
-        self.ax4.cla()
-        self.t = (self.x >= self.xcord[0]) & (self.x <= self.xcord[1])
-        self.range_aerosol = (self.y > self.ycord[0]) & (self.y < self.ycord[1])
-        self.co_mean_profile = np.nanmean(self.co[self.t, :], axis=0)
-        self.cross_mean_profile = np.nanmean(self.cross[self.t, :], axis=0)
-        self.ax2.plot(self.co_mean_profile,
-                      self.y, '.', label='co_signal', c='red')
-        self.ax2.plot(self.cross_mean_profile,
-                      self.y, '.', label='cross_signal', c='blue')
-        self.ax2.yaxis.set_major_formatter(m_km_ticks())
-        self.ax2.legend()
-        self.ax2.set_xlim([0.9995, 1.003])
-        self.ax2.set_title('Co and cross profile')
-        self.ax2.set_ylabel('Height (km)')
-        self.ax2.set_xlabel('SNR')
+        self.canvas = fig.canvas
+        self.fig = fig
+        self.bleed_mean = bleed_mean
+        self.bleed_sd = bleed_sd
+        self.axnext = self.fig.add_axes([0.59, 0.005, 0.1, 0.025])
+        self.bnext = Button(self.axnext, 'Next')
+        self.bnext.on_clicked(self.myf)
+        self.axsave = self.fig.add_axes([0.48, 0.005, 0.1, 0.025])
+        self.bsave = Button(self.axsave, 'Save')
+        self.bsave.on_clicked(self.save)
         self.axapply = self.fig.add_axes([0.7, 0.005, 0.1, 0.025])
         self.axfit = self.fig.add_axes([0.81, 0.005, 0.1, 0.025])
         self.bfit = Button(self.axfit, 'Fit')
         self.bapply = Button(self.axapply, 'Apply')
+        self.t = t
+
+    def myf(self, event):
+        self.ax1.cla()
+        self.ax2.cla()
+        self.ax3.cla()
+        self.ax4.cla()
+        # self.t += 1
+        self.range_aerosol = self.aerosol_percentage[self.t, :] > 0.8
+        self.co_mean_profile = self.co[self.t, :]
+        self.cross_mean_profile = self.cross[self.t, :]
+        self.ax1.plot(self.co_mean_profile,
+                      self.range, '.', label='co_signal', c='red')
+        self.ax1.plot(self.cross_mean_profile,
+                      self.range, '.', label='cross_signal', c='blue')
+        self.ax1.yaxis.set_major_formatter(m_km_ticks())
+        self.ax1.legend()
+        self.ax1.set_xlim([0.9995, 1.003])
+        self.ax1.set_ylabel('Height [km]')
+
+        self.ax2.plot(self.co_mean_profile,
+                      self.range, '.', label='co_signal', c='red')
+        self.ax2.plot(self.cross_mean_profile,
+                      self.range, '.', label='cross_signal', c='blue')
+        self.ax2.yaxis.set_major_formatter(m_km_ticks())
+        self.ax2.legend()
+        self.ax2.set_xlim([0.9995, 1.003])
         self.canvas.draw()
-        self.span_aerosol = span_aerosol(self.co_mean_profile, self.y, self.ax2,
+        self.span_aerosol = span_aerosol(self.co_mean_profile, self.range, self.ax1,
                                          self.canvas, 'vertical',
                                          self.cross_mean_profile,
                                          self.range_aerosol,
-                                         self.df, self.ax3, self.ax4)
+                                         self.ax2, self.ax3, self.ax4,
+                                         self.bleed_mean, self.bleed_sd)
         self.bfit.on_clicked(self.span_aerosol.fit)
         self.bapply.on_clicked(self.span_aerosol.apply)
 
+    def save(self, event):
+        self.fig.savefig(self.save_path + str(self.t),
+                         bbox_inches='tight')
+
 
 # %%
-data = hd.getdata('F:/halo/46/depolarization')
-image_folder = 'F:/HYSPLIT/'
-Path(image_folder).mkdir(parents=True, exist_ok=True)
-
-# %%
-date = '20180415'
-file = [file for file in data if date in file][0]
-df = hd.halo_data(file)
-
-df.filter_height()
-df.unmask999()
-
-# %%
-fig = plt.figure(figsize=(18, 9))
-ax1 = fig.add_subplot(211)
-ax2 = fig.add_subplot(234)
-ax3 = fig.add_subplot(235, sharey=ax2)
-ax4 = fig.add_subplot(236, sharey=ax2)
-c = ax1.pcolormesh(df.data['time'], df.data['range'],
-                   np.log10(df.data['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
-cbar = fig.colorbar(c, ax=ax1, fraction=0.01)
-cbar.ax.set_ylabel('Beta', rotation=90)
-cbar.ax.yaxis.set_label_position('left')
-ax1.set_title(df.filename, weight='bold', size=22)
-ax1.set_xlabel('Time (h)')
-ax1.set_xlim([0, 24])
-ax1.set_xticks(np.arange(24))
-ax1.set_ylim([0, None])
-ax1.set_ylabel('Height (km)')
-ax1.yaxis.set_major_formatter(hd.m_km_ticks())
-fig.tight_layout()
-fig.subplots_adjust(bottom=0.1, hspace=0.3)
-p = hd.area_aerosol(df.data['time'], df.data['range'],
-                    df.data['depo_raw'].T, ax_in=ax1,
-                    fig=fig, ax2=ax2, df=df, ax3=ax3, ax4=ax4)
-
-# %%
-dep0_1 = p.span_aerosol.depo_corrected[df.data['range'] < 1500]
-
-# %%
-fig.savefig(image_folder + df.filename + '45.png',
-            bbox_inches='tight')
-# save profile as csv
-save_df = pd.DataFrame({'range': p.span_aerosol.range,
-                        'co_signal': p.span_aerosol.co_corrected,
-                        'cross_signal': p.span_aerosol.cross_corrected,
-                        'depo': p.span_aerosol.depo_corrected,
-                        'depo_sd': p.span_aerosol.depo_corrected_sd,
-                        'co_sd': p.span_aerosol.sigma_co,
-                        'cross_sd': p.span_aerosol.sigma_cross,
-                        'date': df.date,
-                        'location': df.location})
-save_df.to_csv(image_folder + df.filename + '_mean_profile45.csv',
-               index=False)
-
-# %%
-
-list = glob.glob(image_folder + '*.csv')
-list
-all_profile = pd.concat([pd.read_csv(x) for x in list])
-all_profile = all_profile[all_profile['range'] < 2000]
-all_profile
-
-# %%
-plt.hist(all_profile['depo'])
+def m_km_ticks():
+    '''
+    Modify ticks from m to km
+    '''
+    return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
