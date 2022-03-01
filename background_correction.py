@@ -37,6 +37,7 @@ import string
 import scipy.stats as stats
 from netCDF4 import Dataset
 import pywt
+from scipy.signal import find_peaks, peak_widths
 %matplotlib qt
 
 # %%
@@ -314,6 +315,7 @@ fig.savefig('F:/halo/paper/figures/background_correction2/summary_myway', bbox_i
 
 
 # %%
+time = 3
 co = avg['co_signal'][time, :].values
 cross = avg['cross_signal_bleed'][time, :].values
 
@@ -342,39 +344,117 @@ filtered_cross = filtered_cross[:len(cross)]
 
 background = filtered < 1+6e-5
 
-selected_range = df['range'][background]
-selected_co = filtered[background]
-selected_cross = filtered_cross[background]
+fig, ax = plt.subplots()
+ax.plot(co, df['range'])
+ax.plot(filtered, df['range'])
 
-a, b, c = myfit(selected_range, selected_co)
-y_co = c + b*df['range'] + a*(df['range']**2)
-y_co_background = c + b*selected_range + a*(selected_range**2)
 
-a, b, c = myfit(selected_range, selected_cross)
-y_cross = c + b*df['range'] + a*(df['range']**2)
-y_cross_background = c + b*selected_range + a*(selected_range**2)
-
-fig, axes = plt.subplots(1, 3, sharex=True, sharey=True,
-                         figsize=(9, 4))
-
-axes[0].plot(co, df['range'], '.', label='$SNR_{co}$')
-axes[0].plot(cross, df['range'], '.', label='$SNR_{cross}$')
-
-axes[2].plot(filtered, df['range'], '.', label='$SNR_{co}$')
-axes[2].plot(filtered_cross, df['range'], '.', label='$SNR_{cross}$')
-
-axes[0].plot(y_co, df['range'], label='Fitted $SNR_{co}$')
-axes[0].plot(y_cross, df['range'], label='Fitted $SNR_{cross}$')
-
-axes[1].plot((filtered)/y_co, df['range'], '.', label='Corrected $SNR_{co}$')
-axes[1].plot((filtered_cross)/y_cross, df['range'], '.', label='Corrected $SNR_{cross}$')
-
-axes[0].set_xlim([0.9995, 1.001])
-axes[0].yaxis.set_major_formatter(hd.m_km_ticks())
-axes[0].set_ylabel('Height a.g.l [km]')
-for ax in axes.flatten():
-    ax.tick_params(axis='x', labelrotation=45)
-    ax.legend()
-    ax.set_xlabel('SNR')
+# selected_range = df['range'][background]
+# selected_co = filtered[background]
+# selected_cross = filtered_cross[background]
+#
+# a, b, c = myfit(selected_range, selected_co)
+# y_co = c + b*df['range'] + a*(df['range']**2)
+# y_co_background = c + b*selected_range + a*(selected_range**2)
+#
+# a, b, c = myfit(selected_range, selected_cross)
+# y_cross = c + b*df['range'] + a*(df['range']**2)
+# y_cross_background = c + b*selected_range + a*(selected_range**2)
+#
+# fig, axes = plt.subplots(1, 3, sharex=True, sharey=True,
+#                          figsize=(9, 4))
+#
+# axes[0].plot(co, df['range'], '.', label='$SNR_{co}$')
+# axes[0].plot(cross, df['range'], '.', label='$SNR_{cross}$')
+#
+# axes[2].plot(filtered, df['range'], '.', label='$SNR_{co}$')
+# axes[2].plot(filtered_cross, df['range'], '.', label='$SNR_{cross}$')
+#
+# axes[0].plot(y_co, df['range'], label='Fitted $SNR_{co}$')
+# axes[0].plot(y_cross, df['range'], label='Fitted $SNR_{cross}$')
+#
+# axes[1].plot((filtered)/y_co, df['range'], '.', label='Corrected $SNR_{co}$')
+# axes[1].plot((filtered_cross)/y_cross, df['range'], '.', label='Corrected $SNR_{cross}$')
+#
+# axes[0].set_xlim([0.9995, 1.001])
+# axes[0].yaxis.set_major_formatter(hd.m_km_ticks())
+# axes[0].set_ylabel('Height a.g.l [km]')
+# for ax in axes.flatten():
+#     ax.tick_params(axis='x', labelrotation=45)
+#     ax.legend()
+#     ax.set_xlabel('SNR')
 
 # %%
+time = 1
+co = avg['co_signal'][time, :].values
+cross = avg['cross_signal_bleed'][time, :].values
+
+coeff = pywt.swt(np.pad(co-1, (0, 67), 'constant', constant_values=(0, 0)), wavelet, level=5)
+uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+filtered = pywt.iswt(coeff, wavelet) + 1
+filtered = filtered[:len(co)]
+
+peaks, _ = find_peaks(-filtered)
+results = peak_widths(filtered, peaks, rel_height=1)
+
+x = np.arange(len(co))
+peaks = peaks[filtered[peaks] < 1]
+a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
+smooth_peaks = c + b*x + a*(x**2)
+fig, ax = plt.subplots()
+ax.plot(co)
+ax.plot(filtered)
+ax.plot(peaks, filtered[peaks], 'o')
+ax.plot(x, smooth_peaks)
+ax.plot(x, smooth_peaks + 6e-5)
+ax.axhline(y=1+6e-5)
+# for i in range(len(results[1])):
+#     ax.hlines(results[1][i], results[2][i], results[3][i])
+# %%
+
+
+def background_correction(x, wavelet='bior2.6'):
+    coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
+                     wavelet, level=5)
+    uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+    coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+    filtered = pywt.iswt(coeff, wavelet) + 1
+    filtered = filtered[:len(x)]
+
+    peaks, _ = find_peaks(-filtered)
+    peaks = peaks[filtered[peaks] < 1]
+
+    indices = np.arange(len(x))
+    a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
+    smooth_peaks = c + b*indices + a*(indices**2)
+    background = filtered < smooth_peaks + 6e-5
+
+    selected_x = filtered[background]
+    selected_indices = indices[background]
+
+    a, b, c = np.polyfit(selected_indices, selected_x, deg=2)
+    x_fitted = c + b*indices + a*(indices**2)
+    x_background_fitted = c + b*selected_indices + a*(selected_indices**2)
+
+    x_corrected = x/x_fitted
+    x_background_corrected = selected_x/x_background_fitted
+
+    return x_corrected, x_background_corrected
+
+
+# %%
+corrected_co, _ = background_correction(co)
+corrected_cross, _ = background_correction(cross)
+aerosol_mask = avg['aerosol_percentage'][time, :] > 0.8
+
+plt.plot(((cross-1) / (co-1))[aerosol_mask], df['range'][aerosol_mask])
+plt.plot(((corrected_cross-1) / (corrected_co-1))[aerosol_mask], df['range'][aerosol_mask])
+
+# %%
+(len(x) // 2**5 + 3) * 2**5 - len(x)
+2**5
+len(x) / 2**5
+# %%
+pywt.swt(np.pad(x-1, (0, 35), 'constant', constant_values=(0, 0)),
+         wavelet, level=5)
