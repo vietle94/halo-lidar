@@ -193,11 +193,20 @@ class span_aerosol(span_select):
         # a, b, c = np.polyfit(selected_range, selected_cross, deg=2)
         # y_cross = c + b*self.range + a*(self.range**2)
         # y_cross_background = c + b*selected_range + a*(selected_range**2)
-
-        co_corrected, co_corrected_background, co_fitted = background_correction(self.co)
+        background, peaks, smooth_peaks = background_detection(self.co)
+        co_corrected, co_corrected_background, co_fitted = background_correction(
+            self.co, background)
         cross_corrected, cross_corrected_background, cross_fitted = background_correction(
-            self.cross)
-
+            self.cross, background)
+        # co_corrected, co_corrected_background, co_fitted = background_correction(self.co)
+        # cross_corrected, cross_corrected_background, cross_fitted = background_correction(
+        #     self.cross)
+        self.ax2.plot(self.co[background],
+                      self.range[background], 'x',
+                      label='background_co', c='red', alpha=0.5)
+        self.ax2.plot(self.cross[background],
+                      self.range[background], 'x',
+                      label='background_cross', c='blue', alpha=0.5)
         self.ax2.plot(co_fitted, self.range, c='red', label='wavelet-fit co')
         self.ax2.plot(cross_fitted, self.range, c='blue', label='wavelet-fit cross')
         self.ax2.legend()
@@ -265,6 +274,8 @@ class span_aerosol(span_select):
 
         self.ax3.axline((0, 0), (0.35, 0.35), color='grey', linewidth=0.5,
                         ls='--')
+        self.ax3.grid()
+        self.ax4.grid()
         self.canvas.draw()
 
 
@@ -314,13 +325,17 @@ class area_aerosol():
         self.ax1.set_xlim([0.9995, 1.003])
         self.ax1.set_ylabel('Height [km]')
 
-        self.ax2.plot(self.co_mean_profile,
-                      self.range, '.', label='co_signal', c='red')
-        self.ax2.plot(self.cross_mean_profile,
-                      self.range, '.', label='cross_signal', c='blue')
+        self.ax2.scatter(self.co_mean_profile,
+                         self.range, label='co_signal', c='red',
+                         alpha=0.3, edgecolors='none', s=20)
+        self.ax2.scatter(self.cross_mean_profile,
+                         self.range, label='cross_signal', c='blue',
+                         alpha=0.3, edgecolors='none', s=20)
         self.ax2.yaxis.set_major_formatter(m_km_ticks())
         self.ax2.legend()
         self.ax2.set_xlim([0.9995, 1.003])
+        self.ax1.grid()
+        self.ax2.grid()
         self.canvas.draw()
         self.span_aerosol = span_aerosol(self.co_mean_profile, self.range, self.ax1,
                                          self.canvas, 'vertical',
@@ -343,14 +358,17 @@ def m_km_ticks():
     return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
 
 
-def background_correction(x, wavelet='bior2.6'):
+def background_detection(x, wavelet='bior2.6'):
     coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
                      wavelet, level=5)
     uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
     coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
     filtered = pywt.iswt(coeff, wavelet) + 1
     filtered = filtered[:len(x)]
-
+    filtered_ = np.convolve(filtered, [1/5, 1/5, 1/5, 1/5, 1/5], 'same')
+    filtered_[:3] = filtered[:3]
+    filtered_[-3:] = filtered[-3:]
+    filtered = filtered_
     peaks, _ = find_peaks(-filtered)
     peaks = peaks[filtered[peaks] < 1]
 
@@ -359,7 +377,12 @@ def background_correction(x, wavelet='bior2.6'):
     smooth_peaks = c + b*indices + a*(indices**2)
     background = filtered < smooth_peaks + 6e-5
 
-    selected_x = filtered[background]
+    return background, peaks, smooth_peaks
+
+
+def background_correction(x, background):
+    indices = np.arange(len(x))
+    selected_x = x[background]
     selected_indices = indices[background]
 
     a, b, c = np.polyfit(selected_indices, selected_x, deg=2)

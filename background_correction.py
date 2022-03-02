@@ -95,7 +95,7 @@ df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-04-15-Hyytiala-46_classifi
 df = bleed_through(df)
 
 # %%
-time = 0
+time = 19
 co = avg['co_signal'][time, :].values
 cross = avg['cross_signal_bleed'][time, :].values
 
@@ -385,7 +385,7 @@ ax.plot(filtered, df['range'])
 #     ax.set_xlabel('SNR')
 
 # %%
-time = 1
+time = 19
 co = avg['co_signal'][time, :].values
 cross = avg['cross_signal_bleed'][time, :].values
 
@@ -414,14 +414,17 @@ ax.axhline(y=1+6e-5)
 # %%
 
 
-def background_correction(x, wavelet='bior2.6'):
+def background_detection(x, wavelet='bior2.6'):
     coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
                      wavelet, level=5)
     uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
     coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
     filtered = pywt.iswt(coeff, wavelet) + 1
     filtered = filtered[:len(x)]
-
+    filtered_ = np.convolve(filtered, [1/5, 1/5, 1/5, 1/5, 1/5], 'same')
+    filtered_[:3] = filtered[:3]
+    filtered_[-3:] = filtered[-3:]
+    filtered = filtered_
     peaks, _ = find_peaks(-filtered)
     peaks = peaks[filtered[peaks] < 1]
 
@@ -430,7 +433,12 @@ def background_correction(x, wavelet='bior2.6'):
     smooth_peaks = c + b*indices + a*(indices**2)
     background = filtered < smooth_peaks + 6e-5
 
-    selected_x = filtered[background]
+    return background, peaks, smooth_peaks, filtered
+
+
+def background_correction(x, background):
+    indices = np.arange(len(x))
+    selected_x = x[background]
     selected_indices = indices[background]
 
     a, b, c = np.polyfit(selected_indices, selected_x, deg=2)
@@ -440,21 +448,31 @@ def background_correction(x, wavelet='bior2.6'):
     x_corrected = x/x_fitted
     x_background_corrected = selected_x/x_background_fitted
 
-    return x_corrected, x_background_corrected
+    return x_corrected, x_background_corrected, x_fitted
 
 
 # %%
-corrected_co, _ = background_correction(co)
-corrected_cross, _ = background_correction(cross)
+# for time in range(24):
+time = 12
+co = avg['co_signal'][time, :].values
+cross = avg['cross_signal_bleed'][time, :].values
+# background, peaks, smooth_peaks, co_smooth = background_detection(co, wavelet='sym8')
+background, peaks, smooth_peaks, co_smooth = background_detection(co)
+corrected_co, _, co_fitted = background_correction(co, background)
+corrected_cross, _, cross_fitted = background_correction(cross, background)
 aerosol_mask = avg['aerosol_percentage'][time, :] > 0.8
+fig, ax = plt.subplots()
+ax.plot(co, df['range'], '.', label='co', alpha=0.5)
+ax.plot(cross, df['range'], '.', label='cross', alpha=0.5)
+ax.plot(co[background], df['range'][background], 'x')
+ax.plot(cross[background], df['range'][background], 'x')
+# ax.plot(smooth_peaks, df['range'], '--')
+ax.plot(co_smooth, df['range'])
+ax.plot(smooth_peaks + 6e-5, df['range'], '--')
+ax.plot(co_fitted, df['range'], label='co_fitted')
+ax.plot(cross_fitted, df['range'], label='cross_fitted')
 
-plt.plot(((cross-1) / (co-1))[aerosol_mask], df['range'][aerosol_mask])
-plt.plot(((corrected_cross-1) / (corrected_co-1))[aerosol_mask], df['range'][aerosol_mask])
-
-# %%
-(len(x) // 2**5 + 3) * 2**5 - len(x)
-2**5
-len(x) / 2**5
-# %%
-pywt.swt(np.pad(x-1, (0, 35), 'constant', constant_values=(0, 0)),
-         wavelet, level=5)
+ax.axvline(x=1 + 6e-5)
+ax.set_xlim([0.9995, 1.001])
+ax.legend()
+# break
