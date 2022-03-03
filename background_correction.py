@@ -454,6 +454,10 @@ def background_correction(x, background):
 # %%
 # for time in range(24):
 time = 12
+filter_aerosol = df.classified == 10
+wavelet = 'bior2.6'
+avg = df[['co_signal', 'cross_signal_bleed']].resample(time='60min').mean(dim='time')
+avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
 co = avg['co_signal'][time, :].values
 cross = avg['cross_signal_bleed'][time, :].values
 # background, peaks, smooth_peaks, co_smooth = background_detection(co, wavelet='sym8')
@@ -461,18 +465,79 @@ background, peaks, smooth_peaks, co_smooth = background_detection(co)
 corrected_co, _, co_fitted = background_correction(co, background)
 corrected_cross, _, cross_fitted = background_correction(cross, background)
 aerosol_mask = avg['aerosol_percentage'][time, :] > 0.8
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(9, 6))
 ax.plot(co, df['range'], '.', label='co', alpha=0.5)
 ax.plot(cross, df['range'], '.', label='cross', alpha=0.5)
 ax.plot(co[background], df['range'][background], 'x')
 ax.plot(cross[background], df['range'][background], 'x')
 # ax.plot(smooth_peaks, df['range'], '--')
-ax.plot(co_smooth, df['range'])
-ax.plot(smooth_peaks + 6e-5, df['range'], '--')
+ax.plot(co_smooth, df['range'], label='co smoothed')
+ax.plot(smooth_peaks + 6e-5, df['range'], '--', label='threshold for co smoothed')
 ax.plot(co_fitted, df['range'], label='co_fitted')
 ax.plot(cross_fitted, df['range'], label='cross_fitted')
 
-ax.axvline(x=1 + 6e-5)
+ax.axvline(x=1 + 6e-5, label='original threshold')
 ax.set_xlim([0.9995, 1.001])
 ax.legend()
+fig.savefig(r'F:\halo\paper\figures\background_compare/background_algorithm.png',
+            bbox_inches='tight')
 # break
+
+# %%
+df = pd.concat([pd.read_csv(x)
+                for x in glob.glob(r'F:\halo\paper\figures\background_compare/*.csv')])
+df['time'] = pd.to_datetime(df['time'])
+
+# %%
+z = np.polyfit(df['depo_wave'][df['aerosol'] == True],
+               df['depo_eye'][df['aerosol'] == True], 1)
+y_hat = np.poly1d(z)(df['depo_wave'][df['aerosol'] == True])
+
+text = f"$y={z[0]:0.3f}\;x{z[1]:+0.3f}$\n$R^2 = {r2_score(df['depo_eye'][df['aerosol'] == True],y_hat):0.3f}$"
+
+
+fig, ax = plt.subplots(figsize=(9, 6))
+p = ax.scatter(df['depo_wave'][df['aerosol'] == True], df['depo_eye'][df['aerosol'] == True],
+               c=df['range'][df['aerosol'] == True], alpha=0.5, edgecolors='none')
+cbar = fig.colorbar(p, ax=ax)
+cbar.ax.set_ylabel('Height [m]')
+ax.set_xlim([0, 0.35])
+ax.set_ylim([0, 0.35])
+ax.set_xlabel('Wavelet-corrected depo')
+ax.set_ylabel('Eye-corrected depo')
+ax.plot(df['depo_wave'][df['aerosol'] == True], y_hat, label='fitted line')
+ax.legend()
+ax.axline((0, 0), (0.35, 0.35), color='grey', linewidth=0.5,
+          ls='--')
+ax.text(0.05, 0.85, text, transform=ax.transAxes,
+        fontsize=10, verticalalignment='top')
+ax.grid()
+fig.savefig(r'F:\halo\paper\figures\background_compare/summary_wave_eye.png',
+            bbox_inches='tight')
+
+# %%
+z = np.polyfit(df['depo_wave'][df['aerosol'] == True],
+               df['depo'][df['aerosol'] == True], 1)
+y_hat = np.poly1d(z)(df['depo_wave'][df['aerosol'] == True])
+
+text = f"$y={z[0]:0.3f}\;x{z[1]:+0.3f}$\n$R^2 = {r2_score(df['depo'][df['aerosol'] == True],y_hat):0.3f}$"
+
+
+fig, ax = plt.subplots(figsize=(9, 6))
+p = ax.scatter(df['depo_wave'][df['aerosol'] == True], df['depo'][df['aerosol'] == True],
+               c=df['range'][df['aerosol'] == True], alpha=0.5, edgecolors='none')
+cbar = fig.colorbar(p, ax=ax)
+cbar.ax.set_ylabel('Height [m]')
+ax.set_xlim([0, 0.35])
+ax.set_ylim([0, 0.35])
+ax.set_xlabel('Wavelet-corrected depo')
+ax.set_ylabel('Original depo')
+ax.axline((0, 0), (0.35, 0.35), color='grey', linewidth=0.5,
+          ls='--')
+ax.plot(df['depo_wave'][df['aerosol'] == True], y_hat, label='fitted line')
+ax.legend()
+ax.text(0.05, 0.85, text, transform=ax.transAxes,
+        fontsize=10, verticalalignment='top')
+ax.grid()
+fig.savefig(r'F:\halo\paper\figures\background_compare/summary_wave_original.png',
+            bbox_inches='tight')
