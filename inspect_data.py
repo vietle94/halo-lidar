@@ -430,3 +430,34 @@ result = pd.DataFrame.from_dict({
 
 with open(r'F:\halo\paper\figures\background_compare/' + df.attrs['file_name'] + '_background_compare_' + str(p.t) + '.csv', 'w') as f:
     result.to_csv(f, header=f.tell() == 0, index=False)
+
+# %%
+file_name = ['2016-07-19-Hyytiala-33_background_compare*.csv',
+             '2016-07-26-Vehmasmaki-53_background_compare*.csv',
+             '2017-10-31-Sodankyla-54_background_compare*.csv',
+             '2018-04-14-Hyytiala-46_background_compare*.csv']
+
+name.split('_')[0]
+fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+for name, ax in zip(file_name, axes.flatten()):
+    file_list = glob.glob(r'F:\halo\paper\figures\background_compare/' + name)
+    data = pd.concat([pd.read_csv(x) for x in file_list])
+    aerosol = data[data['aerosol'] == True]
+    ax.plot(aerosol['depo_wave'], aerosol['depo_eye'], '.')
+    ax.set_xlabel('Wavelet corrected')
+    ax.set_ylabel('Eye-corrected')
+    ax.set_xlim([0, 0.35])
+    ax.set_ylim([0, 0.35])
+    ax.set_title(name.split('_')[0])
+    z = np.polyfit(aerosol['depo_wave'],
+                   aerosol['depo_eye'], 1)
+    y_hat = np.poly1d(z)(aerosol['depo_wave'])
+
+    text = f"$y={z[0]:0.3f}\;x{z[1]:+0.3f}$\n$R^2 = {r2_score(aerosol['depo_eye'],y_hat):0.3f}$"
+    ax.text(0.05, 0.95, text, transform=ax.transAxes,
+            fontsize=10, verticalalignment='top')
+
+    ax.axline((0, 0), (0.35, 0.35), color='grey', linewidth=0.5,
+              ls='--')
+    ax.grid()
+fig.subplots_adjust(hspace=0.4)
