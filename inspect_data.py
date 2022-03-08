@@ -193,7 +193,13 @@ class span_aerosol(span_select):
         # a, b, c = np.polyfit(selected_range, selected_cross, deg=2)
         # y_cross = c + b*self.range + a*(self.range**2)
         # y_cross_background = c + b*selected_range + a*(selected_range**2)
-        background, peaks, smooth_peaks = background_detection(self.co)
+        # background, peaks, smooth_peaks = background_detection(self.co)
+        # co_corrected, co_corrected_background, co_fitted = background_correction(
+        #     self.co, background)
+        # cross_corrected, cross_corrected_background, cross_fitted = background_correction(
+        #     self.cross, background)
+
+        background = background_detection(self.co)
         co_corrected, co_corrected_background, co_fitted = background_correction(
             self.co, background)
         cross_corrected, cross_corrected_background, cross_fitted = background_correction(
@@ -369,15 +375,17 @@ def background_detection(x, wavelet='bior2.6'):
     filtered_[:3] = filtered[:3]
     filtered_[-3:] = filtered[-3:]
     filtered = filtered_
-    peaks, _ = find_peaks(-filtered)
-    peaks = peaks[filtered[peaks] < 1]
+    # peaks, _ = find_peaks(-filtered)
+    # peaks = peaks[filtered[peaks] < 1]
+    #
+    # indices = np.arange(len(x))
+    # a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
+    # smooth_peaks = c + b*indices + a*(indices**2)
+    # background = filtered < smooth_peaks + 6e-5*2
+    background = filtered < 1 + 6e-5
 
-    indices = np.arange(len(x))
-    a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
-    smooth_peaks = c + b*indices + a*(indices**2)
-    background = filtered < smooth_peaks + 6e-5
-
-    return background, peaks, smooth_peaks
+    # return background, peaks, smooth_peaks
+    return background
 
 
 def background_correction(x, background):
@@ -396,7 +404,7 @@ def background_correction(x, background):
 
 
 # %%
-df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-04-15-Hyytiala-46_classified.nc')
+df = xr.open_dataset(r'F:\halo\classifier_new\33/2016-07-19-Hyytiala-33_classified.nc')
 df = bleed_through(df)  # just to get the bleed through mean and std
 
 filter_aerosol = df.classified == 10
@@ -435,7 +443,7 @@ with open(r'F:\halo\paper\figures\background_compare/' + df.attrs['file_name'] +
 file_name = ['2016-07-19-Hyytiala-33_background_compare*.csv',
              '2016-07-26-Vehmasmaki-53_background_compare*.csv',
              '2017-10-31-Sodankyla-54_background_compare*.csv',
-             '2018-04-14-Hyytiala-46_background_compare*.csv']
+             '2018-04-15-Hyytiala-46_background_compare*.csv']
 
 name.split('_')[0]
 fig, axes = plt.subplots(2, 2, figsize=(12, 9))
@@ -461,3 +469,10 @@ for name, ax in zip(file_name, axes.flatten()):
               ls='--')
     ax.grid()
 fig.subplots_adjust(hspace=0.4)
+
+# %%
+fig, ax = plt.subplots()
+dep = ((p.span_aerosol.cross - 1)/(p.span_aerosol.co - 1)).values
+ax.plot(p.span_aerosol.co[p.span_aerosol.range_aerosol.values == True],
+        (p.span_aerosol.depo_corrected_wave.values / dep)[p.span_aerosol.range_aerosol.values == True], '.')
+# p.span_aerosol.co
