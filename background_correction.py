@@ -5,7 +5,6 @@ import glob
 from pathlib import Path
 import pandas as pd
 import xarray as xr
-import halo_data as hd
 
 # %%
 save_folder = r'F:\halo\paper\figures\background_correction_all'
