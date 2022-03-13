@@ -1,3 +1,4 @@
+import pywt
 from scipy.io import netcdf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1081,3 +1082,45 @@ def bleed_through(df):
             (sigma_co/(df['co_signal']-1))**2
         ))
     return df
+
+
+# %% Wavelet background method
+
+
+def background_detection(x, wavelet='bior2.6'):
+    coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
+                     wavelet, level=5)
+    uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
+    coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
+    filtered = pywt.iswt(coeff, wavelet) + 1
+    filtered = filtered[:len(x)]
+    filtered_ = np.convolve(filtered, [1/5, 1/5, 1/5, 1/5, 1/5], 'same')
+    filtered_[:3] = filtered[:3]
+    filtered_[-3:] = filtered[-3:]
+    filtered = filtered_
+    # peaks, _ = find_peaks(-filtered)
+    # peaks = peaks[filtered[peaks] < 1]
+    #
+    # indices = np.arange(len(x))
+    # a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
+    # smooth_peaks = c + b*indices + a*(indices**2)
+    # background = filtered < smooth_peaks + 6e-5*2
+    background = filtered < 1 + 6e-5
+
+    # return background, peaks, smooth_peaks
+    return background
+
+
+def background_correction(x, background):
+    indices = np.arange(len(x))
+    selected_x = x[background]
+    selected_indices = indices[background]
+
+    a, b, c = np.polyfit(selected_indices, selected_x, deg=2)
+    x_fitted = c + b*indices + a*(indices**2)
+    x_background_fitted = c + b*selected_indices + a*(selected_indices**2)
+
+    x_corrected = x/x_fitted
+    x_background_corrected = selected_x/x_background_fitted
+
+    return x_corrected, x_background_corrected, x_fitted
