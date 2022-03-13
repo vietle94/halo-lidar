@@ -19,7 +19,7 @@ for file in file_list:
     avg = df[['co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
     avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
 
-    for t in range(24):
+    for t in range(pd.to_datetime(avg.time.values[-1]).hour+1):
 
         range_aerosol = avg['aerosol_percentage'][t, :] > 0.8
         co_mean_profile = avg['co_signal'][t, :]
