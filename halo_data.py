@@ -1087,7 +1087,7 @@ def bleed_through(df):
 # %% Wavelet background method
 
 
-def background_detection(x, wavelet='bior2.6'):
+def background_detection(x, threshold, wavelet='bior2.6'):
     coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
                      wavelet, level=5)
     uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
@@ -1105,7 +1105,7 @@ def background_detection(x, wavelet='bior2.6'):
     # a, b, c = np.polyfit(peaks, filtered[peaks], deg=2)
     # smooth_peaks = c + b*indices + a*(indices**2)
     # background = filtered < smooth_peaks + 6e-5*2
-    background = filtered < 1 + 6e-5
+    background = filtered < 1 + threshold
 
     # return background, peaks, smooth_peaks
     return background

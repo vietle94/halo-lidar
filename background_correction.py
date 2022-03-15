@@ -18,14 +18,15 @@ for file in file_list:
     wavelet = 'bior2.6'
     avg = df[['co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
     avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
+    threshold_n = np.median(df[['co_signal']].resample(time='60min').count()['co_signal'].values)
+    threshold = df.attrs['background_snr_sd']/np.sqrt(threshold_n)
+    for t in avg['time']:
 
-    for t in range(pd.to_datetime(avg.time.values[-1]).hour+1):
+        range_aerosol = avg['aerosol_percentage'].loc[t, :].values > 0.8
+        co_mean_profile = avg['co_signal'].loc[t, :].values
+        cross_mean_profile = avg['cross_signal'].loc[t, :].values
 
-        range_aerosol = avg['aerosol_percentage'][t, :] > 0.8
-        co_mean_profile = avg['co_signal'][t, :]
-        cross_mean_profile = avg['cross_signal'][t, :]
-
-        background = hd.background_detection(co_mean_profile)
+        background = hd.background_detection(co_mean_profile, threshold)
         co_corrected, co_corrected_background, co_fitted = hd.background_correction(
             co_mean_profile, background)
         cross_corrected, cross_corrected_background, cross_fitted = hd.background_correction(
@@ -58,8 +59,8 @@ for file in file_list:
             ))
 
         result = pd.DataFrame.from_dict({
-            'time': t,
-            'range': avg['range'][range_aerosol],
+            'time': t.values,
+            'range': avg['range'][range_aerosol].values,
             # original depo value
             'depo': ((cross_mean_profile - 1)/(co_mean_profile - 1))[range_aerosol],
             'depo_wave': depo_corrected_wave[range_aerosol],  # wave depo value
@@ -114,6 +115,6 @@ for file in file_list:
             result.to_csv(f, header=f.tell() == 0, index=False)
 
         fig.savefig(depo_sub_folder + '/' + df.attrs['file_name'] +
-                    '_aerosol_bkg_corrected_' + str(t),
+                    '_aerosol_bkg_corrected_' + str(pd.to_datetime(t.values).hour),
                     bbox_inches='tight')
         plt.close('all')
