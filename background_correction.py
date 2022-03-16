@@ -7,25 +7,29 @@ import pandas as pd
 import xarray as xr
 
 # %%
-save_folder = r'F:\halo\paper\figures\background_correction_all'
-file_list = glob.glob(r'F:\halo\classifier_new\33/*.nc')
+save_folder = r'F:\halo\paper\figures\background_correction_all/53/'
+file_list = glob.glob(r'F:\halo\classifier_new\53/*.nc')
 for file in file_list:
     print(file)
     df = xr.open_dataset(file)
     df = hd.bleed_through(df)  # just to get the bleed through mean and std
+    _, index = np.unique(df.coords['time'], return_index=True)
+    df = df.isel(time=index)
+    df = df.loc[{'time': sorted(df.coords['time'].values)}]
 
     filter_aerosol = df.classified == 10
     wavelet = 'bior2.6'
     avg = df[['co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
     avg['aerosol_percentage'] = filter_aerosol.resample(time='60min').mean(dim='time')
-    threshold_n = np.median(df[['co_signal']].resample(time='60min').count()['co_signal'].values)
+    threshold_n = np.nanmedian(df[['co_signal']].resample(time='60min').count()['co_signal'].values)
     threshold = df.attrs['background_snr_sd']/np.sqrt(threshold_n)
     for t in avg['time']:
 
         range_aerosol = avg['aerosol_percentage'].loc[t, :].values > 0.8
         co_mean_profile = avg['co_signal'].loc[t, :].values
         cross_mean_profile = avg['cross_signal'].loc[t, :].values
-
+        if all(np.isnan(co_mean_profile)) | all(np.isnan(cross_mean_profile)):
+            continue
         background = hd.background_detection(co_mean_profile, threshold)
         co_corrected, co_corrected_background, co_fitted = hd.background_correction(
             co_mean_profile, background)
