@@ -7,8 +7,8 @@ import pandas as pd
 import xarray as xr
 
 # %%
-save_folder = r'F:\halo\paper\figures\background_correction_all/53/'
-file_list = glob.glob(r'F:\halo\classifier_new\53/*.nc')
+save_folder = r'F:\halo\paper\figures\background_correction_all/46/'
+file_list = glob.glob(r'F:\halo\classifier_new\46/*.nc')
 for file in file_list:
     print(file)
     df = xr.open_dataset(file)
@@ -24,18 +24,21 @@ for file in file_list:
     threshold_n = np.nanmedian(df[['co_signal']].resample(time='60min').count()['co_signal'].values)
     threshold = df.attrs['background_snr_sd']/np.sqrt(threshold_n)
     for t in avg['time']:
-
         range_aerosol = avg['aerosol_percentage'].loc[t, :].values > 0.8
         co_mean_profile = avg['co_signal'].loc[t, :].values
         cross_mean_profile = avg['cross_signal'].loc[t, :].values
         if all(np.isnan(co_mean_profile)) | all(np.isnan(cross_mean_profile)):
             continue
         background = hd.background_detection(co_mean_profile, threshold)
+        if np.sum(background)/len(background) < 0.5:
+            continue
         co_corrected, co_corrected_background, co_fitted = hd.background_correction(
             co_mean_profile, background)
         cross_corrected, cross_corrected_background, cross_fitted = hd.background_correction(
             cross_mean_profile, background)
 
+        if (np.max(np.abs(co_fitted - 1)) > 4*threshold) | (np.max(np.abs(cross_fitted - 1)) > 4*threshold):
+            continue
         cross_sd_background = np.nanstd(cross_corrected_background)
         co_sd_background = np.nanstd(co_corrected_background)
         # self.sigma_co, self.sigma_cross = co_sd_background, cross_sd_background
@@ -115,7 +118,7 @@ for file in file_list:
 
         # Append to or create new csv file
         with open(depo_sub_folder + '/' +
-                  df.attrs['file_name'] + '_aerosol_bkg_corrected.csv', 'a') as f:
+                  df.attrs['file_name'] + '_aerosol_bkg_corrected.csv', 'w') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
 
         fig.savefig(depo_sub_folder + '/' + df.attrs['file_name'] +
