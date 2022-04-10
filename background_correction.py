@@ -7,8 +7,8 @@ import pandas as pd
 import xarray as xr
 
 # %%
-save_folder = r'F:\halo\paper\figures\background_correction_all/46/'
-file_list = glob.glob(r'F:\halo\classifier_new\46/*.nc')
+save_folder = r'F:\halo\paper\figures\background_correction_all/32/'
+file_list = glob.glob(r'F:\halo\classifier_new\32/*.nc')
 for file in file_list:
     print(file)
     df = xr.open_dataset(file)
@@ -25,11 +25,18 @@ for file in file_list:
     threshold = df.attrs['background_snr_sd']/np.sqrt(threshold_n)
     for t in avg['time']:
         range_aerosol = avg['aerosol_percentage'].loc[t, :].values > 0.8
+
+        if np.sum(range_aerosol) == 0:
+            continue
+
         co_mean_profile = avg['co_signal'].loc[t, :].values
         cross_mean_profile = avg['cross_signal'].loc[t, :].values
+
         if all(np.isnan(co_mean_profile)) | all(np.isnan(cross_mean_profile)):
             continue
+
         background = hd.background_detection(co_mean_profile, threshold)
+
         if np.sum(background)/len(background) < 0.5:
             continue
         co_corrected, co_corrected_background, co_fitted = hd.background_correction(
@@ -37,13 +44,8 @@ for file in file_list:
         cross_corrected, cross_corrected_background, cross_fitted = hd.background_correction(
             cross_mean_profile, background)
 
-        if (np.max(np.abs(co_fitted - 1)) > 4*threshold) | (np.max(np.abs(cross_fitted - 1)) > 4*threshold):
-            continue
         cross_sd_background = np.nanstd(cross_corrected_background)
         co_sd_background = np.nanstd(co_corrected_background)
-        # self.sigma_co, self.sigma_cross = co_sd_background, cross_sd_background
-        # bleed = self.bleed_mean
-        # sigma_bleed = self.bleed_sd
 
         cross_corrected = (cross_corrected - 1) - \
             df.attrs['bleed_through_mean'] * (co_corrected - 1) + 1
@@ -64,7 +66,12 @@ for file in file_list:
                 (cross_sd_background_bleed/(cross_corrected - 1))**2 +
                 (co_sd_background/(co_corrected - 1))**2
             ))
-
+        if (np.max(np.abs(co_fitted - 1)) > 4*threshold) | (np.max(np.abs(cross_fitted - 1)) > 4*threshold):
+            good_profile_label = 'Bad'
+            good_profile = np.repeat(False, len(depo_corrected_wave[range_aerosol]))
+        else:
+            good_profile = np.repeat(True, len(depo_corrected_wave[range_aerosol]))
+            good_profile_label = 'Good'
         result = pd.DataFrame.from_dict({
             'time': t.values,
             'range': avg['range'][range_aerosol].values,
@@ -72,7 +79,8 @@ for file in file_list:
             'depo': ((cross_mean_profile - 1)/(co_mean_profile - 1))[range_aerosol],
             'depo_wave': depo_corrected_wave[range_aerosol],  # wave depo value
             'depo_wave_sd': depo_corrected_sd_wave[range_aerosol],
-            'co_corrected': co_corrected[range_aerosol]
+            'co_corrected': co_corrected[range_aerosol],
+            'good_profile': good_profile
         })
 
         fig, ax = plt.subplots(1, 3, figsize=(12, 6))
@@ -105,7 +113,7 @@ for file in file_list:
                        label='corrected depo',
                        errorevery=1, elinewidth=0.5, fmt='.')
         ax[2].set_xlim([-0.05, 0.4])
-        ax[2].set_xlabel('Depolarization ratio (only Aerosol)')
+        ax[2].set_xlabel('Depolarization ratio (only Aerosol) ' + good_profile_label)
 
         for ax_ in ax.flatten():
             ax_.grid()
@@ -118,7 +126,7 @@ for file in file_list:
 
         # Append to or create new csv file
         with open(depo_sub_folder + '/' +
-                  df.attrs['file_name'] + '_aerosol_bkg_corrected.csv', 'w') as f:
+                  df.attrs['file_name'] + '_aerosol_bkg_corrected.csv', 'a') as f:
             result.to_csv(f, header=f.tell() == 0, index=False)
 
         fig.savefig(depo_sub_folder + '/' + df.attrs['file_name'] +
