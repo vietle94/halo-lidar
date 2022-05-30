@@ -42,7 +42,8 @@ import pickle
 # %%
 #######################################
 
-save_dir = '/media/le/Elements/halo/paper/figures/focus_function/'
+# save_dir = '/media/le/Elements/halo/paper/figures/focus_function/'
+save_dir = r'F:\halo/paper/figures/focus_function/'
 df = xr.open_dataset(r'F:\halo\classifier_new\32/2019-04-05-Uto-32_classified.nc')
 # df = xr.open_dataset(r'/media/le/Elements/halo/classifier_new/32/2019-04-05-Uto-32_classified.nc')
 avg = df[['beta_raw', 'co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
@@ -166,8 +167,23 @@ for grp_name, grp_value in data.groupby(data['time']):
     result_D.append(D_base)
 
 # %%
-fig, ax = plt.subplots()
-ax.hist2d(result_f, result_D)
+%matplotlib qt
+fig, ax = plt.subplots(figsize=(12, 9))
+H, x_edges, y_edges = np.histogram2d(
+    result_f,
+    result_D,
+    bins=[np.linspace(0, 1000, 120), np.linspace(0, 60e-3, 120)])
+
+H[H == 0] = np.nan
+X, Y = np.meshgrid(x_edges, y_edges)
+p = ax.pcolormesh(x_edges, y_edges, H.T)
+ax.set_xlim([000, 1000])
+ax.set_ylim([0e-3, 60e-3])
+ax.set_xlabel('f')
+ax.set_ylabel('D')
+cbar = fig.colorbar(p, ax=ax)
+cbar.ax.set_ylabel('N')
+fig.savefig(save_dir + '2d_histogram_f_D', bbox_inches='tight')
 
 # %%
 scaler = StandardScaler()
