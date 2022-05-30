@@ -1,3 +1,5 @@
+from scipy.stats import pearsonr
+from sklearn.preprocessing import StandardScaler
 import json
 from sklearn.metrics import r2_score
 import matplotlib.cm as cm
@@ -40,20 +42,23 @@ import pickle
 # %%
 #######################################
 
-
-# %%
 save_dir = '/media/le/Elements/halo/paper/figures/focus_function/'
-# df = xr.open_dataset(r'F:\halo\classifier_new\32/2019-04-05-Uto-32_classified.nc')
-df = xr.open_dataset(r'/media/le/Elements/halo/classifier_new/32/2019-04-05-Uto-32_classified.nc')
+df = xr.open_dataset(r'F:\halo\classifier_new\32/2019-04-05-Uto-32_classified.nc')
+# df = xr.open_dataset(r'/media/le/Elements/halo/classifier_new/32/2019-04-05-Uto-32_classified.nc')
 avg = df[['beta_raw', 'co_signal', 'cross_signal']].resample(time='60min').mean(dim='time')
 
-# ceilo = Dataset(r'F:\halo\paper\uto_ceilo_20190405\20190405_uto_cl31.nc')
-ceilo = Dataset(r'/media/le/Elements/halo/paper/uto_ceilo_20190405/20190405_uto_cl31.nc')
+ceilo = Dataset(r'F:\halo\paper\uto_ceilo_20190405\20190405_uto_cl31.nc')
+# ceilo = Dataset(r'/media/le/Elements/halo/paper/uto_ceilo_20190405/20190405_uto_cl31.nc')
 ceilo_beta = ceilo['beta_raw'][:]
 ceilo_range = ceilo['range'][:]
 ceilo_time = [pd.Timedelta(x, 'H') + pd.to_datetime(df.time.values[0]).floor('D')
               for x in ceilo['time'][:]]
 ceilo_time = pd.to_datetime(ceilo_time)
+ceilo_time = ceilo_time - pd.Timedelta('2H')
+
+ceilo_beta = ceilo_beta[ceilo_time > pd.to_datetime('20190405')]
+ceilo_time = ceilo_time[ceilo_time > pd.to_datetime('20190405')]
+
 ceilo_time_seconds = ceilo_time.hour*3600+ceilo_time.minute*60+ceilo_time.second
 halo_time = pd.to_datetime(df.time.values)
 halo_time_seconds = halo_time.hour*3600+halo_time.minute*60+halo_time.second
@@ -97,10 +102,11 @@ def beta(SNR, R, f=308, D=18e-3):
 df['co_signal'] = xr.where(
     df['co_signal'] < 3*df.attrs['background_snr_sd'] + 1, np.nan, df['co_signal'])
 halo_range = df['range'].values
-halo_range = halo_range[halo_range > 500]
+min_range = 200
+halo_range = halo_range[halo_range > min_range]
 final_range_bin = np.append((halo_range - 15), (halo_range + 15)[-1])
 final_range_bin = final_range_bin[final_range_bin < 7710]
-halo_snr = (df['co_signal']-1)[:, df['range'] > 500]
+halo_snr = (df['co_signal']-1)[:, df['range'] > min_range]
 final_time_bin = pd.date_range('2019-04-05', periods=34, freq='30min')
 final_time_bin_seconds = final_time_bin.hour*3600 + final_time_bin.minute*60 + final_time_bin.minute
 
@@ -112,10 +118,6 @@ ceilo_beta_binned, _, _, _ = binned_statistic_2d(ceilo_time_seconds_flattened,
                                                  ceilo_range_flattened, ceilo_beta_flattened,
                                                  bins=[final_time_bin_seconds, final_range_bin],
                                                  statistic=np.nanmean)
-ceilo_beta_count, _, _, _ = binned_statistic_2d(ceilo_time_seconds_flattened,
-                                                ceilo_range_flattened, ceilo_beta_flattened,
-                                                bins=[final_time_bin_seconds, final_range_bin],
-                                                statistic='count')
 
 # %%
 halo_snr_flattened = halo_snr.values.flatten()
@@ -125,13 +127,6 @@ halo_snr_binned, _, _, _ = binned_statistic_2d(halo_time_seconds_flattened,
                                                halo_range_flattened, halo_snr_flattened,
                                                bins=[final_time_bin_seconds, final_range_bin],
                                                statistic=np.nanmean)
-halo_snr_count, _, _, _ = binned_statistic_2d(halo_time_seconds_flattened,
-                                              halo_range_flattened, halo_snr_flattened,
-                                              bins=[final_time_bin_seconds, final_range_bin],
-                                              statistic='count')
-
-# %%
-halo_snr_binned[halo_snr_count < 5] = np.nan
 
 # %%
 data = pd.DataFrame({'halo_snr': halo_snr_binned.flatten(),
@@ -139,15 +134,88 @@ data = pd.DataFrame({'halo_snr': halo_snr_binned.flatten(),
                      'time': np.repeat(final_time_bin[:-1], final_range_bin.size-1),
                      'range': np.tile(final_range_bin[:-1], final_time_bin.size - 1)})
 
+
 # %%
 data['ceilo_beta'] = np.log10(data['ceilo_beta'])
-data = data[data['ceilo_beta'] > -7.5]
-data = data[data['halo_snr'] > 0]
-data = data[data['range'] < 2000]
-data = data[data['range'] > 200]
 data = data.dropna(axis=0)
 data = data.reset_index(drop=True)
+data = data[data['range'] < 1500]
 
+# %%
+f = np.linspace(100, 1000, 100)
+D = np.linspace(10e-3, 60e-3, 100)
+
+result_rms = []
+result_f = []
+result_D = []
+for grp_name, grp_value in data.groupby(data['time']):
+    rms_base = 1100
+    f_base = 900
+    D_base = 900
+    for fi, f_ in enumerate(f):
+        for Di, D_ in enumerate(D):
+            corrected_beta = beta(grp_value['halo_snr'], grp_value['range'], f=f_, D=D_)
+            corrected_beta = np.log10(corrected_beta)
+            new_rms = np.sqrt(np.mean((data['ceilo_beta'] - corrected_beta)**2))
+            if new_rms < rms_base:
+                rms_base = new_rms
+                f_base = f_
+                D_base = D_
+    result_rms.append(rms_base)
+    result_f.append(f_base)
+    result_D.append(D_base)
+
+# %%
+fig, ax = plt.subplots()
+ax.hist2d(result_f, result_D)
+
+# %%
+scaler = StandardScaler()
+r2_matrix = np.empty((f.size, D.size))
+rms_matrix = np.empty((f.size, D.size))
+
+for fi, f_ in enumerate(f):
+    for Di, D_ in enumerate(D):
+        corrected_beta = beta(data['halo_snr'], data['range'], f=f_, D=D_)
+        corrected_beta = np.log10(corrected_beta)
+        corrected_beta_compare = corrected_beta
+        ceilo_beta_compare = data['ceilo_beta']
+        r2_matrix[fi, Di] = pearsonr(ceilo_beta_compare, corrected_beta_compare)[0]
+        rms_matrix[fi, Di] = np.sqrt(np.mean((corrected_beta_compare - ceilo_beta_compare)**2))
+
+
+# %%
+fig, ax = plt.subplots(2, 1, figsize=(12, 6), sharex=True, sharey=True)
+p = ax[0].pcolormesh(f, D, r2_matrix.T)
+fig.colorbar(p, ax=ax[0])
+ax[0].set_title('Pearson_R')
+
+pp = ax[1].pcolormesh(f, D, rms_matrix.T)
+fig.colorbar(pp, ax=ax[1])
+ax[1].set_title('root_mean_squared_error')
+
+# %%
+fig, ax = plt.subplots(3, 3, sharey=True, sharex=True, figsize=(12, 6))
+
+for ax_, (f, D) in zip(ax.flatten(), list(itertools.product([100, 300, 900], [10e-3, 18e-3, 30e-3]))):
+    mask = data['range'] < 1100
+    x_data = np.log10(beta(data['halo_snr'][mask], data['range'][mask], f, D))
+    y_data = data['ceilo_beta'][mask]
+    ax_.plot(x_data, y_data, '.', alpha=0.1)
+    ax_.set_title(f'f:{f}m, D:{D}m')
+
+    axline_min = np.nanmin((np.nanmin(x_data), np.nanmin(y_data)))
+    axline_max = np.nanmin((np.nanmax(x_data), np.nanmax(y_data)))
+    ax_.axline((axline_min, axline_min),
+               (axline_max, axline_max),
+               color='grey', linewidth=0.5, ls='--')
+
+    ax_.grid()
+    ax_.set_xlim([-8, -4])
+    ax_.set_ylim([-8, -4])
+    ax_.set_xticks([-8, -7, -6, -5, -4])
+
+# %%
 #################################################
 # Stan model
 # # %%
