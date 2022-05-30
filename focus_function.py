@@ -133,7 +133,7 @@ halo_snr_binned, _, _, _ = binned_statistic_2d(halo_time_seconds_flattened,
 data = pd.DataFrame({'halo_snr': halo_snr_binned.flatten(),
                      'ceilo_beta': ceilo_beta_binned.flatten(),
                      'time': np.repeat(final_time_bin[:-1], final_range_bin.size-1),
-                     'range': np.tile(final_range_bin[:-1], final_time_bin.size - 1)})
+                     'range': np.tile(final_range_bin[:-1]+15, final_time_bin.size - 1)})
 
 
 # %%
