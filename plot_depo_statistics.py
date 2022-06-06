@@ -12,9 +12,12 @@ import datetime
 import string
 %matplotlib qt
 
+
 # %%
 path = r'F:\halo\paper\figures/final_fig/'
 sites = ['32', '33', '46', '53', '54']
+location_site = ['Uto', 'Hyytiala', 'Vehmasmaki', 'Sodankyla']
+
 df_full = pd.DataFrame({})
 for site in sites:
     site_path = r'F:\halo\paper\figures\background_correction_all/stan/' + site + '/'
@@ -163,20 +166,6 @@ fig2.tight_layout(rect=(0, 0, 1, 0.9))
 fig.savefig(path + '/depo_range.png', bbox_inches='tight')
 fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
 
-# %%
-# df_miss = df.merge(missing_df_all, 'outer')
-# df_miss.dropna(inplace=True)
-# df_miss = df_miss[df_miss['count'] >= 15]
-fig, ax = plt.subplots(figsize=(6, 4))
-# for k, grp in df_miss.groupby(['location2']):
-for k, grp in df.groupby(['location']):
-    grp.resample('M', on='datetime')['depo'].median().plot(ax=ax, label=k)
-ax.set_ylabel('Depolarization ratio')
-fig.legend(ncol=4, loc='upper center')
-ax.set_xlabel('')
-ax.grid(which='major', axis='x')
-# fig.savefig(path + '/depo_median_month.png',
-#             bbox_inches='tight')
 
 ##################################################
 # %% Depo original vs corrected
@@ -189,7 +178,10 @@ for place, v in zip(['Uto', 'Hyytiala', 'Vehmasmaki', 'Sodankyla'],
     jitter[place] = v
 
 fig, ax = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
-for k, grp in df.groupby(['location']):
+# for k, grp in df.groupby(['location']):
+group = df.groupby(['location'])
+for k in location_site:
+    grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo_corrected']
     median_plot = grp_.median()
     median25_plot = grp_.agg(lambda x: np.nanpercentile(x, q=25))
@@ -210,7 +202,10 @@ for k, grp in df.groupby(['location']):
     ax[0].legend()
     ax[0].set_title('Depo corrected')
 
-for k, grp in df.groupby(['location']):
+# for k, grp in df.groupby(['location']):
+group = df.groupby(['location'])
+for k in location_site:
+    grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo']
     median_plot = grp_.median()
     median25_plot = grp_.agg(lambda x: np.nanpercentile(x, q=25))
@@ -233,7 +228,9 @@ fig.savefig(path + '/depo_original_corrected.png', bbox_inches='tight')
 
 
 fig, ax = plt.subplots(1, figsize=(9, 6))
-for k, grp in df.groupby(['location']):
+group = df.groupby(['location'])
+for k in location_site:
+    grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo_corrected']
     median_plot = grp_.median()
     median25_plot = grp_.agg(lambda x: np.nanpercentile(x, q=25))
@@ -262,7 +259,11 @@ bin_month = np.arange(0.5, 13, 1)
 bin_time = np.arange(0, 25)
 X, Y = np.meshgrid(bin_time, bin_month)
 fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
-for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
+
+group = df_miss[df_miss['count'] > 15].groupby(['location'])
+for k, ax in zip(location_site, axes.flatten()):
+    grp = group.get_group(k)
+# for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
     print(k)
     dep_mean, time_edge, month_edge, _ = binned_statistic_2d(
         grp.datetime.dt.hour,
@@ -297,7 +298,11 @@ bin_month = np.arange(0.5, 13, 1)
 bin_range = np.arange(105, 3020, 30)
 X, Y = np.meshgrid(bin_month, bin_range)
 fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
-for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
+
+group = df_miss[df_miss['count'] > 15].groupby(['location'])
+for k, ax in zip(location_site, axes.flatten()):
+    grp = group.get_group(k)
+# for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
     print(k)
     dep_mean, month_edge, range_edge, _ = binned_statistic_2d(
         grp.datetime.dt.month,
@@ -345,7 +350,10 @@ cbar_max = {'Uto': 600*3, 'Hyytiala': 600*3,
 #             'Vehmasmaki': 330, 'Sodankyla': 260}
 bin_depo = np.linspace(0, 0.5, 50)
 X, Y = np.meshgrid(bin_month, bin_depo)
-for k, grp in df_miss[df_miss['count'] > 15].groupby(['location']):
+group = df_miss[df_miss['count'] > 15].groupby(['location'])
+for k, ax in zip(location_site, axes.flatten()):
+    grp = group.get_group(k)
+# for k, grp in df_miss[df_miss['count'] > 15].groupby(['location']):
     print(k)
     fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True)
     axes = axes.flatten()
@@ -377,7 +385,10 @@ bin_depo = np.linspace(0, 0.5, 50)
 X, Y = np.meshgrid(bin_month, bin_depo)
 month_ticklabels = [datetime.date(1900, item, 1).strftime('%b') for item
                     in np.arange(1, 13)]
-for k, grp in df_miss[df_miss['count'] > 15].groupby(['location']):
+group = df_miss[df_miss['count'] > 15].groupby(['location'])
+for k, ax in zip(location_site, axes.flatten()):
+    grp = group.get_group(k)
+# for k, grp in df_miss[df_miss['count'] > 15].groupby(['location']):
     fig = plt.figure(figsize=(16, 9))
     subfigs = fig.subfigures(2, 2, wspace=0.1, hspace=0.1)
 
