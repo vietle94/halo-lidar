@@ -270,7 +270,7 @@ for k, ax in zip(location_site, axes.flatten()):
         grp.datetime.dt.month,
         grp['depo'],
         bins=[bin_time, bin_month],
-        statistic=np.nanmean)
+        statistic=np.nanmedian)
     p = ax.pcolormesh(X, Y, dep_mean.T,
                       cmap='jet',
                       vmin=1e-5, vmax=0.3)
@@ -288,7 +288,7 @@ for n, ax in enumerate(axes.flatten()):
             transform=ax.transAxes, size=12)
 
 fig.tight_layout()
-fig.savefig(path + '/' + 'month_time.png',
+fig.savefig(path + '/' + 'month_time_median.png',
             bbox_inches='tight')
 
 #########################################################
