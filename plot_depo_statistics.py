@@ -228,7 +228,10 @@ fig.savefig(path + '/depo_original_corrected.png', bbox_inches='tight')
 
 
 fig, ax = plt.subplots(1, figsize=(9, 6))
-group = df.groupby(['location'])
+# group = df.groupby(['location'])
+# for k in location_site:
+#     grp = group.get_group(k)
+group = df_miss[df_miss['count'] > 15].groupby(['location'])
 for k in location_site:
     grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo_corrected']
