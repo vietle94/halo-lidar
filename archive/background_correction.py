@@ -9,7 +9,7 @@ import xarray as xr
 # %%
 save_folder = r'F:\halo\paper\figures\background_correction_all/32/'
 file_list = glob.glob(r'F:\halo\classifier_new\32/*.nc')
-for file in file_list:
+for file in file_list[583:]:
     print(file)
     df = xr.open_dataset(file)
     df = hd.bleed_through(df)  # just to get the bleed through mean and std
