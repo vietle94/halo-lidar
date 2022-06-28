@@ -314,6 +314,7 @@ for n, ax in enumerate([ax0, ax1, ax2, ax3, ax4, ax5]):
     ax.tick_params(axis='x', labelrotation=0)
     ax.grid()
     ax.xaxis.set_major_locator(dates.MonthLocator([6, 12]))
+    ax.set_ylabel('$\delta$')
 
 for ax in [ax0_hist, ax1_hist, ax2_hist, ax3_hist, ax4_hist, ax5_hist]:
     plt.setp(ax.get_yticklabels(), visible=False)
