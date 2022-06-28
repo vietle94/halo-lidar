@@ -276,6 +276,25 @@ for k in location_site:
     ax.legend()
 fig.savefig(path + '/monthly_median.png', bbox_inches='tight')
 
+# %%
+group['depo_corrected'].median()
+group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=25))
+group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=75))
+
+# %%
+fig, ax = plt.subplots(4, 1, figsize=(6, 4), sharex=True)
+for k, ax_ in zip(location_site, ax):
+    grp = group.get_group(k)
+    ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.3, 30))
+    ax_.set_ylabel('N')
+
+for n, ax_ in enumerate(ax.flatten()):
+    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+             transform=ax_.transAxes, size=12)
+ax_.set_xlabel('$\delta$')
+fig.subplots_adjust(hspace=0.5)
+fig.savefig(path + '/site_hist.png', bbox_inches='tight')
+
 #########################################################
 # %% Monthly hour
 #########################################################
