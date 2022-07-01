@@ -71,6 +71,9 @@ df = df[(df['depo_corrected'] < 0.5) & (df['depo_corrected'] > -0.1)]
 df['year'] = df['datetime'].dt.year
 df['month'] = df['datetime'].dt.month
 
+df[(df['location'] == 'Uto') &
+    (df['datetime'] >= '2019-12-06') &
+    (df['datetime'] <= '2019-12-10')] = np.nan
 # %%
 missing_df = pd.DataFrame({})
 for site in ['46', '54', '33', '53', '32']:
@@ -102,11 +105,6 @@ df_miss = df_miss[~pd.isnull(df_miss.datetime)]
 df_miss.reset_index(drop=True, inplace=True)
 
 # %%
-
-df[(df['location'] == 'Uto') &
-    (df['datetime'] >= '2019-12-06') &
-    (df['datetime'] <= '2019-12-10')] = np.nan
-
 bad_site = df_miss['site'].astype('int') == 33
 bad_range = (df_miss['range'] > 400) & (df_miss['range'] < 470)
 df_miss.loc[bad_site & bad_range, 'depo_corrected'] = np.nan
@@ -247,12 +245,20 @@ for k in location_site:
     ax[1].set_title('Depo original')
 fig.savefig(path + '/depo_original_corrected.png', bbox_inches='tight')
 
-
+##################################################
+# %% Depo median month
+##################################################
+jitter = {}
+for place, v in zip(['Uto', 'Hyytiala', 'Vehmasmaki', 'Sodankyla'],
+                    np.linspace(-0.15, 0.15, 4)):
+    jitter[place] = v
 fig, ax = plt.subplots(1, figsize=(6, 4))
 # group = df.groupby(['location'])
 # for k in location_site:
 #     grp = group.get_group(k)
-group = df_miss[df_miss['count'] > 15].groupby(['location'])
+# group = df_miss[df_miss['count'] > 15].groupby(['location'])
+group = df_miss[(df_miss['count'] > 15) & (
+    df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
 for k in location_site:
     grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo_corrected']
@@ -276,7 +282,9 @@ for k in location_site:
     ax.legend()
 fig.savefig(path + '/monthly_median.png', bbox_inches='tight')
 
-# %%
+##################################################
+# %% Overall depo
+##################################################
 group['depo_corrected'].median()
 group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=25))
 group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=75))
@@ -285,12 +293,13 @@ group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=75))
 fig, ax = plt.subplots(4, 1, figsize=(6, 4), sharex=True)
 for k, ax_ in zip(location_site, ax):
     grp = group.get_group(k)
-    ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.3, 30))
+    ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.4, 30))
     ax_.set_ylabel('N')
 
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
+    ax_.grid()
 ax_.set_xlabel('$\delta$')
 fig.subplots_adjust(hspace=0.5)
 fig.savefig(path + '/site_hist.png', bbox_inches='tight')
@@ -303,7 +312,9 @@ bin_time = np.arange(0, 25)
 X, Y = np.meshgrid(bin_time, bin_month)
 fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
 
-group = df_miss[df_miss['count'] > 15].groupby(['location'])
+# group = df_miss[df_miss['count'] > 15].groupby(['location'])
+group = df_miss[(df_miss['count'] > 15) & (
+    df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
 for k, ax in zip(location_site, axes.flatten()):
     grp = group.get_group(k)
 # for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
@@ -342,10 +353,11 @@ bin_range = np.arange(105, 3020, 30)
 X, Y = np.meshgrid(bin_month, bin_range)
 fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharex=True, sharey=True)
 
-group = df_miss[df_miss['count'] > 15].groupby(['location'])
+# group = df_miss[df_miss['count'] > 15].groupby(['location'])
+group = df_miss[(df_miss['count'] > 15) & (
+    df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
 for k, ax in zip(location_site, axes.flatten()):
     grp = group.get_group(k)
-# for (k, grp), ax in zip(df_miss[df_miss['count'] > 15].groupby(['location']), axes.flatten()):
     print(k)
     dep_mean, month_edge, range_edge, _ = binned_statistic_2d(
         grp.datetime.dt.month,
@@ -431,188 +443,9 @@ bin_depo = np.linspace(0, 0.3, 30)
 X, Y = np.meshgrid(bin_month, bin_depo)
 month_ticklabels = [datetime.date(1900, item, 1).strftime('%b') for item
                     in np.arange(1, 13, 3)]
-group = df_miss[df_miss['count'] > 15].groupby(['location'])
-for k in location_site:
-    grp = group.get_group(k)
-    print(k)
-# for k, grp in df_miss[df_miss['count'] > 15].groupby(['location']):
-    fig = plt.figure(figsize=(16, 9))
-    # subfigs = fig.subfigures(2, 2, wspace=0.1, hspace=0.1)
-    gs = fig.add_gridspec(nrows=13, ncols=60, wspace=0, hspace=0.5, left=0.05, right=0.94)
-    gs_bar = fig.add_gridspec(nrows=13, ncols=1, wspace=0, hspace=0.5, left=0.95, right=0.96)
-    if k != 'Sodankyla':
-        ax0 = fig.add_subplot(gs[6:9, :15])
-        ax0_range = fig.add_subplot(gs[:3, :15], sharex=ax0)
-        ax0_range_count = fig.add_subplot(gs[3:6, :15], sharex=ax0)
-        ax0_hour = fig.add_subplot(gs[9:12, :15], sharex=ax0)
-        ax0_ = fig.add_subplot(gs[-1, :15], sharex=ax0)
-
-    ax1 = fig.add_subplot(gs[6:9, 15:30], sharey=ax0)
-    ax1_range = fig.add_subplot(gs[:3, 15:30], sharex=ax1, sharey=ax0_range)
-    ax1_range_count = fig.add_subplot(gs[3:6, 15:30], sharex=ax1, sharey=ax0_range_count)
-    ax1_hour = fig.add_subplot(gs[9:12, 15:30], sharex=ax1, sharey=ax0_hour)
-    ax1_ = fig.add_subplot(gs[-1, 15:30], sharex=ax1, sharey=ax0_)
-
-    ax2 = fig.add_subplot(gs[6:9, 30:45], sharey=ax0)
-    ax2_range = fig.add_subplot(gs[:3, 30:45], sharex=ax2, sharey=ax0_range)
-    ax2_range_count = fig.add_subplot(gs[3:6, 30:45], sharex=ax2, sharey=ax0_range_count)
-    ax2_hour = fig.add_subplot(gs[9:12, 30:45], sharex=ax2, sharey=ax0_hour)
-    ax2_ = fig.add_subplot(gs[-1, 30:45], sharex=ax2, sharey=ax0_)
-
-    ax3 = fig.add_subplot(gs[6:9, 45:60], sharey=ax0)
-    ax3_range = fig.add_subplot(gs[:3, 45:60], sharex=ax3, sharey=ax0_range)
-    ax3_range_count = fig.add_subplot(gs[3:6, 45:60], sharex=ax3, sharey=ax0_range_count)
-    ax3_hour = fig.add_subplot(gs[9:12, 45:60], sharex=ax3, sharey=ax0_hour)
-    ax3_ = fig.add_subplot(gs[-1, 45:60], sharex=ax3, sharey=ax0_)
-
-    ax_cbar = fig.add_subplot(gs_bar[6:9])
-    ax_range_cbar = fig.add_subplot(gs_bar[:3])
-    ax_range_count_cbar = fig.add_subplot(gs_bar[3:6])
-    ax_hour_cbar = fig.add_subplot(gs_bar[9:12])
-    label_holder = 0
-    year_ax = {2016: [ax0, ax0_, ax0_range, ax0_range_count, ax0_hour],
-               2017: [ax1, ax1_, ax1_range, ax1_range_count, ax1_hour],
-               2018: [ax2, ax2_, ax2_range, ax2_range_count, ax2_hour],
-               2019: [ax3, ax3_, ax3_range, ax3_range_count, ax3_hour]}
-    grp_year = grp.groupby('year')
-    for key in grp.year.unique():
-        g = grp_year.get_group(key)
-        ax, ax_, ax_range, ax_range_count, ax_hour = year_ax[key]
-
-    # for (key, g), ax, ax_, ax_range,  ax_hour in zip(grp.groupby(['year']), [ax0, ax1, ax2, ax3],
-    #                                                  [ax0_, ax1_, ax2_, ax3_],
-    #                                                  [ax0_range, ax1_range,
-    #                                                   ax2_range, ax3_range],
-    #                                                  [ax0_hour, ax1_hour, ax2_hour, ax3_hour]):
-        label_holder += 1
-
-        # Month depo
-        H, month_edge, depo_edge = np.histogram2d(
-            g['month'], g['depo_corrected'],
-            bins=(bin_month, bin_depo))
-        H_sum = np.sum(H, axis=1)
-        H_plot = H.T/H_sum.T
-        H_plot[H_plot == 0] = np.nan
-        p = ax.pcolormesh(X, Y, H_plot*100, cmap='viridis',
-                          vmin=0, vmax=10)
-        cbar = fig.colorbar(p, ax=ax, cax=ax_cbar)
-        cbar.ax.set_ylabel('%N')
-        ax.set_xticklabels([])
-
-        # Month total count
-        ax_.bar(np.arange(1, 13), H_sum)
-        ax_.set_xticks(np.arange(1, 13, 3))
-
-        # Month range median
-        dep_mean, month_edge, range_edge, _ = binned_statistic_2d(
-            g.datetime.dt.month,
-            g['range'],
-            g['depo_corrected'],
-            bins=[bin_month, bin_range],
-            statistic=np.nanmedian)
-        # Month range count
-        dep_count, month_edge, range_edge = np.histogram2d(
-            g.datetime.dt.month,
-            g['range'],
-            bins=[bin_month, bin_range])
-        dep_count[dep_count == 0] = np.nan
-        dep_mean[dep_count < 10] = np.nan
-
-        p = ax_range.pcolormesh(month_edge, range_edge, dep_mean.T, cmap='jet',
-                                vmin=0, vmax=0.3)
-        cbar = fig.colorbar(p, ax=ax_range, cax=ax_range_cbar)
-        cbar.ax.set_ylabel('$\\delta$')
-        ax_range.set_xticklabels([])
-        ax_range.yaxis.set_major_formatter(hd.m_km_ticks())
-
-        p = ax_range_count.pcolormesh(month_edge, range_edge, dep_count.T, cmap='viridis',
-                                      vmin=0, vmax=2500)
-        cbar = fig.colorbar(p, ax=ax_range_count, cax=ax_range_count_cbar)
-        cbar.ax.set_ylabel('$N$')
-        ax_range_count.set_xticklabels([])
-        ax_range_count.yaxis.set_major_formatter(hd.m_km_ticks())
-
-        # Month hour median
-        dep_mean, month_edge, time_edge, _ = binned_statistic_2d(
-            g.datetime.dt.month,
-            g.datetime.dt.hour,
-            g['depo_corrected'],
-            bins=[bin_month, bin_time],
-            statistic=np.nanmedian)
-
-        p = ax_hour.pcolormesh(month_edge, time_edge, dep_mean.T,
-                               cmap='jet',
-                               vmin=1e-5, vmax=0.3)
-        cbar = fig.colorbar(p, ax=ax_hour, cax=ax_hour_cbar)
-        cbar.ax.set_ylabel('$\delta$')
-
-        if label_holder < 2:
-            ax.set_ylabel('$\\delta$')
-            ax_range.set_ylabel('Height a.g.l [km]')
-            ax_range_count.set_ylabel('Height a.g.l [km]')
-            ax_hour.set_yticks(np.arange(0, 24, 6))
-            ax_hour.set_ylabel('Hour')
-            ax_.set_ylabel('N')
-
-        if label_holder > 1:
-            plt.setp(ax.get_yticklabels(), visible=False)
-            plt.setp(ax_range.get_yticklabels(), visible=False)
-            plt.setp(ax_range_count.get_yticklabels(), visible=False)
-            plt.setp(ax_hour.get_yticklabels(), visible=False)
-            plt.setp(ax_.get_yticklabels(), visible=False)
-
-        ax_.text(-0.0, -1, key, weight='bold',
-                 transform=ax_.transAxes, size=12)
-
-    # for n, ax in enumerate([ax0, ax1, ax2, ax3]):
-    #     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-    #             transform=ax.transAxes, size=12)
-
-    for ax in [ax0_, ax1_, ax2_, ax3_]:
-        ax.set_xticklabels(month_ticklabels)
-
-    for ax in [ax0, ax1, ax2, ax3, ax0_range, ax1_range, ax2_range, ax3_range,
-               ax0_range_count, ax1_range_count, ax2_range_count, ax3_range_count,
-               ax0_hour, ax1_hour, ax2_hour, ax3_hour]:
-        plt.setp(ax.get_xticklabels(), visible=False)
-        # ax.tick_params(axis='x',         # changes apply to the x-axis
-        #                which='both',      # both major and minor ticks are affected
-        #                bottom=False,      # ticks along the bottom edge are off
-        #                top=False,         # ticks along the top edge are off
-        #                labelbottom=False)
-
-    for ax in [ax1, ax2, ax3, ax1_range, ax2_range, ax3_range,
-               ax1_range_count, ax2_range_count, ax3_range_count,
-               ax1_hour, ax2_hour, ax3_hour, ax1_, ax2_, ax3_]:
-        ax.tick_params(axis='y',         # changes apply to the x-axis
-                       which='both',      # both major and minor ticks are affected
-                       left=False)
-
-    for ax in [ax1, ax2, ax1_range, ax2_range,
-               ax1_range_count, ax2_range_count,
-               ax1_hour, ax2_hour, ax1_, ax2_]:
-        ax.spines['right'].set_color('none')
-        ax.spines['left'].set_color('none')
-
-    for ax in [ax0, ax0_range, ax0_range_count, ax0_hour, ax0_]:
-        ax.spines['right'].set_color('none')
-
-    for ax in [ax3, ax3_range, ax3_range_count, ax3_hour, ax3_]:
-        ax.spines['left'].set_color('none')
-
-    fig.savefig(path + '/sites/' + k + '.png', bbox_inches='tight')
-
-###############################################
-# %%
-###############################################
-bin_range = np.arange(105, 3020, 90)
-bin_month = np.arange(0.5, 13, 1)
-bin_time = np.arange(0, 25)
-bin_depo = np.linspace(0, 0.3, 30)
-X, Y = np.meshgrid(bin_month, bin_depo)
-month_ticklabels = [datetime.date(1900, item, 1).strftime('%b') for item
-                    in np.arange(1, 13, 3)]
-group = df_miss[df_miss['count'] > 15].groupby(['location'])
+# group = df_miss[df_miss['count'] > 15].groupby(['location'])
+group = df_miss[(df_miss['count'] > 15) & (
+    df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
 for k in location_site:
     grp = group.get_group(k)
     print(k)
