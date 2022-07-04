@@ -177,26 +177,6 @@ table['second'] = second * 60
 table['time_'] = pd.to_datetime(table[['year', 'month', 'day', 'hour', 'minute', 'second']])
 group_ = table.groupby('systemID')
 
-# %%
-# fig = plt.figure(figsize=(12, 7))
-# gs = fig.add_gridspec(nrows=3, ncols=12, wspace=0, hspace=2)
-# ax0 = fig.add_subplot(gs[0, :5])
-# ax0_hist = fig.add_subplot(gs[0, 5])
-#
-# ax1 = fig.add_subplot(gs[0, 6:11])
-# ax1_hist = fig.add_subplot(gs[0, 11])
-#
-# ax2 = fig.add_subplot(gs[1, :5])
-# ax2_hist = fig.add_subplot(gs[1, 5])
-#
-# ax3 = fig.add_subplot(gs[1, 6:11])
-# ax3_hist = fig.add_subplot(gs[1, 11])
-#
-# ax4 = fig.add_subplot(gs[2, :5])
-# ax4_hist = fig.add_subplot(gs[2, 5])
-#
-# ax5 = fig.add_subplot(gs[2, 6:11])
-# ax5_hist = fig.add_subplot(gs[2, 11])
 
 # %%
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -312,6 +292,7 @@ for n, ax in enumerate([ax0, ax1, ax2, ax3, ax4, ax5]):
     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
             transform=ax.transAxes, size=12)
     ax.tick_params(axis='x', labelrotation=0)
+    ax.set_yticks([0, 0.025, 0.05])
     ax.grid()
     ax.xaxis.set_major_locator(dates.MonthLocator([6, 12]))
     ax.set_ylabel('$\delta$')
