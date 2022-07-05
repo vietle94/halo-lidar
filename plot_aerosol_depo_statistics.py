@@ -74,6 +74,7 @@ df['month'] = df['datetime'].dt.month
 df[(df['location'] == 'Uto') &
     (df['datetime'] >= '2019-12-06') &
     (df['datetime'] <= '2019-12-10')] = np.nan
+
 # %%
 missing_df = pd.DataFrame({})
 for site in ['46', '54', '33', '53', '32']:
@@ -128,62 +129,67 @@ month_labs = ['Dec-Jan-Feb',
               'Jun-Jul-Aug',
               'Sep-Oct-Nov']
 
-fig, axes = plt.subplots(2, 2, figsize=(6, 4), sharey=True, sharex=True)
-fig2, axes2 = plt.subplots(2, 2, figsize=(6, 4), sharey=True, sharex=True)
+fig2, axes2 = plt.subplots(2, 2, figsize=(7, 4), sharey=True, sharex=True)
 
-for (i, month), ax, ax2 in zip(enumerate(period_months),
-                               axes.flatten(), axes2.flatten()):
-    group = df[df.time.dt.month.isin(month)].groupby('location')
+for (i, month), ax2 in zip(enumerate(period_months), axes2.flatten()):
+    # group = df[df.time.dt.month.isin(month)].groupby('location')
+    group = df_miss[df_miss.time.dt.month.isin(month) & (
+        df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
     for loc in location_site:
         grp = group.get_group(loc)
-        grp_avg = grp.groupby('range')['depo_corrected'].mean()
-        # grp_count = grp.groupby('range')['depo_corrected'].count()
-        grp_std = grp.groupby('range')['depo_corrected'].std()
-        # grp_avg = grp_avg[grp_count > 0.01 * sum(grp_count)]
-        # grp_std = grp_std[grp_count > 0.01 * sum(grp_count)]
-        ax.errorbar(grp_avg.index + jitter[loc][0],
-                    grp_avg, grp_std, label=loc,
-                    fmt='.', elinewidth=1)
-        ax.set_xlim([-50, 2500])
-
         grp_ground = grp[grp['range'] <= 300]
         y_grp = grp_ground.groupby(pd.cut(grp_ground['RH'], np.arange(0, 105, 5)))
+        y_count = y_grp['depo_corrected'].count()
         y_mean = y_grp['depo_corrected'].mean()
         y_std = y_grp['depo_corrected'].std()
-        x = np.arange(5, 104, 5)
-        ax2.errorbar(x + jitter[loc][1], y_mean, y_std,
+        y_mean = y_mean[y_count > 0.01 * sum(y_count)]
+        y_std = y_std[y_count > 0.01 * sum(y_count)]
+        x = np.arange(5, 104, 5) - 2.5
+        ax2.errorbar(x[y_count > 0.01 * sum(y_count)] + jitter[loc][1], y_mean, y_std,
                      label=loc, fmt='.', elinewidth=1)
         ax2.set_xlim([20, 105])
-        ax.grid(visible=True, which='major', axis='both')
         ax2.grid(visible=True, which='major', axis='both')
+        ax2.xaxis.set_major_formatter(mtick.PercentFormatter(100))
+        ax2.set_yticks([0, 0.1, 0.2])
     if i in [2, 3]:
-        ax.set_xlabel('Height a.g.l [km]')
-        ax.xaxis.set_major_formatter(hd.m_km_ticks())
         ax2.set_xlabel('RH')
+
     if i in [0, 2]:
-        ax.set_ylabel('$\delta$')
         ax2.set_ylabel('$\delta$')
     # ax.set_title(month_labs[i], weight='bold')
     # ax2.set_title(month_labs[i], weight='bold')
-handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, loc='lower center', ncol=4)
 handles, labels = ax2.get_legend_handles_labels()
 fig2.legend(handles, labels, loc='lower center', ncol=4)
 # fig.tight_layout(rect=(0, 0.05, 1, 0.9))
 # fig2.tight_layout(rect=(0, 0.05, 1, 0.9))
-fig.subplots_adjust(bottom=0.2)
-fig2.subplots_adjust(bottom=0.2)
+fig2.subplots_adjust(bottom=0.2, hspace=0.3)
 
-for n, ax in enumerate(axes.flatten()):
-    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-            transform=ax.transAxes, size=12)
 
 for n, ax in enumerate(axes2.flatten()):
     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
             transform=ax.transAxes, size=12)
 
-fig.savefig(path + '/depo_range.png', bbox_inches='tight')
 fig2.savefig(path + '/depo_RH.png', bbox_inches='tight')
+
+# %%
+
+
+def regress(data, yvar, xvars):
+    Y = data[yvar]
+    X = data[xvars]
+    X['intercept'] = 1.
+    result = sm.OLS(Y, X).fit()
+    return [np.around(i, digit) for i, digit in zip([result.params[0], result.pvalues[0], result.rsquared],
+                                                    [3, 3, 3])]
+
+
+temp = df_miss[df_miss['depo_corrected_sd'] < 0.05].copy()
+temp['RH'] = temp['RH']/100
+temp = temp.dropna(axis=0)
+
+for (i, month) in enumerate(period_months):
+    print(month,
+          temp[temp.datetime.dt.month.isin(month)].groupby('location').apply(regress, 'depo_corrected', ['RH']))
 
 
 ##################################################
@@ -290,17 +296,19 @@ group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=25))
 group['depo_corrected'].agg(lambda x: np.nanpercentile(x, q=75))
 
 # %%
-fig, ax = plt.subplots(4, 1, figsize=(6, 4), sharex=True)
+fig, ax = plt.subplots(1, 4, figsize=(9, 2), sharex=True, sharey=True)
 for k, ax_ in zip(location_site, ax):
     grp = group.get_group(k)
-    ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.4, 30))
-    ax_.set_ylabel('N')
+    weights = np.ones_like(grp['depo_corrected'])/float(len(grp['depo_corrected']))
+    ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.4, 11),
+             weights=weights)
+    ax_.set_xlabel('$\delta$')
+ax[0].set_ylabel('Relative frequency')
 
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
     ax_.grid()
-ax_.set_xlabel('$\delta$')
 fig.subplots_adjust(hspace=0.5)
 fig.savefig(path + '/site_hist.png', bbox_inches='tight')
 
@@ -365,14 +373,6 @@ for k, ax in zip(location_site, axes.flatten()):
         grp['depo_corrected'],
         bins=[bin_month, bin_range],
         statistic=np.nanmean)
-    # dep_count, month_edge, range_edge, _ = binned_statistic_2d(
-    #     grp.datetime.dt.month,
-    #     grp['range'],
-    #     grp['depo'],
-    #     bins=[bin_month, bin_range],
-    #     statistic=np.nanmean)
-    # dep_count = dep_count/np.nansum(dep_count, axis=1)
-    # (dep_count.T/np.nansum(dep_count.T, axis=0)).shape
     p = ax.pcolormesh(X, Y, dep_mean.T,
                       cmap='jet',
                       vmin=1e-5, vmax=0.3)
