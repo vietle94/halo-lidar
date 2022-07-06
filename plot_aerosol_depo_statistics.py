@@ -14,6 +14,7 @@ import datetime
 import string
 from sklearn.metrics import r2_score
 import matplotlib.ticker as mtick
+from matplotlib.ticker import FuncFormatter
 %matplotlib qt
 
 
@@ -631,7 +632,7 @@ month_labs = ['Dec-Jan-Feb',
               'Sep-Oct-Nov']
 props = dict(boxstyle='round', facecolor='wheat', alpha=1)
 group = df_miss.groupby(['location'])
-fig, axes = plt.subplots(4, 4, figsize=(16, 9), sharey=True, sharex=True)
+fig, axes = plt.subplots(4, 4, figsize=(16, 9), sharey='True', sharex=True)
 for site, axes_row in zip(['Uto', 'Hyytiala', 'Vehmasmaki', 'Sodankyla'], axes):
     grp = group.get_group(site)
     for period, ax in zip(period_months, axes_row):
@@ -690,3 +691,178 @@ mod = sm.OLS(temp['depo_corrected'], sm.add_constant(temp['RH']))
 fii = mod.fit()
 fii.summary()
 # p_values = fii.summary2().tables[1]['P>|t|']
+
+###############################################
+# %%
+###############################################
+bin_range = np.arange(105, 3020, 90)
+bin_month = np.arange(0.5, 13, 1)
+bin_time = np.arange(0, 25)
+bin_depo = np.linspace(0, 0.3, 30)
+X, Y = np.meshgrid(bin_month, bin_depo)
+month_ticklabels = [datetime.date(1900, item, 1).strftime('%b') for item
+                    in np.arange(1, 13, 3)]
+# group = df_miss[df_miss['count'] > 15].groupby(['location'])
+group = df_miss[(df_miss['count'] > 15) & (
+    df_miss['depo_corrected_sd'] < 0.05)].groupby(['location'])
+# fig, axes = plt.subplots(3, 4, figsize=(12, 6), sharex=True, sharey='row')
+fig = plt.figure(figsize=(9, 6))
+gs = fig.add_gridspec(nrows=9, ncols=60, left=0.05, right=0.9)
+gs_bar = fig.add_gridspec(nrows=9, ncols=1, left=0.92, right=0.94)
+ax0 = fig.add_subplot(gs[:3, :15])
+ax0_range = fig.add_subplot(gs[3:6, :15], sharex=ax0)
+ax0_hour = fig.add_subplot(gs[6:9, :15], sharex=ax0)
+ax_Uto = [ax0, ax0_range, ax0_hour]
+
+ax1 = fig.add_subplot(gs[:3, 15:30], sharey=ax0)
+ax1_range = fig.add_subplot(gs[3:6, 15:30], sharex=ax1, sharey=ax0_range)
+ax1_hour = fig.add_subplot(gs[6:9, 15:30], sharex=ax1, sharey=ax0_hour)
+ax_Hyytiala = [ax1, ax1_range, ax1_hour]
+
+ax2 = fig.add_subplot(gs[:3, 30:45], sharey=ax0)
+ax2_range = fig.add_subplot(gs[3:6, 30:45], sharex=ax2, sharey=ax0_range)
+ax2_hour = fig.add_subplot(gs[6:9, 30:45], sharex=ax2, sharey=ax0_hour)
+ax_Vehmasmaki = [ax2, ax2_range, ax2_hour]
+
+ax3 = fig.add_subplot(gs[:3, 45:60], sharey=ax0)
+ax3_range = fig.add_subplot(gs[3:6, 45:60], sharex=ax3, sharey=ax0_range)
+ax3_hour = fig.add_subplot(gs[6:9, 45:60], sharex=ax3, sharey=ax0_hour)
+ax_Sodankyla = [ax3, ax3_range, ax3_hour]
+
+ax_cbar = fig.add_subplot(gs_bar[:3])
+ax_range_cbar = fig.add_subplot(gs_bar[3:6])
+ax_hour_cbar = fig.add_subplot(gs_bar[6:9])
+label_holder = 0
+for k, ax in zip(location_site, [ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyla]):
+    label_holder += 1
+    g = group.get_group(k)
+    print(k)
+
+    # Month range median
+    dep_mean, month_edge, range_edge, _ = binned_statistic_2d(
+        g.datetime.dt.month,
+        g['range'],
+        g['depo_corrected'],
+        bins=[bin_month, bin_range],
+        statistic=np.nanmedian)
+    # Month range count
+    dep_count, month_edge, range_edge = np.histogram2d(
+        g.datetime.dt.month,
+        g['range'],
+        bins=[bin_month, bin_range])
+
+    # mask = (dep_count.T < np.nanpercentile(dep_count, q=10, axis=1).T).T
+    # dep_count[mask] = np.nan
+    # dep_count[dep_count == 0] = np.nan
+    # dep_mean[dep_count < 200] = np.nan
+    # dep_mean[np.isnan(dep_count)] = np.nan
+
+    dep_percent = dep_count/np.nansum(dep_count)
+    dep_mean[dep_percent < 0.0005] = np.nan
+
+    p = ax[0].pcolormesh(month_edge, range_edge, dep_mean.T, cmap='jet',
+                         vmin=0, vmax=0.3)
+    cbar = fig.colorbar(p, ax=ax[0], cax=ax_cbar)
+    cbar.ax.set_ylabel('$\\delta$')
+    ax[0].set_xticklabels([])
+    ax[0].yaxis.set_major_formatter(FuncFormatter(lambda x, pos: f'{x/1000:.0f}'))
+
+    p = ax[1].pcolormesh(month_edge, range_edge, dep_percent.T, cmap='viridis',
+                         vmin=0, vmax=0.015)
+    cbar = fig.colorbar(p, ax=ax[1], cax=ax_range_cbar)
+    cbar.ax.set_ylabel('Relative frequency')
+    ax[1].set_xticklabels([])
+    ax[1].yaxis.set_major_formatter(FuncFormatter(lambda x, pos: f'{x/1000:.0f}'))
+
+    # Month depo
+    # H, month_edge, depo_edge = np.histogram2d(
+    #     g['month'], g['depo_corrected'],
+    #     bins=(bin_month, bin_depo))
+    # H_sum = np.sum(H, axis=1)
+    # H_plot = H.T/H_sum.T
+    # H_plot[H_plot == 0] = np.nan
+    # p = ax[2].pcolormesh(X, Y, H_plot*100, cmap='viridis',
+    #                   vmin=0, vmax=10)
+    # cbar = fig.colorbar(p, ax=ax[2])
+    # cbar.ax.set_ylabel('%N')
+    # ax[2].set_xticklabels([])
+
+    # Month hour median
+    dep_mean, month_edge, time_edge, _ = binned_statistic_2d(
+        g.datetime.dt.month,
+        g.datetime.dt.hour,
+        g['depo_corrected'],
+        bins=[bin_month, bin_time],
+        statistic=np.nanmedian)
+
+    p = ax[2].pcolormesh(month_edge, time_edge, dep_mean.T,
+                         cmap='jet',
+                         vmin=1e-5, vmax=0.3)
+    cbar = fig.colorbar(p, ax=ax[2], cax=ax_hour_cbar)
+    cbar.ax.set_ylabel('$\delta$')
+
+    ax[2].set_xticks(np.arange(1, 13, 3))
+
+    if label_holder > 1:
+        for ax_ in ax:
+            plt.setp(ax_.get_yticklabels(), visible=False)
+
+for ax_ in [ax0_hour, ax1_hour, ax2_hour, ax3_hour]:
+    ax_.set_xticklabels(month_ticklabels)
+
+ax0.set_ylabel('Height a.g.l [km]')
+ax0_range.set_ylabel('Height a.g.l [km]')
+ax0.set_yticks([0, 1000, 2000])
+ax0_range.set_yticks([0, 1000, 2000])
+ax0_hour.set_yticks(np.arange(0, 24, 6))
+ax0_hour.set_ylabel('Hour')
+
+for ax_ in np.array([ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyla]).T[:-1].flatten():
+    plt.setp(ax_.get_xticklabels(), visible=False)
+    # if label_holder > 1:
+    #     plt.setp(ax.get_yticklabels(), visible=False)
+    #     plt.setp(ax_range.get_yticklabels(), visible=False)
+    #     plt.setp(ax_range_count.get_yticklabels(), visible=False)
+    #     plt.setp(ax_hour.get_yticklabels(), visible=False)
+    #
+    # ax_hour.text(-0.0, -0.4, int(key), weight='bold',
+    #              transform=ax_hour.transAxes, size=12)
+
+for n, ax in enumerate(np.array([ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyla]).T.flatten()):
+    ax.text(0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+            transform=ax.transAxes, size=12)
+#
+
+fig.subplots_adjust(hspace=1, wspace=2)
+#     for ax in [ax0, ax1, ax2, ax3, ax0_range, ax1_range, ax2_range, ax3_range,
+#                ax0_range_count, ax1_range_count, ax2_range_count, ax3_range_count]:
+#         plt.setp(ax.get_xticklabels(), visible=False)
+#         # ax.tick_params(axis='x',         # changes apply to the x-axis
+#         #                which='both',      # both major and minor ticks are affected
+#         #                bottom=False,      # ticks along the bottom edge are off
+#         #                top=False,         # ticks along the top edge are off
+#         #                labelbottom=False)
+#
+#     for ax in [ax1, ax2, ax3, ax1_range, ax2_range, ax3_range,
+#                ax1_range_count, ax2_range_count, ax3_range_count,
+#                ax1_hour, ax2_hour, ax3_hour]:
+#         ax.tick_params(axis='y',         # changes apply to the x-axis
+#                        which='both',      # both major and minor ticks are affected
+#                        left=False)
+#
+#     for ax in [ax1, ax2, ax1_range, ax2_range,
+#                ax1_range_count, ax2_range_count,
+#                ax1_hour, ax2_hour]:
+#         ax.spines['right'].set_color('none')
+#         ax.spines['left'].set_color('none')
+#
+#     for ax in [ax0, ax0_range, ax0_range_count, ax0_hour]:
+#         ax.spines['right'].set_color('none')
+#
+#     for ax in [ax3, ax3_range, ax3_range_count, ax3_hour]:
+#         ax.spines['left'].set_color('none')
+#
+#     if k == 'Sodankyla':
+#         for ax in [ax1, ax1_range, ax1_range_count, ax1_hour]:
+#             ax.spines['left'].set_color('black')
+fig.savefig(path + '/sites/all_sites_summary.png', bbox_inches='tight')
