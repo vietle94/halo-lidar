@@ -168,11 +168,11 @@ ax[2].set_xlabel('corrected $SNR_{co}$')
 mask_ = np.std(depo_corrected, axis=0) < 0.2
 ax[3].plot(depo[mask_],
            avg['range'][mask_], '.',
-           label='original depo', ms=3, alpha=0.7)
+           label='original $\delta$', ms=3, alpha=0.7)
 ax[3].errorbar(x=np.mean(depo_corrected, axis=0)[mask_],
                y=avg['range'][mask_],
                xerr=np.std(depo_corrected, axis=0)[mask_],
-               label='corrected depo',
+               label='corrected $\delta$',
                errorevery=1, elinewidth=0.5, fmt='.', alpha=0.7, ms=3)
 ax[3].set_xlim([-0.05, 0.4])
 ax[3].set_xlabel(r'$\delta$')
