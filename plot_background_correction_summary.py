@@ -1,13 +1,8 @@
-import halo_data as hd
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
-from pathlib import Path
 import pandas as pd
-import xarray as xr
-from matplotlib.colors import LogNorm
 import string
-%matplotlib qt
 
 # %%
 sites = ['33', '46', '53', '54']
@@ -22,7 +17,7 @@ file_paths['32XR'] = site_32[513:]
 site_plot = ['32', '32XR', '33', '46', '53', '54']
 
 # %%
-fig, axes = plt.subplots(3, 2, figsize=(9, 9), sharey=True, sharex=True)
+fig, axes = plt.subplots(3, 2, figsize=(9, 6), sharey=True, sharex=True)
 for key, ax in zip(site_plot, axes.flatten()):
     value = file_paths[key]
     df = pd.concat([pd.read_csv(x) for x in value], ignore_index=True)
@@ -74,10 +69,11 @@ axes[1, 0].set_ylabel(r'$\delta_{corrected} - \delta_{original}$')
 axes[2, 0].set_ylabel(r'$\delta_{corrected} - \delta_{original}$')
 axes[-1, 0].set_xlabel('$SNR_{co, corrected}$')
 axes[-1, 1].set_xlabel('$SNR_{co, corrected}$')
-
+ax.set_ylim([-0.1, 0.3])
 for n, ax_ in enumerate(axes.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
     ax_.grid()
 
-fig.savefig(r'F:\halo\paper\figures\background_correction_all/summary.png', bbox_inches='tight')
+fig.savefig(r'F:\halo\paper\figures\background_correction_all/summary.png',
+            dpi=150, bbox_inches='tight')

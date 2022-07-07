@@ -367,8 +367,8 @@ handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower center', ncol=3)
 fig.subplots_adjust(bottom=0.2)
 print(df.filename)
-# fig.savefig(path + df.filename + '_depo_profile.png',
-#             bbox_inches='tight')
+fig.savefig(path + df.filename + '_depo_profile.png',
+            bbox_inches='tight', dpi=150)
 
 # %%
 ######################################
