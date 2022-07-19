@@ -61,12 +61,15 @@ weather['day'] = weather['day'].str.zfill(2)
 weather['datetime'] = weather['year'] + weather['month'] + \
     weather['day'] + weather['time']
 weather['datetime'] = pd.to_datetime(weather['datetime'], format='%Y%m%d%H:%M')
-weather = weather.set_index('datetime').resample('1H').mean()
-weather = weather.reset_index()
+
+weather_full = pd.DataFrame()
+for grp_lab, grp_val in weather.groupby('location2'):
+    weather_ = grp_val.set_index('datetime').resample('1H').mean().reset_index()
+    weather_['location'] = grp_lab
+    weather_full = weather_full.append(weather_, ignore_index=True)
 
 df_full['datetime'] = df_full['time']
-# df_full = df_full.drop(['time'], axis=1)
-df = pd.merge(weather, df_full)
+df = pd.merge(weather_full, df_full)
 
 df = df[(df['depo_corrected'] < 0.5) & (df['depo_corrected'] > -0.1)]
 df['year'] = df['datetime'].dt.year
