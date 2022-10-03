@@ -8,6 +8,7 @@ import halo_data as hd
 from pathlib import Path
 import xarray as xr
 import matplotlib.dates as dates
+from matplotlib.colors import LogNorm
 from matplotlib.ticker import FuncFormatter
 
 #########################################
@@ -28,7 +29,7 @@ time = np.concatenate((df['time'], df2['time']))
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(9, 3), sharex=True, sharey=True)
 c = ax[0].pcolormesh(time, df['range'],
-                     np.log10(beta), vmin=-8, vmax=-4, cmap='jet')
+                     beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet')
 cbar = fig.colorbar(c, ax=ax[0])
 
 cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
@@ -61,7 +62,7 @@ for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
 fig.tight_layout()
-fig.savefig(path + 'overview.png', bbox_inches='tight', dpi=150)
+fig.savefig(path + 'overview.png', bbox_inches='tight', dpi=500)
 
 #########################################
 # %%
@@ -282,7 +283,7 @@ time = np.concatenate((df['time'], df2['time']))
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(9, 3), sharex=True, sharey=True)
 c = ax[0].pcolormesh(time, df['range'],
-                     np.log10(beta), vmin=-8, vmax=-4, cmap='jet')
+                     beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet')
 cbar = fig.colorbar(c, ax=ax[0])
 
 cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
@@ -315,7 +316,7 @@ for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
 fig.tight_layout()
-fig.savefig(path + 'overview.png', bbox_inches='tight', dpi=150)
+fig.savefig(path + 'overview.png', bbox_inches='tight', dpi=500)
 
 #########################################
 # %%
