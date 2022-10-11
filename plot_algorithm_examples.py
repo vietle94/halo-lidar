@@ -63,10 +63,59 @@ boundaries_cloudnet = np.linspace(-0.5, 10.5, 12)
 norm_cloudnet = mpl.colors.BoundaryNorm(boundaries_cloudnet, cmap_cloudnet.N, clip=True)
 
 
-chosen_dates = ['2018-06-11', '2019-04-07', '2019-08-07', '2019-12-31']
-files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/*.nc')
-fig, axes = plt.subplots(4, 2, figsize=(12, 9), sharey=True)
-for date_, file_cloudnet, ax in zip(chosen_dates, files, axes):
+# chosen_dates = ['2018-06-11', '2019-04-07', '2019-08-07', '2019-12-31']
+# files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/*.nc')
+# fig, axes = plt.subplots(4, 2, figsize=(12, 9), sharey=True)
+# for date_, file_cloudnet, ax in zip(chosen_dates, files, axes):
+#
+#     df = xr.open_dataset(r'F:\halo\classifier_new\46/' + date_ + '-Hyytiala-46_classified.nc')
+#     df_cloudnet = xr.open_dataset(file_cloudnet)
+#
+#     decimal_time = df['time'].dt.hour + \
+#         df['time'].dt.minute / 60 + df['time'].dt.second/3600
+#     p1 = ax[0].pcolormesh(decimal_time, df['range'],
+#                           df['classified'].T,
+#                           cmap=cmap, norm=norm)
+#
+#     cbar = fig.colorbar(p1, ax=ax[0], ticks=[5, 15, 30, 45])
+#     cbar.ax.set_yticklabels(['Background', 'Aerosol',
+#                              'Hydrometeor', 'Undefined'])
+#
+#     decimal_time_cloudnet = pd.to_datetime(df_cloudnet['time']).hour + \
+#         pd.to_datetime(df_cloudnet['time']).minute / 60 + \
+#         pd.to_datetime(df_cloudnet['time']).second/3600
+#     p2 = ax[1].pcolormesh(decimal_time_cloudnet,
+#                           df_cloudnet['height'], df_cloudnet['target_classification'].T,
+#                           cmap=cmap_cloudnet, norm=norm_cloudnet)
+#     cbar = fig.colorbar(p2, ax=ax[1], ticks=np.arange(11))
+#     cbar.ax.set_yticklabels(['Clear sky', 'Droplets', 'Drizzle or rain', 'Drizzle & droplets',
+#                              'Ice', 'Ice & droplets', 'Melting ice', 'Melting & droplets',
+#                              'Aerosols', 'Insects', 'Aerosol & Insects'])
+#
+# for n, ax in enumerate(axes.flatten()):
+#     # ax.yaxis.set_major_formatter(preprocess.m_km_ticks())
+#     ax.set_yticks([0, 4000, 8000])
+#     ax.yaxis.set_major_formatter(hd.m_km_ticks())
+#     ax.set_ylim(bottom=0)
+#     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+#             transform=ax.transAxes, size=12)
+#     ax.set_xticks([0, 6, 12, 18, 24])
+#     ax.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
+#     ax.set_xlabel('Time UTC')
+#
+# for ax in axes[:, 0]:
+#     ax.set_ylabel('Height a.g.l [km]')
+#
+#
+# fig.tight_layout()
+# fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight')
+
+# %%
+chosen_dates = ['2019-05-31']
+files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/' +
+                  chosen_dates[0].replace('-', '') + '*.nc')
+fig, ax = plt.subplots(1, 2, figsize=(12, 2.5), sharey=True)
+for date_, file_cloudnet in zip(chosen_dates, files):
 
     df = xr.open_dataset(r'F:\halo\classifier_new\46/' + date_ + '-Hyytiala-46_classified.nc')
     df_cloudnet = xr.open_dataset(file_cloudnet)
@@ -92,20 +141,17 @@ for date_, file_cloudnet, ax in zip(chosen_dates, files, axes):
                              'Ice', 'Ice & droplets', 'Melting ice', 'Melting & droplets',
                              'Aerosols', 'Insects', 'Aerosol & Insects'])
 
-for n, ax in enumerate(axes.flatten()):
+for n, ax_ in enumerate(ax.flatten()):
     # ax.yaxis.set_major_formatter(preprocess.m_km_ticks())
-    ax.set_yticks([0, 4000, 8000])
-    ax.yaxis.set_major_formatter(hd.m_km_ticks())
-    ax.set_ylim(bottom=0)
-    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-            transform=ax.transAxes, size=12)
-    ax.set_xticks([0, 6, 12, 18, 24])
-    ax.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
-    ax.set_xlabel('Time UTC')
+    ax_.set_yticks([0, 4000, 8000])
+    ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+    ax_.set_ylim(bottom=0)
+    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+             transform=ax_.transAxes, size=12)
+    ax_.set_xticks([0, 6, 12, 18, 24])
+    ax_.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
+    ax_.set_xlabel('Time UTC')
 
-for ax in axes[:, 0]:
-    ax.set_ylabel('Height a.g.l [km]')
-
-
+ax[0].set_ylabel('Height a.g.l [km]')
 fig.tight_layout()
-fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight')
+fig.savefig('algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
