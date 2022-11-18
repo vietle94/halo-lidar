@@ -185,14 +185,16 @@ group = df_miss[(df_miss['count'] > 15) & (
 for k in location_site:
     grp = group.get_group(k)
     grp_ = grp.groupby(grp.datetime.dt.month)['depo_corrected']
-    mean_plot = grp_.mean()
-    std_plot = grp_.std()
+    median_plot = grp_.median()
+    median25_plot = grp_.agg(lambda x: np.nanpercentile(x, q=25))
+    median75_plot = grp_.agg(lambda x: np.nanpercentile(x, q=75))
 
-    ax[0].errorbar(mean_plot.index + jitter[k],
-                   mean_plot,
-                   yerr=std_plot,
+    ax[0].errorbar(median_plot.index + jitter[k],
+                   median_plot,
+                   yerr=(median_plot - median25_plot,
+                         median75_plot - median_plot),
                    label=k, marker='.',
-                   fmt='--', elinewidth=1)
+                   fmt='--', elinewidth=1, linewidth=0.5)
 
     ax[0].set_xticks(np.arange(1, 13, 3))
     ax[0].set_xticklabels(['Jan', 'April', 'July', 'Oct'])
@@ -245,4 +247,9 @@ for n, ax_ in enumerate(ax):
     ax_.text(0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
 ax[0].set_ylim(top=0.5)
-fig.savefig(path + '/depo_vs_ref.png', bbox_inches='tight', dpi=1000)
+# fig.savefig(path + '/depo_vs_ref.png', bbox_inches='tight', dpi=1000)
+
+# %%
+df_ref[df_ref['Type'].isin(['anthropogenic\npollution', 'smoke'])]
+
+df_ref[df_ref['Type'] == 'pollen']
