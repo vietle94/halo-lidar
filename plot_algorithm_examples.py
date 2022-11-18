@@ -111,19 +111,67 @@ norm_cloudnet = mpl.colors.BoundaryNorm(boundaries_cloudnet, cmap_cloudnet.N, cl
 # fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight')
 
 # %%
-chosen_dates = ['2019-05-31']
-files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/' +
-                  chosen_dates[0].replace('-', '') + '*.nc')
-fig, ax = plt.subplots(1, 2, figsize=(12, 2.5), sharey=True)
-for date_, file_cloudnet in zip(chosen_dates, files):
+# chosen_dates = ['2019-05-31']
+# files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/' +
+#                   chosen_dates[0].replace('-', '') + '*.nc')
+# fig, ax = plt.subplots(1, 2, figsize=(12, 2.5), sharey=True)
+# for date_, file_cloudnet in zip(chosen_dates, files):
+#
+#     df = xr.open_dataset(r'F:\halo\classifier_new\46/' + date_ + '-Hyytiala-46_classified.nc')
+#     df_cloudnet = xr.open_dataset(file_cloudnet)
+#
+#     decimal_time = df['time'].dt.hour + \
+#         df['time'].dt.minute / 60 + df['time'].dt.second/3600
+#     p1 = ax[0].pcolormesh(decimal_time, df['range'],
+#                           df['classified'].T,
+#                           cmap=cmap, norm=norm)
+#
+#     cbar = fig.colorbar(p1, ax=ax[0], ticks=[5, 15, 30, 45])
+#     cbar.ax.set_yticklabels(['Background', 'Aerosol',
+#                              'Hydrometeor', 'Undefined'])
+#
+#     decimal_time_cloudnet = pd.to_datetime(df_cloudnet['time']).hour + \
+#         pd.to_datetime(df_cloudnet['time']).minute / 60 + \
+#         pd.to_datetime(df_cloudnet['time']).second/3600
+#     p2 = ax[1].pcolormesh(decimal_time_cloudnet,
+#                           df_cloudnet['height'], df_cloudnet['target_classification'].T,
+#                           cmap=cmap_cloudnet, norm=norm_cloudnet)
+#     cbar = fig.colorbar(p2, ax=ax[1], ticks=np.arange(11))
+#     cbar.ax.set_yticklabels(['Clear sky', 'Droplets', 'Drizzle or rain', 'Drizzle & droplets',
+#                              'Ice', 'Ice & droplets', 'Melting ice', 'Melting & droplets',
+#                              'Aerosols', 'Insects', 'Aerosol & Insects'])
+#
+# for n, ax_ in enumerate(ax.flatten()):
+#     # ax.yaxis.set_major_formatter(preprocess.m_km_ticks())
+#     ax_.set_yticks([0, 4000, 8000])
+#     ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+#     ax_.set_ylim(bottom=0)
+#     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+#              transform=ax_.transAxes, size=12)
+#     ax_.set_xticks([0, 6, 12, 18, 24])
+#     ax_.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
+#     ax_.set_xlabel('Time UTC')
+#
+# ax[0].set_ylabel('Height a.g.l [km]')
+# fig.tight_layout()
+# fig.savefig('algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
 
+# %%
+path = r'F:\halo\paper\figures\algorithm/'
+chosen_dates = ['2018-04-08', '2018-06-11', '2018-09-03', '2019-12-31']
+files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/*.nc')
+fig, axes = plt.subplots(4, 2, figsize=(12, 9), sharey=True)
+for date_, ax in zip(chosen_dates, axes):
     df = xr.open_dataset(r'F:\halo\classifier_new\46/' + date_ + '-Hyytiala-46_classified.nc')
-    df_cloudnet = xr.open_dataset(file_cloudnet)
 
-    decimal_time = df['time'].dt.hour + \
-        df['time'].dt.minute / 60 + df['time'].dt.second/3600
-    p1 = ax[0].pcolormesh(decimal_time, df['range'],
-                          df['classified'].T,
+    df_cloudnet = xr.open_dataset([x for x in files if date_.replace('-', '') in x][0])
+    df_cloudnet['height'] = df_cloudnet['height'] - df_cloudnet['altitude'].values
+
+    df_int = df.interp(range=df_cloudnet['height'], time=df_cloudnet['time'], method='nearest')
+    decimal_time = df_int['time'].dt.hour + \
+        df_int['time'].dt.minute / 60 + df_int['time'].dt.second/3600
+    p1 = ax[0].pcolormesh(decimal_time, df_int['range'],
+                          df_int['classified'].T,
                           cmap=cmap, norm=norm)
 
     cbar = fig.colorbar(p1, ax=ax[0], ticks=[5, 15, 30, 45])
@@ -140,18 +188,87 @@ for date_, file_cloudnet in zip(chosen_dates, files):
     cbar.ax.set_yticklabels(['Clear sky', 'Droplets', 'Drizzle or rain', 'Drizzle & droplets',
                              'Ice', 'Ice & droplets', 'Melting ice', 'Melting & droplets',
                              'Aerosols', 'Insects', 'Aerosol & Insects'])
+    cloudnet_aerosol = (df_cloudnet['target_classification'] == 8) | \
+        (df_cloudnet['target_classification'] == 10)
+    cloudnet_hydro = (df_cloudnet['target_classification'] < 8) * \
+        (df_cloudnet['target_classification'] > 0)
 
-for n, ax_ in enumerate(ax.flatten()):
+    ai_aerosol = df_int['classified'] == 10
+    same_aerosol = np.sum((cloudnet_aerosol * ai_aerosol).values)
+    false_aerosol = np.sum((cloudnet_hydro * ai_aerosol).values)
+
+    total_cloudnet_aerosol = np.sum(cloudnet_aerosol.values)
+    total_ai_aerosol = np.sum(ai_aerosol.values)
+
+    print(same_aerosol, total_cloudnet_aerosol, total_ai_aerosol,
+          false_aerosol/total_ai_aerosol,
+          (total_cloudnet_aerosol-same_aerosol)/total_ai_aerosol)
+for n, ax in enumerate(axes.flatten()):
     # ax.yaxis.set_major_formatter(preprocess.m_km_ticks())
-    ax_.set_yticks([0, 4000, 8000])
-    ax_.yaxis.set_major_formatter(hd.m_km_ticks())
-    ax_.set_ylim(bottom=0)
-    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-             transform=ax_.transAxes, size=12)
-    ax_.set_xticks([0, 6, 12, 18, 24])
-    ax_.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
-    ax_.set_xlabel('Time UTC')
+    ax.set_yticks([0, 4000, 8000])
+    ax.yaxis.set_major_formatter(hd.m_km_ticks())
+    ax.set_ylim(bottom=0)
+    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+            transform=ax.transAxes, size=12)
+    ax.set_xticks([0, 6, 12, 18, 24])
+    ax.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
+    ax.set_xlabel('Time UTC')
 
-ax[0].set_ylabel('Height a.g.l [km]')
+for ax in axes[:, 0]:
+    ax.set_ylabel('Height a.g.l [km]')
+
 fig.tight_layout()
-fig.savefig('algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
+# fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
+
+###############################
+# %% Collect overall statistics
+###############################
+# cloudnet_files = glob.glob(r'F:\halo\paper\figures\algorithm\cloudnet/all/*.nc')
+# ai_files = glob.glob(r'F:\halo\classifier_new\46/*.nc')
+# chosen_dates = [x.split('-Hyy')[0].split('\\')[-1] for x in ai_files]
+#
+# for date_ in chosen_dates:
+#     df = xr.open_dataset(r'F:\halo\classifier_new\46/' + date_ + '-Hyytiala-46_classified.nc')
+#     try:
+#         df_cloudnet = xr.open_dataset([x for x in cloudnet_files if date_.replace('-', '') in x][0])
+#     except IndexError:
+#         continue
+#     df_cloudnet['height'] = df_cloudnet['height'] - df_cloudnet['altitude'].values
+#     df_int = df.interp(range=df_cloudnet['height'], time=df_cloudnet['time'], method='nearest')
+#
+#     cloudnet_aerosol = (df_cloudnet['target_classification'] == 8) | \
+#         (df_cloudnet['target_classification'] == 10)
+#     cloudnet_hydro = (df_cloudnet['target_classification'] < 8) * \
+#         (df_cloudnet['target_classification'] > 0)
+#
+#     ai_aerosol = df_int['classified'] == 10
+#     same_aerosol = np.sum((cloudnet_aerosol * ai_aerosol).values)
+#     false_aerosol = np.sum((cloudnet_hydro * ai_aerosol).values)
+#
+#     total_cloudnet_aerosol = np.sum(cloudnet_aerosol.values)
+#     total_ai_aerosol = np.sum(ai_aerosol.values)
+#     result = pd.DataFrame.from_records([{
+#         'time': date_,
+#         'ai_aerosol': total_ai_aerosol,
+#         'cloudnet_aerosol': total_cloudnet_aerosol,
+#         'same_aerosol': same_aerosol,
+#         'false_aerosol': false_aerosol,
+#         'false_aerosol_percent': false_aerosol/total_ai_aerosol,
+#         'miss_aerosol': (total_cloudnet_aerosol-same_aerosol),
+#         'miss_aerosol_percent': (total_cloudnet_aerosol-same_aerosol)/total_ai_aerosol
+#     }])
+#     with open(r'F:\halo\paper\figures\algorithm\cloudnet/ai_summary.csv', 'a') as f:
+#         result.to_csv(f, header=f.tell() == 0, index=False)
+
+
+#############################
+# %% Overall statistics
+#############################
+df = pd.read_csv(r'F:\halo\paper\figures\algorithm\cloudnet/ai_summary.csv')
+
+# %%
+false_per = np.sum(df['false_aerosol'])/np.sum(df['ai_aerosol'])
+miss_per = np.sum(df['miss_aerosol'])/np.sum(df['ai_aerosol'])
+
+false_per
+miss_per
