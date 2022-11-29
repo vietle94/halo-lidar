@@ -77,3 +77,20 @@ for n, ax_ in enumerate(axes.flatten()):
 
 fig.savefig(r'F:\halo\paper\figures\background_correction_all/summary.png',
             dpi=150, bbox_inches='tight')
+
+# %%
+for key, ax in zip(site_plot, axes.flatten()):
+    value = file_paths[key]
+    df = pd.concat([pd.read_csv(x) for x in value], ignore_index=True)
+    df['time'] = pd.to_datetime(df['time'])
+
+    df['subtract'] = df['depo_corrected'] - df['depo']
+    temp = df[['co_corrected', 'subtract']]
+    temp['co_corrected'] = temp['co_corrected'] - 1
+    temp = temp[(temp['subtract'] < 0.3) & (temp['co_corrected'] < 0.2)]
+    temp = temp[(temp['subtract'] > -0.1) & (temp['co_corrected'] > 0)]
+    temp = temp.dropna()
+    mynum = temp[np.abs(temp['subtract']) > 0.05].size/temp.size
+    mynum2 = temp[np.abs(temp['subtract']) > 0.01].size/temp.size
+    mynum3 = temp[np.abs(temp['subtract']) > 0.1].size/temp.size
+    print(key, mynum, mynum2, mynum3)
