@@ -210,12 +210,13 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
         group = group_.get_group(id)
         x = group[(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
             group[['year', 'month', 'day']]) < '2017-11-22')]
+        print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
         ax0.errorbar(x_group_mean.index, x_group.mean(),
                      yerr=x_group.std(), ls='none', marker='.', linewidth=0.5, markersize=5)
         ax0_hist.hist(x['depo'], bins=50, orientation='horizontal')
-        gmm = GaussianMixture(n_components=1, max_iter=10000)
+        gmm = GaussianMixture(n_components=2, max_iter=10000)
         gmm.fit(x['depo'].values.reshape(-1, 1))
         smean = gmm.means_.ravel()
         sstd = np.sqrt(gmm.covariances_).ravel()
@@ -230,6 +231,7 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
 
         x = group[(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
             group[['year', 'month', 'day']]) >= '2017-11-22')]
+        print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
         ax1.errorbar(x_group_mean.index, x_group.mean(),
@@ -250,6 +252,7 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
     elif id in [46, 33]:
         group = group_.get_group(id)
         x = group[(group['depo'] > -0.01) & (group['depo'] < 0.1)]
+        print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
         ax.errorbar(x_group_mean.index, x_group.mean(),
@@ -270,6 +273,7 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
     else:
         group = group_.get_group(id)
         x = group[(group['depo'] > -0.01) & (group['depo'] < 0.1)]
+        print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
         ax.errorbar(x_group_mean.index, x_group.mean(),
@@ -303,8 +307,8 @@ for ax in [ax0_hist, ax1_hist, ax2_hist, ax3_hist, ax4_hist, ax5_hist]:
     ax.grid()
 ax0.set_ylim([-0.01, 0.07])
 # fig.subplots_adjust(hspace=0.7)
-fig.savefig(path + '/depo_ts.png', dpi=150,
-            bbox_inches='tight')
+# fig.savefig(path + '/depo_ts.png', dpi=500,
+#             bbox_inches='tight')
 
 # %%
 ######################################
