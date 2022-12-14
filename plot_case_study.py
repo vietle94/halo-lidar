@@ -141,13 +141,13 @@ df_plot_range = df_plot['range'].values
 fig, ax = plt.subplots(2, 2, figsize=(9, 4), sharey='row')
 
 c = ax[0, 0].pcolormesh(time_plot, df['range'],
-                        beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet')
+                        beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet', zorder=10)
 cbar = fig.colorbar(c, ax=ax[0, 0])
 
 cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
 
 c = ax[0, 1].pcolormesh(time_delta, df['range'],
-                        delta, vmin=0, vmax=0.5, cmap='jet')
+                        delta, vmin=0, vmax=0.5, cmap='jet', zorder=10)
 cbar = fig.colorbar(c, ax=ax[0, 1])
 
 cbar.ax.set_ylabel(r'$\delta$', rotation=90)
@@ -166,6 +166,8 @@ for ax_ in ax[0]:
     ax_.set_xlabel('Time UTC')
 
     ax_.set_yticks([0, 2000, 4000, 6000, 8000])
+    ax_.axvspan('2018-04-15T03:00:00', '2018-04-15T04:00:00', facecolor='gray',
+                alpha=0.3)
     # ax_.axvline(x='2018-04-15T03:00:00', c='gray', ls='--', lw=0.75)
     # ax_.axvline(x='2018-04-15T04:00:00', c='gray', ls='--', lw=0.75)
 # ax_.set_xlabel('Time UTC')
@@ -307,6 +309,10 @@ for ax_ in [ax1, ax2]:
     ax_.set_xlabel('Time UTC')
 
     ax_.set_yticks([0, 2000, 4000, 6000, 8000])
+    ax_.axvspan('2017-05-13T18:00:00', '2017-05-13T20:00:00', facecolor='gray',
+                alpha=0.3)
+    ax_.axvspan('2017-05-14T00:00:00', '2017-05-14T05:00:00', facecolor='gray',
+                alpha=0.3)
     # ax_.axvline(x='2018-04-15T03:00:00', c='gray', ls='--', lw=0.75)
     # ax_.axvline(x='2018-04-15T04:00:00', c='gray', ls='--', lw=0.75)
 # ax_.set_xlabel('Time UTC')
