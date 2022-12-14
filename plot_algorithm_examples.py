@@ -22,7 +22,9 @@ path = r'F:\halo\paper\figures\algorithm/'
 # algorithm examples
 ####################################
 cmap = mpl.colors.ListedColormap(
-    ['white', '#2ca02c', 'red', 'gray'])
+    # ['white', '#2ca02c', 'red', 'gray'])
+    # ['white', '#009e73', '#e69f00', 'gray'])
+    ['white', '#e69f00', '#56b4e9', 'gray'])
 boundaries = [0, 10, 20, 40, 50]
 norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
 
@@ -218,7 +220,7 @@ for ax in axes[:, 0]:
     ax.set_ylabel('Height a.g.l [km]')
 
 fig.tight_layout()
-# fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
+fig.savefig(path + 'algorithm_cloudnet.png', bbox_inches='tight', dpi=500)
 
 ###############################
 # %% Collect overall statistics
