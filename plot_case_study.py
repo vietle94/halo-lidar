@@ -311,8 +311,11 @@ for ax_ in [ax1, ax2]:
     ax_.set_yticks([0, 2000, 4000, 6000, 8000])
     ax_.axvspan('2017-05-13T18:00:00', '2017-05-13T20:00:00', facecolor='gray',
                 alpha=0.3)
+    ax_.text('2017-05-13T19:00:00', 6000, 'I')
     ax_.axvspan('2017-05-14T00:00:00', '2017-05-14T05:00:00', facecolor='gray',
                 alpha=0.3)
+    ax_.text('2017-05-14T02:30:00', 6000, 'II')
+
     # ax_.axvline(x='2018-04-15T03:00:00', c='gray', ls='--', lw=0.75)
     # ax_.axvline(x='2018-04-15T04:00:00', c='gray', ls='--', lw=0.75)
 # ax_.set_xlabel('Time UTC')
