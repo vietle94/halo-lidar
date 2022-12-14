@@ -35,7 +35,6 @@ import string
 import scipy.stats as stats
 from netCDF4 import Dataset
 import pywt
-%matplotlib qt
 
 # %%
 path = r'F:\halo\paper\figures\algorithm/'
@@ -63,45 +62,6 @@ temp_co = df.data['co_signal'].copy()
 lol = np.isnan(np.log10(df.data['beta_raw']))
 lol[~m_, :] = False
 temp_co[lol] = 1
-
-fig, axes = plt.subplots(3, 1, sharex=True, sharey=True, figsize=(6, 4.5))
-p = axes[0].pcolormesh(df.data['time'], df.data['range'],
-                       np.log10(df.data['beta_raw']).T, cmap='jet',
-                       vmin=-8, vmax=-4)
-axes[1].yaxis.set_major_formatter(hd.m_km_ticks())
-axes[0].set_yticks([0, 4000, 8000])
-axes[0].set_xlim([0, 24])
-cbar = fig.colorbar(p, ax=axes[0], fraction=0.05)
-cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
-cbar.ax.set_title(r'$1e$', size=10)
-axes[0].set_ylabel('Height a.g.l [km]')
-axes[-1].set_xlabel('Time UTC')
-
-p = axes[1].pcolormesh(df.data['time'], df.data['range'],
-                       df.data['v_raw'].T, cmap='jet',
-                       vmin=-2, vmax=2)
-cbar = fig.colorbar(p, ax=axes[1], fraction=0.05)
-cbar.ax.set_ylabel('w [' + df.units.get('v_raw', None) + ']', rotation=90)
-# axes[1].set_ylabel('Height a.g.l [km]')
-axes[1].set_ylabel('Height a.g.l [km]')
-
-p = axes[2].pcolormesh(df.data['time'], df.data['range'],
-                       temp_co.T - 1, cmap='jet',
-                       vmin=0.995 - 1, vmax=1.005 - 1)
-cbar = fig.colorbar(p, ax=axes[2], fraction=0.05)
-cbar.ax.set_ylabel('$SNR_{co}$', rotation=90)
-# axes[2].set_ylabel('Height a.g.l [km]')
-axes[2].set_ylabel('Height a.g.l [km]')
-axes[2].set_xticks([0, 6, 12, 18, 24])
-axes[2].set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
-axes[0].set_ylim(bottom=0)
-for n, ax in enumerate(axes.flatten()):
-    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-            transform=ax.transAxes, size=12)
-fig.tight_layout()
-
-fig.savefig(path + 'processed_data.png',
-            bbox_inches='tight')
 
 ####################################################
 # %%
@@ -136,11 +96,7 @@ aerosol_smoothed = median_filter(aerosol_smoothed, size=(15, 1))
 # %%
 df.data['classifier'][aerosol_smoothed] = 10
 class2 = df.data['classifier'].copy()
-# %%
-cmap = mpl.colors.ListedColormap(
-    ['white', '#2ca02c', 'red', 'gray'])
-boundaries = [0, 10, 20, 40, 50]
-norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
+
 
 # %%
 df.filter(variables=['beta_raw', 'v_raw', 'depo_adj'],
@@ -333,7 +289,14 @@ if (df.data['classifier'] == 20).any():
 class12 = df.data['classifier'].copy()
 
 # %%
-fig, ax = plt.subplots(4, 1, figsize=(6.25, 6))
+cmap = mpl.colors.ListedColormap(
+    # ['white', '#2ca02c', 'red', 'gray'])
+    # ['white', '#009e73', '#e69f00', 'gray'])
+    ['white', '#e69f00', '#56b4e9', 'gray'])
+boundaries = [0, 10, 20, 40, 50]
+norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
+
+fig, ax = plt.subplots(3, 1, figsize=(6.25, 5))
 for ax_, data_plot in zip(ax.flatten(), [first_plot, second_plot, third_plot, fourth_plot]):
     p = ax_.pcolormesh(df.data['time'], df.data['range'],
                        data_plot.T,
@@ -351,4 +314,56 @@ for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
 fig.tight_layout()
-fig.savefig(path + 'algorithm_demo.png', bbox_inches='tight')
+fig.savefig(path + 'algorithm_demo.png', bbox_inches='tight', dpi=500)
+
+###########################################
+# %%
+############################################
+fig, axes = plt.subplots(4, 1, sharex=True, sharey=True, figsize=(6.5, 6))
+p = axes[0].pcolormesh(df.data['time'], df.data['range'],
+                       np.log10(df.data['beta_raw']).T, cmap='jet',
+                       vmin=-8, vmax=-4)
+p1 = axes[1].pcolormesh(df.data['time'], df.data['range'],
+                        df.data['v_raw'].T, cmap='jet',
+                        vmin=-2, vmax=2)
+p2 = axes[2].pcolormesh(df.data['time'], df.data['range'],
+                        temp_co.T - 1, cmap='jet',
+                        vmin=0.995 - 1, vmax=1.005 - 1)
+p3 = axes[3].pcolormesh(df.data['time'], df.data['range'],
+                        fourth_plot.T,
+                        cmap=cmap, norm=norm)
+
+for n, ax in enumerate(axes.flatten()):
+    ax.set_xticks([0, 6, 12, 18, 24])
+    ax.set_xticklabels(['00:00', '06:00', '12:00', '18:00', '24:00'])
+    ax.set_xlim([0, 24])
+    ax.set_ylim(bottom=0)
+    ax.set_yticks([0, 4000, 8000])
+    ax.yaxis.set_major_formatter(hd.m_km_ticks())
+    ax.set_ylabel('Height a.g.l [km]')
+    ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+            transform=ax.transAxes, size=12)
+
+cbar = fig.colorbar(p, ax=axes[0])
+cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+cbar.ax.set_title(r'$1e$', size=10)
+
+
+cbar = fig.colorbar(p1, ax=axes[1])
+cbar.ax.set_ylabel('w [' + df.units.get('v_raw', None) + ']', rotation=90)
+# axes[1].set_ylabel('Height a.g.l [km]')
+
+
+cbar = fig.colorbar(p2, ax=axes[2])
+cbar.ax.set_ylabel('$SNR_{co}$', rotation=90)
+# axes[2].set_ylabel('Height a.g.l [km]')
+
+cbar = fig.colorbar(p3, ax=axes[3], ticks=[5, 15, 30, 45])
+axes[3].set_xlabel('Time UTC')
+cbar.ax.set_yticklabels(['Background', 'Aerosol',
+                         'Hydrometeor', 'Undefined'])
+
+fig.tight_layout()
+
+fig.savefig(path + 'processed_data.png', dpi=500,
+            bbox_inches='tight')
