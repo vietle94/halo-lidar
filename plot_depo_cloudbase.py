@@ -404,7 +404,7 @@ depo.loc[(depo['date'] > '2017-11-20') & (depo['systemID'] == '32'),
 depo['sys'] = depo['location'] + '-' + depo['systemID']
 
 # %%
-fig, ax = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
+fig, ax = plt.subplots(figsize=(4, 3), sharey=True)
 table32 = table[(table['systemID'] == 32) & (pd.to_datetime(
     table[['year', 'month', 'day']]) >= '2017-11-22')]
 
@@ -417,48 +417,48 @@ H, co_edges, cross_edges = np.histogram2d(
 
 y_hat = (co_cross_data['co_signal'] - 1) * 0.004
 text = "$SNR_{cross}=0.004\;SNR_{co}$"
-ax[0].plot(co_cross_data['co_signal'] - 1,
-           y_hat, "r-", lw=1, label=text)
+ax.plot(co_cross_data['co_signal'] - 1,
+        y_hat, "r-", lw=1, label=text)
 
-# ax[0].text(0.05, 0.95, text, transform=ax[0].transAxes,
+# ax.text(0.05, 0.95, text, transform=ax.transAxes,
 #         fontsize=10, verticalalignment='top', bbox=props)
-ax[0].legend(fontsize=10, facecolor='wheat', framealpha=0.5)
+ax.legend(fontsize=10, facecolor='wheat', framealpha=0.5)
 
 X, Y = np.meshgrid(co_edges, cross_edges)
-p = ax[0].pcolormesh(X, Y, H.T, norm=LogNorm())
-ax[0].set_xlabel('$SNR_{co}$')
-ax[0].set_ylabel('$SNR_{cross}$')
-colorbar = fig.colorbar(p, ax=ax[0])
+p = ax.pcolormesh(X, Y, H.T, norm=LogNorm())
+ax.set_xlabel('$SNR_{co}$')
+ax.set_ylabel('$SNR_{cross}$')
+colorbar = fig.colorbar(p, ax=ax)
 colorbar.ax.set_ylabel('N')
-
-for key, group in depo.groupby('sys'):
-    # Co-cross histogram
-    if key == 'Uto-32XR':
-        co_cross_data = group[['co_signal', 'cross_signal']].dropna()
-        H, co_edges, cross_edges = np.histogram2d(
-            co_cross_data['co_signal'] - 1,
-            co_cross_data['cross_signal'] - 1,
-            bins=1000)
-        y_hat = (co_cross_data['co_signal'] - 1) * 0.004
-        text = "$SNR_{cross}=0.004\;SNR_{co}$"
-        ax[1].plot(co_cross_data['co_signal'] - 1,
-                   y_hat, "r-", lw=1, label=text)
-        ax[1].legend(fontsize=10, facecolor='wheat', framealpha=0.5)
-
-        # ax[1].text(0.05, 0.95, text, transform=ax[1].transAxes,
-        #         fontsize=10, verticalalignment='top', bbox=props)
-        X, Y = np.meshgrid(co_edges, cross_edges)
-        p = ax[1].pcolormesh(X, Y, H.T, norm=LogNorm())
-        ax[1].set_xlabel('$SNR_{co}$')
-        colorbar = fig.colorbar(p, ax=ax[1])
-        colorbar.ax.set_ylabel('N')
-        ax[1].set_ylim(top=0.3)
-        break
-for n, ax_ in enumerate(ax.flatten()):
-    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
-             transform=ax_.transAxes, size=12)
-    ax_.grid()
-fig.savefig(path + 'co_cross_saturation.png', dpi=150,
+ax.grid()
+# for key, group in depo.groupby('sys'):
+#     # Co-cross histogram
+#     if key == 'Uto-32XR':
+#         co_cross_data = group[['co_signal', 'cross_signal']].dropna()
+#         H, co_edges, cross_edges = np.histogram2d(
+#             co_cross_data['co_signal'] - 1,
+#             co_cross_data['cross_signal'] - 1,
+#             bins=1000)
+#         y_hat = (co_cross_data['co_signal'] - 1) * 0.004
+#         text = "$SNR_{cross}=0.004\;SNR_{co}$"
+#         ax[1].plot(co_cross_data['co_signal'] - 1,
+#                    y_hat, "r-", lw=1, label=text)
+#         ax[1].legend(fontsize=10, facecolor='wheat', framealpha=0.5)
+#
+#         # ax[1].text(0.05, 0.95, text, transform=ax[1].transAxes,
+#         #         fontsize=10, verticalalignment='top', bbox=props)
+#         X, Y = np.meshgrid(co_edges, cross_edges)
+#         p = ax[1].pcolormesh(X, Y, H.T, norm=LogNorm())
+#         ax[1].set_xlabel('$SNR_{co}$')
+#         colorbar = fig.colorbar(p, ax=ax[1])
+#         colorbar.ax.set_ylabel('N')
+#         ax[1].set_ylim(top=0.3)
+#         break
+# for n, ax_ in enumerate(ax.flatten()):
+#     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+#              transform=ax_.transAxes, size=12)
+#     ax_.grid()
+fig.savefig(path + 'co_cross_saturation.png', dpi=300,
             bbox_inches='tight')
 
 # %%
