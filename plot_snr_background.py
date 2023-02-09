@@ -20,17 +20,28 @@ for site in site_names:
     df2 = pd.read_csv(integration + site + '.csv')
     df = df1.merge(df2, how='left')
     df['time'] = pd.to_datetime(df['time'])
-    axes[0].plot(df['time'], df['noise'], '.', label=site,
-                 markeredgewidth=0.0)
+    ax_c = axes[0].plot(df['time'], df['noise'], '.', label=site,
+                        markeredgewidth=0.0)
     axes[0].set_ylabel('$\sigma_{SNR}$')
     if site == 'Uto-32XR':
-        axes[1].plot(df['time'], df['noise'] * np.sqrt(df['integration_time']*10000),
+        axes[1].plot(df['time'], df['noise'] * np.sqrt(20000),
                      '.', label=site,
-                     markeredgewidth=0.0)
+                     markeredgewidth=0.0, c=ax_c[0].get_color())
+    elif site == 'Uto-32':
+        if [df['time'] > pd.to_datetime('20160712')]:
+            axes[1].plot(df['time'][df['time'] > pd.to_datetime('20160712')], df['noise'][df['time'] > pd.to_datetime('20160712')] * np.sqrt(75000),
+                         '.', label=site, markeredgewidth=0.0, c=ax_c[0].get_color())
+            axes[1].plot(df['time'][df['time'] < pd.to_datetime('20160712')], df['noise'][df['time'] < pd.to_datetime('20160712')] * np.sqrt(450000),
+                         '.',
+                         markeredgewidth=0.0, c=ax_c[0].get_color())
+    elif site in ['Vehmasmaki-53', 'Sodankyla-54']:
+        axes[1].plot(df['time'], df['noise'] * np.sqrt(90000),
+                     '.', label=site,
+                     markeredgewidth=0.0, c=ax_c[0].get_color())
     else:
-        axes[1].plot(df['time'], df['noise'] * np.sqrt(df['integration_time']*15000),
+        axes[1].plot(df['time'], df['noise'] * np.sqrt(90000),
                      '.', label=site,
-                     markeredgewidth=0.0)
+                     markeredgewidth=0.0, c=ax_c[0].get_color())
     axes[1].set_ylabel('$\sigma_{SNR}$ x $\sqrt{N}$')
     axes[0].set_ylim([0, 0.0025])
 for ax in axes.flatten():
