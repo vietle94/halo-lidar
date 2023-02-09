@@ -345,7 +345,7 @@ for n, ax in enumerate(axes.flatten()):
             transform=ax.transAxes, size=12)
 
 cbar = fig.colorbar(p, ax=axes[0])
-cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+cbar.ax.set_ylabel(r"$\beta'\quad[Mm^{-1}]$", rotation=90)
 cbar.ax.set_title(r'$1e$', size=10)
 
 

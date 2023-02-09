@@ -189,7 +189,7 @@ ax[1, 1].grid()
 ax[1, 0].set_ylabel('Height a.g.l [km]')
 ax[1, 0].set_ylim([0, 4000])
 
-ax[1, 0].set_xlabel(r'$\beta$')
+ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
 ax[1, 1].set_xlabel(r'$\delta$')
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
@@ -341,7 +341,7 @@ ax4.set_xlim([0.05, 0.35])
 ax3.set_ylabel('Height a.g.l [km]')
 ax3.set_ylim([0, 2000])
 
-# ax1.set_xlabel(r'$\beta$')
+# ax1.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
 # ax2.set_xlabel(r'$\delta$')
 
 mask = np.isin(df['range'], df_plot2_range)
@@ -365,9 +365,9 @@ ax5.set_ylabel('Height a.g.l [km]')
 ax5.set_ylim([0, 2000])
 # ax5.set_xticks(ax3.get_xticks())
 
-ax5.set_xlabel(r'$\beta$')
+ax5.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
 ax6.set_xlabel(r'$\delta$')
-ax3.set_xlabel(r'$\beta$')
+ax3.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
 ax4.set_xlabel(r'$\delta$')
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',

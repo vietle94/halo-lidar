@@ -348,7 +348,7 @@ beta_profile_plot = df.data['beta_raw'][mask_time_plot,
 fig, axes = plt.subplots(1, 3, figsize=(10, 4), sharey=True)
 
 for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
-                        ['$\delta$', '$SNR_{co}$', r'$\beta\quad[Mm^{-1}]$']):
+                        ['$\delta$', '$SNR_{co}$', r"$\beta'\quad[Mm^{-1}]$"]):
     for h, leg in zip([df.data['range'] <= cloud_base_height,
                        df.data['range'] == cloud_base_height,
                        (cloud_base_height < df.data['range']) &
@@ -372,7 +372,7 @@ fig.legend(handles, labels, loc='lower center', ncol=3)
 fig.subplots_adjust(bottom=0.2)
 print(df.filename)
 fig.savefig(path + df.filename + '_depo_profile.png',
-            bbox_inches='tight', dpi=150)
+            bbox_inches='tight', dpi=300)
 
 # %%
 ######################################
