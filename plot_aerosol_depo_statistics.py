@@ -285,12 +285,12 @@ for k in location_site:
 
     ax.set_xticks(np.arange(1, 13, 3))
     ax.set_xticklabels(['Jan', 'April', 'July', 'Oct'])
-    ax.set_ylabel('$\delta$')
+    ax.set_ylabel('$\delta_{aerosol}$')
     ax.grid(axis='x', which='major', linewidth=0.5, c='silver')
     ax.grid(axis='y', which='major', linewidth=0.5, c='silver')
     # ax.set_xlabel('Month')
     ax.legend()
-fig.savefig(path + '/monthly_median.png', bbox_inches='tight')
+fig.savefig(path + '/monthly_median.png', dpi=300, bbox_inches='tight')
 
 ##################################################
 # %% Overall depo
@@ -308,7 +308,7 @@ for k, ax_ in zip(location_site, ax):
     weights = np.ones_like(grp['depo_corrected'])/float(len(grp['depo_corrected']))
     ax_.hist(grp['depo_corrected'], bins=np.linspace(-0.1, 0.4, 11),
              weights=weights)
-    ax_.set_xlabel('$\delta$')
+    ax_.set_xlabel('$\delta_{aerosol}$')
 ax[0].set_ylabel('Fraction')
 
 for n, ax_ in enumerate(ax.flatten()):
@@ -317,7 +317,7 @@ for n, ax_ in enumerate(ax.flatten()):
     ax_.grid()
     ax_.yaxis.set_major_formatter(mtick.PercentFormatter(1, decimals=0))
 fig.subplots_adjust(hspace=0.5)
-fig.savefig(path + '/site_hist.png', bbox_inches='tight')
+fig.savefig(path + '/site_hist.png', dpi=300, bbox_inches='tight')
 
 #########################################################
 # %% Monthly hour
@@ -691,10 +691,11 @@ for k, ax in zip(location_site, [ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyl
     p = ax[0].pcolormesh(month_edge, range_edge, dep_mean.T, cmap='jet',
                          vmin=0, vmax=0.3)
     cbar = fig.colorbar(p, ax=ax[0], cax=ax_cbar)
-    cbar.ax.set_ylabel('$\\delta$')
+    cbar.ax.set_ylabel('$\\delta_{aerosol}$')
     ax[0].set_xticklabels([])
     ax[0].yaxis.set_major_formatter(FuncFormatter(lambda x, pos: f'{x/1000:.0f}'))
 
+    dep_percent[dep_percent < 0.0005] = np.nan
     p = ax[1].pcolormesh(month_edge, range_edge, dep_percent.T, cmap='viridis',
                          vmin=0, vmax=0.015)
     cbar = fig.colorbar(p, ax=ax[1], cax=ax_range_cbar)
@@ -728,7 +729,7 @@ for k, ax in zip(location_site, [ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyl
                          cmap='jet',
                          vmin=1e-5, vmax=0.3)
     cbar = fig.colorbar(p, ax=ax[2], cax=ax_hour_cbar)
-    cbar.ax.set_ylabel('$\delta$')
+    cbar.ax.set_ylabel('$\delta_{aerosol}$')
 
     ax[2].set_xticks(np.arange(1, 13, 3))
 
@@ -794,7 +795,7 @@ fig.subplots_adjust(hspace=1, wspace=2)
 #     if k == 'Sodankyla':
 #         for ax in [ax1, ax1_range, ax1_range_count, ax1_hour]:
 #             ax.spines['left'].set_color('black')
-fig.savefig(path + '/sites/all_sites_summary.png', bbox_inches='tight')
+fig.savefig(path + '/sites/all_sites_summary.png', dpi=300, bbox_inches='tight')
 
 
 ###############################################
@@ -851,7 +852,7 @@ for k, ax in zip(location_site, [ax_Uto, ax_Hyytiala, ax_Vehmasmaki, ax_Sodankyl
                          cmap='jet',
                          vmin=1e-5, vmax=0.3)
     cbar = fig.colorbar(p, ax=ax[0], cax=ax_hour_cbar)
-    cbar.ax.set_ylabel('$\delta$')
+    cbar.ax.set_ylabel('$\delta_{aerosol}$')
 
     ax[0].set_xticks(np.arange(1, 13, 3))
 
@@ -932,4 +933,4 @@ fig.subplots_adjust(hspace=1, wspace=2)
 #     if k == 'Sodankyla':
 #         for ax in [ax1, ax1_range, ax1_range_count, ax1_hour]:
 #             ax.spines['left'].set_color('black')
-fig.savefig(path + '/RH_hour_depo_summary.png', bbox_inches='tight', dpi=200)
+fig.savefig(path + '/RH_hour_depo_summary.png', bbox_inches='tight', dpi=300)
