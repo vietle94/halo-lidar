@@ -1,11 +1,9 @@
 # %% Load modules
-from scipy import signal
 import string
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import halo_data as hd
-from pathlib import Path
 import xarray as xr
 import matplotlib.dates as dates
 from matplotlib.colors import LogNorm
@@ -380,3 +378,206 @@ for n, ax_ in enumerate([ax1, ax2, ax3, ax4, ax5, ax6]):
              transform=ax_.transAxes, size=12)
     ax_.yaxis.set_major_formatter(hd.m_km_ticks())
 fig.savefig(path + 'hourly.png', bbox_inches='tight', dpi=500)
+
+#########################################
+# Uto 2018-04-14
+# Beta plots
+# %%
+df = xr.open_dataset(r'F:\halo\classifier_new\32/2018-04-14-Uto-32_classified.nc')
+df2 = xr.open_dataset(r'F:\halo\classifier_new\32/2018-04-15-Uto-32_classified.nc')
+beta = np.hstack((df['beta_raw'].T, df2['beta_raw'].T))
+time_plot = np.concatenate((df['time'], df2['time']))
+
+# %%
+time = pd.to_datetime(time_plot)
+beta_plot = beta[:, (time < '2018-04-15T01:00:00') & (time >= '2018-04-15T00:00:00')]
+beta_plot = mean_2d(beta_plot)
+
+##########################################
+# Depo plots
+# %%
+df_profiles2 = pd.read_csv(
+    r'F:\halo\paper\figures\case_study\2018-04-14-Uto-32/2018-04-14-Uto-32_aerosol_bkg_corrected.csv')
+df_profiles2['time'] = pd.to_datetime(df_profiles2['time'])
+
+df_profiles = pd.read_csv(
+    r'F:\halo\paper\figures\case_study\2018-04-15-Uto-32/2018-04-15-Uto-32_aerosol_bkg_corrected.csv')
+df_profiles['time'] = pd.to_datetime(df_profiles['time'])
+df_plot = df_profiles[(df_profiles['time'] < '2018-04-15T01:00:00') &
+                      (df_profiles['time'] >= '2018-04-15T00:00:00')]
+df_plot = df_plot.drop(df_plot[df_plot['depo_corrected_sd'] > 0.05].index)
+
+# %%
+df_profiles_all = pd.concat([df_profiles2, df_profiles], ignore_index=True)
+df_profiles_all.loc[df_profiles_all['depo_corrected_sd'] > 0.05, 'depo_corrected'] = np.nan
+depo = df_profiles_all['depo_corrected'].values.reshape(df_profiles_all['time'].unique().size, -1)
+
+# %% Fill-in missing values
+df_range = pd.DataFrame({'range': np.arange(min(df_plot['range']), max(df_plot['range'])+30, 30)})
+df_plot_full = df_plot.merge(df_range, 'outer')
+df_plot_full = df_plot_full.sort_values('range').set_index('range')
+df_plot_range = df_plot['range'].values
+
+# %%
+fig, ax = plt.subplots(2, 2, figsize=(9, 4), sharey='row',
+                       constrained_layout=True)
+
+c = ax[0, 0].pcolormesh(time_plot, df['range'],
+                        beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet', zorder=10)
+cbar = fig.colorbar(c, ax=ax[0, 0])
+
+cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+
+c = ax[0, 1].pcolormesh(df_profiles_all['time'].unique(),
+                        df_profiles_all['range'].unique(),
+                        depo.T, vmin=0, vmax=0.5, cmap='jet', zorder=10)
+cbar = fig.colorbar(c, ax=ax[0, 1])
+
+cbar.ax.set_ylabel(r'$\delta$', rotation=90)
+
+hourlocator = dates.HourLocator(byhour=[0, 6, 12, 18, 24])
+minorlocator = dates.HourLocator(byhour=np.arange(24))
+
+
+majorFmt = dates.DateFormatter('%H:%M\n%d-%b')
+for ax_ in ax[0]:
+    ax_.xaxis.set_major_locator(hourlocator)
+    ax_.xaxis.set_minor_locator(minorlocator)
+    ax_.xaxis.set_major_formatter(majorFmt)
+    ax_.set_xlim(['2018-04-14T12:00:00', '2018-04-15T13:00:00'])
+    ax_.set_ylim([0, 6000])
+    ax_.set_xlabel('Time UTC')
+
+    ax_.set_yticks([0, 2000, 4000, 6000, 8000])
+    ax_.axvspan('2018-04-15T00:00:00', '2018-04-15T01:00:00', facecolor='gray',
+                alpha=0.3)
+    # ax_.axvline(x='2018-05-09T03:00:00', c='gray', ls='--', lw=0.75)
+    # ax_.axvline(x='2018-05-09T04:00:00', c='gray', ls='--', lw=0.75)
+# ax_.set_xlabel('Time UTC')
+ax[0, 0].set_ylabel('Height a.g.l [km]')
+
+
+mask = np.isin(df['range'], df_plot_range)
+mask2 = mean_1d_std(df_plot_full['depo_corrected_sd']) < 0.05
+ax[1, 0].scatter(beta_plot[mask], df['range'][mask].values, s=5, alpha=0.7)
+ax[1, 0].set_xscale('log')
+ax[1, 0].set_xticks([1e-6, 5*1e-7, 1e-7])
+ax[1, 1].errorbar(mean_1d(df_plot_full['depo_corrected'])[mask2], df_plot_full.index.values[mask2],
+                  xerr=mean_1d_std(df_plot_full['depo_corrected_sd'])[mask2], fmt='.',
+                  elinewidth=1, alpha=0.7, ms=3)
+
+ax[1, 0].grid(visible=True, which='both')
+ax[1, 1].grid()
+
+ax[1, 0].set_ylabel('Height a.g.l [km]')
+ax[1, 0].set_ylim([0, 4000])
+
+ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+ax[1, 1].set_xlabel(r'$\delta$')
+for n, ax_ in enumerate(ax.flatten()):
+    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+             transform=ax_.transAxes, size=12)
+    ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+ax[1, 1].set_xlim([0, 0.35])
+# fig.subplots_adjust(hspace=1)
+fig.savefig(r'F:\halo\paper\figures\case_study\Uto/2018-04-15_Uto.png',
+            bbox_inches='tight', dpi=600)
+
+# %%
+############################################
+# %% Hyytiala 2018-05-09
+#########################################
+# Beta plots
+# %%
+df = xr.open_dataset(r'F:\halo\classifier_new\46/2018-05-09-Hyytiala-46_classified.nc')
+
+beta = df['beta_raw'].T
+time_plot = df['time']
+time = pd.to_datetime(time_plot)
+beta_plot = beta[:, (time < '2018-05-09T15:00:00') & (time >= '2018-05-09T14:00:00')]
+beta_plot = mean_2d(beta_plot)
+
+##########################################
+# Depo plots
+# %%
+df_profiles = pd.read_csv(
+    r'F:\halo\paper\figures\case_study\2018-05-09-Hyytiala-46/2018-05-09-Hyytiala-46_aerosol_bkg_corrected.csv')
+df_profiles['time'] = pd.to_datetime(df_profiles['time'])
+df_plot = df_profiles[(df_profiles['time'] < '2018-05-09T15:00:00') &
+                      (df_profiles['time'] >= '2018-05-09T14:00:00')]
+df_plot = df_plot.drop(df_plot[df_plot['depo_corrected_sd'] > 0.05].index)
+
+# %%
+df_profiles_all = df_profiles
+df_profiles_all.loc[df_profiles_all['depo_corrected_sd'] > 0.05, 'depo_corrected'] = np.nan
+depo = df_profiles_all['depo_corrected'].values.reshape(df_profiles_all['time'].unique().size, -1)
+
+# %% Fill-in missing values
+df_range = pd.DataFrame({'range': np.arange(min(df_plot['range']), max(df_plot['range'])+30, 30)})
+df_plot_full = df_plot.merge(df_range, 'outer')
+df_plot_full = df_plot_full.sort_values('range').set_index('range')
+df_plot_range = df_plot['range'].values
+
+# %%
+fig, ax = plt.subplots(2, 2, figsize=(9, 4), sharey='row',
+                       constrained_layout=True)
+
+c = ax[0, 0].pcolormesh(time_plot.values, df['range'],
+                        beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet', zorder=10)
+cbar = fig.colorbar(c, ax=ax[0, 0])
+
+cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+
+c = ax[0, 1].pcolormesh(df_profiles_all['time'].unique(),
+                        df_profiles_all['range'].unique(),
+                        depo.T, vmin=0, vmax=0.5, cmap='jet', zorder=10)
+cbar = fig.colorbar(c, ax=ax[0, 1])
+
+cbar.ax.set_ylabel(r'$\delta$', rotation=90)
+
+hourlocator = dates.HourLocator(byhour=[0, 6, 12, 18, 24])
+minorlocator = dates.HourLocator(byhour=np.arange(24))
+
+
+majorFmt = dates.DateFormatter('%H:%M\n%d-%b')
+for ax_ in ax[0]:
+    ax_.xaxis.set_major_locator(hourlocator)
+    ax_.xaxis.set_minor_locator(minorlocator)
+    ax_.xaxis.set_major_formatter(majorFmt)
+    # ax_.set_xlim(['2018-04-14T12:00:00', '2018-05-10T15:00:00'])
+    ax_.set_ylim([0, 6000])
+    ax_.set_xlabel('Time UTC')
+
+    ax_.set_yticks([0, 2000, 4000, 6000, 8000])
+    ax_.axvspan('2018-05-09T14:00:00', '2018-05-09T15:00:00', facecolor='gray',
+                alpha=0.3)
+    # ax_.axvline(x='2018-05-09T03:00:00', c='gray', ls='--', lw=0.75)
+    # ax_.axvline(x='2018-05-09T04:00:00', c='gray', ls='--', lw=0.75)
+# ax_.set_xlabel('Time UTC')
+ax[0, 0].set_ylabel('Height a.g.l [km]')
+
+
+mask = np.isin(df['range'], df_plot_range)
+mask2 = mean_1d_std(df_plot_full['depo_corrected_sd']) < 0.05
+ax[1, 0].scatter(beta_plot[mask], df['range'][mask].values, s=5, alpha=0.7)
+ax[1, 0].set_xscale('log')
+ax[1, 0].set_xticks([1e-6, 5*1e-7, 1e-7])
+ax[1, 1].errorbar(mean_1d(df_plot_full['depo_corrected'])[mask2], df_plot_full.index.values[mask2],
+                  xerr=mean_1d_std(df_plot_full['depo_corrected_sd'])[mask2], fmt='.',
+                  elinewidth=1, alpha=0.7, ms=3)
+
+ax[1, 0].grid(visible=True, which='both')
+ax[1, 1].grid()
+
+ax[1, 0].set_ylabel('Height a.g.l [km]')
+ax[1, 0].set_ylim([0, 4000])
+
+ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+ax[1, 1].set_xlabel(r'$\delta$')
+for n, ax_ in enumerate(ax.flatten()):
+    ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
+             transform=ax_.transAxes, size=12)
+    ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+ax[1, 1].set_xlim([0, 0.35])
+fig.savefig(r'F:\halo\paper\figures\case_study\Hyytiala/2018-05-09_Hyytiala.png',
+            bbox_inches='tight', dpi=600)
