@@ -273,7 +273,7 @@ beta_plot2 = mean_2d(beta_plot2)
 # %%
 ##########################################
 # fig, ax = plt.subplots(3, 2, figsize=(9, 6), sharey='row')
-fig = plt.figure(figsize=(9, 6))
+fig = plt.figure(figsize=(9, 6), constrained_layout=True)
 ax1 = fig.add_subplot(321)
 ax2 = fig.add_subplot(322, sharex=ax1, sharey=ax1)
 ax3 = fig.add_subplot(323)
@@ -285,7 +285,7 @@ c = ax1.pcolormesh(time_plot, df['range'],
                    beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet')
 cbar = fig.colorbar(c, ax=ax1)
 
-cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+cbar.ax.set_ylabel(r'$\beta\quad[m^{-1} sr^{-1}]$', rotation=90)
 
 c = ax2.pcolormesh(time_delta, df['range'],
                    delta, vmin=0, vmax=0.5, cmap='jet')
@@ -339,7 +339,7 @@ ax4.set_xlim([0.05, 0.35])
 ax3.set_ylabel('Height a.g.l [km]')
 ax3.set_ylim([0, 2000])
 
-# ax1.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+# ax1.set_xlabel(r"$\beta'\quad[m^{-1} sr^{-1}]$")
 # ax2.set_xlabel(r'$\delta$')
 
 mask = np.isin(df['range'], df_plot2_range)
@@ -363,20 +363,24 @@ ax5.set_ylabel('Height a.g.l [km]')
 ax5.set_ylim([0, 2000])
 # ax5.set_xticks(ax3.get_xticks())
 
-ax5.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+ax5.set_xlabel(r"$\beta'\quad[m^{-1} sr^{-1}]$")
 ax6.set_xlabel(r'$\delta$')
-ax3.set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+ax3.set_xlabel(r"$\beta'\quad[m^{-1} sr^{-1}]$")
 ax4.set_xlabel(r'$\delta$')
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
-fig.subplots_adjust(hspace=1)
+# fig.subplots_adjust(hspace=1)
 ax6.set_xlim([0.05, 0.35])
+
+for ax_ in [ax3, ax4, ax5, ax6]:
+    ax_.set_yticks([0, 1000, 2000])
 
 for n, ax_ in enumerate([ax1, ax2, ax3, ax4, ax5, ax6]):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
              transform=ax_.transAxes, size=12)
     ax_.yaxis.set_major_formatter(hd.m_km_ticks())
+
 fig.savefig(path + 'hourly.png', bbox_inches='tight', dpi=500)
 
 #########################################
