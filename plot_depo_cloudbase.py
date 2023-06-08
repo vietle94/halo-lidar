@@ -342,9 +342,18 @@ depo_profile_plot = df.data['depo_raw'][mask_time_plot,
                                         mask_range_plot]
 co_signal_profile_plot = df.data['co_signal'][mask_time_plot,
                                               mask_range_plot]
+cross_signal_profile_plot = df.data['cross_signal'][mask_time_plot,
+                                                    mask_range_plot]
 beta_profile_plot = df.data['beta_raw'][mask_time_plot,
                                         mask_range_plot]
+depo_sd_profile_plot = depo_profile_plot * \
+    np.sqrt(
+        ((df.snr_sd/cross_signal_profile_plot-1))**2 +
+        ((df.snr_sd/co_signal_profile_plot-1))**2)
+# %%
 
+
+# %%
 fig, axes = plt.subplots(1, 3, figsize=(10, 4), sharey=True)
 
 for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
@@ -354,8 +363,24 @@ for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
                        (cloud_base_height < df.data['range']) &
                        (df.data['range'] <= cloud_base_height + 150)],
                       ['Aerosol', 'Cloud base', 'In-cloud']):
-        ax.plot(df.data[var][mask_time_plot, h],
-                df.data['range'][h], '.', label=leg)
+        if lab == r'$\delta$':
+            depo_profile_plot = df.data[var][mask_time_plot, h]
+            co_signal_profile_plot = df.data['co_signal'][mask_time_plot, h]
+            cross_signal_profile_plot = df.data['cross_signal'][mask_time_plot, h]
+            depo_sd_profile_plot = np.abs(depo_profile_plot) * \
+                np.sqrt(
+                    (df.snr_sd/(cross_signal_profile_plot-1))**2 +
+                    (df.snr_sd/(co_signal_profile_plot-1))**2)
+            ax.errorbar(depo_profile_plot,
+                        df.data['range'][h],
+                        xerr=depo_sd_profile_plot,
+                        fmt='.',
+                        errorevery=1, elinewidth=0.5,
+                        alpha=0.7, ms=6,
+                        label=leg)
+        else:
+            ax.plot(df.data[var][mask_time_plot, h],
+                    df.data['range'][h], '.', label=leg)
     ax.grid()
     # ax.axhline(y=cloud_base_height, linestyle='--', color='grey')
     ax.set_xlabel(lab)
@@ -372,7 +397,7 @@ fig.legend(handles, labels, loc='lower center', ncol=3)
 fig.subplots_adjust(bottom=0.2)
 print(df.filename)
 fig.savefig(path + df.filename + '_depo_profile.png',
-            bbox_inches='tight', dpi=300)
+            bbox_inches='tight', dpi=600)
 
 # %%
 ######################################
