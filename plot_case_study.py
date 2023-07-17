@@ -381,7 +381,7 @@ for n, ax_ in enumerate([ax1, ax2, ax3, ax4, ax5, ax6]):
              transform=ax_.transAxes, size=12)
     ax_.yaxis.set_major_formatter(hd.m_km_ticks())
 
-fig.savefig(path + 'hourly.png', bbox_inches='tight', dpi=500)
+# fig.savefig(path + 'hourly.png', bbox_inches='tight', dpi=600)
 
 #########################################
 # Uto 2018-04-14
@@ -484,8 +484,8 @@ for n, ax_ in enumerate(ax.flatten()):
     ax_.yaxis.set_major_formatter(hd.m_km_ticks())
 ax[1, 1].set_xlim([0, 0.35])
 # fig.subplots_adjust(hspace=1)
-fig.savefig(r'F:\halo\paper\figures\case_study\Uto/2018-04-15_Uto.png',
-            bbox_inches='tight', dpi=600)
+# fig.savefig(r'F:\halo\paper\figures\case_study\Uto/2018-04-15_Uto.png',
+#             bbox_inches='tight', dpi=600)
 
 # %%
 ############################################
@@ -530,7 +530,7 @@ c = ax[0, 0].pcolormesh(time_plot.values, df['range'],
                         beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet', zorder=10)
 cbar = fig.colorbar(c, ax=ax[0, 0])
 
-cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
+cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}sr^{-1}]$', rotation=90)
 
 c = ax[0, 1].pcolormesh(df_profiles_all['time'].unique(),
                         df_profiles_all['range'].unique(),
@@ -576,7 +576,7 @@ ax[1, 1].grid()
 ax[1, 0].set_ylabel('Height a.g.l [km]')
 ax[1, 0].set_ylim([0, 4000])
 
-ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}]$")
+ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}sr^{-1}]$")
 ax[1, 1].set_xlabel(r'$\delta$')
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
