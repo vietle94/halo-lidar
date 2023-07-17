@@ -115,8 +115,8 @@ for n, ax in enumerate(axes.flatten()):
 axes.flatten()[-2].set_xlabel('$\delta$')
 axes.flatten()[-1].set_xlabel('$\delta$')
 fig.subplots_adjust(hspace=0.5, wspace=0.3)
-fig.savefig(path + '/depo_cloudbase.png', dpi=150,
-            bbox_inches='tight')
+# fig.savefig(path + '/depo_cloudbase.png', dpi=150,
+#             bbox_inches='tight')
 
 # %%
 ####################################
@@ -203,9 +203,11 @@ ax5_hist = fig.add_subplot(gs[5, 8:], sharey=ax0)
 for ax in [ax0, ax1, ax2, ax3, ax5]:
     ax.sharex(ax4)
 
-for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
-                           [ax1, ax2, ax3, ax4, ax5],
-                           [ax1_hist, ax2_hist, ax3_hist, ax4_hist, ax5_hist]):
+for id, ax, ax_hist, color_ in zip([32, 33, 46, 53, 54],
+                                   [ax1, ax2, ax3, ax4, ax5],
+                                   [ax1_hist, ax2_hist, ax3_hist, ax4_hist, ax5_hist],
+                                   ['tab:orange', 'tab:green', 'tab:red',
+                                    'tab:purple', 'tab:brown']):
     if id == 32:
         group = group_.get_group(id)
         x = group[(group['depo'] > -0.01) & (group['depo'] < 0.1) & (pd.to_datetime(
@@ -213,9 +215,9 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
         print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
-        ax0.errorbar(x_group_mean.index, x_group.mean(),
+        ax0.errorbar(x_group_mean.index, x_group.mean(), color='tab:blue',
                      yerr=x_group.std(), ls='none', marker='.', linewidth=0.5, markersize=5)
-        ax0_hist.hist(x['depo'], bins=50, orientation='horizontal')
+        ax0_hist.hist(x['depo'], bins=50, orientation='horizontal', color='tab:blue')
         gmm = GaussianMixture(n_components=2, max_iter=10000)
         gmm.fit(x['depo'].values.reshape(-1, 1))
         smean = gmm.means_.ravel()
@@ -234,9 +236,9 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
         print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
-        ax1.errorbar(x_group_mean.index, x_group.mean(),
+        ax1.errorbar(x_group_mean.index, x_group.mean(), color='tab:orange',
                      yerr=x_group.std(), ls='none', marker='.', linewidth=0.5, markersize=5)
-        ax1_hist.hist(x['depo'], bins=50, orientation='horizontal')
+        ax1_hist.hist(x['depo'], bins=50, orientation='horizontal', color='tab:orange')
         gmm = GaussianMixture(n_components=1, max_iter=10000)
         gmm.fit(x['depo'].values.reshape(-1, 1))
         smean = gmm.means_.ravel()
@@ -255,9 +257,9 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
         print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
-        ax.errorbar(x_group_mean.index, x_group.mean(),
+        ax.errorbar(x_group_mean.index, x_group.mean(), color=color_,
                     yerr=x_group.std(), ls='none', marker='.', linewidth=0.5, markersize=5)
-        ax_hist.hist(x['depo'], bins=50, orientation='horizontal')
+        ax_hist.hist(x['depo'], bins=50, orientation='horizontal', color=color_)
         gmm = GaussianMixture(n_components=2, max_iter=10000)
         gmm.fit(x['depo'].values.reshape(-1, 1))
         smean = gmm.means_.ravel()
@@ -276,9 +278,9 @@ for id, ax, ax_hist in zip([32, 33, 46, 53, 54],
         print(id, x['depo'].mean(), x['depo'].std())
         x_group = x.groupby(x['time_'].dt.date)['depo']
         x_group_mean = x_group.mean()
-        ax.errorbar(x_group_mean.index, x_group.mean(),
+        ax.errorbar(x_group_mean.index, x_group.mean(), color=color_,
                     yerr=x_group.std(), ls='none', marker='.', linewidth=0.5, markersize=5)
-        ax_hist.hist(x['depo'], bins=50, orientation='horizontal')
+        ax_hist.hist(x['depo'], bins=50, color=color_, orientation='horizontal')
         gmm = GaussianMixture(n_components=1, max_iter=10000)
         gmm.fit(x['depo'].values.reshape(-1, 1))
         smean = gmm.means_.ravel()
@@ -306,9 +308,9 @@ for ax in [ax0_hist, ax1_hist, ax2_hist, ax3_hist, ax4_hist, ax5_hist]:
     ax.set_xlabel('N')
     ax.grid()
 ax0.set_ylim([-0.01, 0.07])
-# fig.subplots_adjust(hspace=0.7)
-# fig.savefig(path + '/depo_ts.png', dpi=500,
-#             bbox_inches='tight')
+fig.subplots_adjust(hspace=0.7)
+fig.savefig(path + '/depo_ts.png', dpi=600,
+            bbox_inches='tight')
 
 # %%
 ######################################
@@ -338,6 +340,9 @@ df.filter(variables=['beta_raw', 'depo_raw'],
 cloud_base_height = table.iloc[i_plot]['range']
 mask_range_plot = (df.data['range'] <= cloud_base_height + 150)
 mask_time_plot = df.data['time'] == table.iloc[i_plot]['time']
+t = df.data['time'][df.data['time'] == table.iloc[i_plot]['time']]
+t % 1 * 60
+(t % 1 * 60) % 1 * 60
 depo_profile_plot = df.data['depo_raw'][mask_time_plot,
                                         mask_range_plot]
 co_signal_profile_plot = df.data['co_signal'][mask_time_plot,
@@ -357,7 +362,7 @@ depo_sd_profile_plot = depo_profile_plot * \
 fig, axes = plt.subplots(1, 3, figsize=(10, 4), sharey=True)
 
 for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
-                        ['$\delta$', '$SNR_{co}$', r"$\beta'\quad[Mm^{-1}]$"]):
+                        ['$\delta$', '$SNR_{co}$', r"$\beta'\quad[Mm^{-1}sr^{-1}]$"]):
     for h, leg in zip([df.data['range'] <= cloud_base_height,
                        df.data['range'] == cloud_base_height,
                        (cloud_base_height < df.data['range']) &
