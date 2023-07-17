@@ -174,7 +174,7 @@ ax[3].errorbar(x=np.mean(depo_corrected, axis=0)[mask_],
                xerr=np.std(depo_corrected, axis=0)[mask_],
                label='corrected $\delta$',
                errorevery=1, elinewidth=0.5, fmt='.', alpha=0.7, ms=3)
-ax[3].set_xlim([-0.05, 0.4])
+ax[3].set_xlim([-0.05, 0.7])
 ax[3].set_xlabel(r'$\delta$')
 
 for ax_ in ax.flatten():
@@ -183,7 +183,7 @@ for ax_ in ax.flatten():
 ax[0].legend(loc='center right', prop={'size': 7})
 ax[3].legend(loc='center right', prop={'size': 7})
 ax[0].set_ylabel('Height a.g.l [km]')
-ax[3].set_xticks([0, 0.1, 0.2, 0.3, 0.4])
+# ax[3].set_xticks([0, 0.1, 0.2, 0.3, 0.4])
 for n, ax_ in enumerate(ax.flatten()):
     ax_.set_ylim(bottom=0)
     ax_.text(-0.0, 1.03, '(' + string.ascii_lowercase[n] + ')',
@@ -191,5 +191,5 @@ for n, ax_ in enumerate(ax.flatten()):
 
 fig.savefig(path + df.attrs['file_name'] +
             '_aerosol_bkg_corrected_' + str(pd.to_datetime(t).hour),
-            bbox_inches='tight', dpi=150)
+            bbox_inches='tight', dpi=600)
 print('done')
