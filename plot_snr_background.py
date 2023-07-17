@@ -54,7 +54,7 @@ for n, ax in enumerate(axes.flatten()):
     ax.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
             transform=ax.transAxes, size=12)
 fig.subplots_adjust(wspace=0.4, bottom=0.2)
-fig.savefig('F:/halo/paper/figures/background_snr/background_snr.png', dpi=300,
+fig.savefig('F:/halo/paper/figures/background_snr/background_snr.png', dpi=600,
             bbox_inches='tight')
 
 # %%
