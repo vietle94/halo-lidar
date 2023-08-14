@@ -316,7 +316,6 @@ fig.savefig(path + '/depo_ts.png', dpi=600,
 ######################################
 # Depo profile
 ######################################
-
 i_plot = 206807
 site = str(int(table.iloc[i_plot]['systemID']))
 if site == '32':
@@ -355,14 +354,11 @@ depo_sd_profile_plot = depo_profile_plot * \
     np.sqrt(
         ((df.snr_sd/cross_signal_profile_plot-1))**2 +
         ((df.snr_sd/co_signal_profile_plot-1))**2)
-# %%
 
-
-# %%
 fig, axes = plt.subplots(1, 3, figsize=(10, 4), sharey=True)
 
 for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
-                        ['$\delta$', '$SNR_{co}$', r"$\beta'\quad[Mm^{-1}sr^{-1}]$"]):
+                        ['$\delta$', '$SNR_{co}$', r"$\beta'\quad[m^{-1}sr^{-1}]$"]):
     for h, leg in zip([df.data['range'] <= cloud_base_height,
                        df.data['range'] == cloud_base_height,
                        (cloud_base_height < df.data['range']) &
@@ -383,6 +379,9 @@ for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
                         errorevery=1, elinewidth=0.5,
                         alpha=0.7, ms=6,
                         label=leg)
+        elif lab == r'$SNR_{co}$':
+            ax.plot(df.data[var][mask_time_plot, h] - 1,
+                    df.data['range'][h], '.', label=leg)
         else:
             ax.plot(df.data[var][mask_time_plot, h],
                     df.data['range'][h], '.', label=leg)
@@ -401,8 +400,8 @@ handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower center', ncol=3)
 fig.subplots_adjust(bottom=0.2)
 print(df.filename)
-fig.savefig(path + df.filename + '_depo_profile.png',
-            bbox_inches='tight', dpi=600)
+# fig.savefig(path + df.filename + '_depo_profile.png',
+#             bbox_inches='tight', dpi=600)
 
 # %%
 ######################################
