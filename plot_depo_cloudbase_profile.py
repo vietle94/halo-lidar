@@ -98,7 +98,7 @@ for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
                             xerr=depo_sd_profile_plot,
                             fmt='.',
                             errorevery=1, elinewidth=0.7,
-                            alpha=0.3, ms=6,
+                            alpha=0.3, ms=8, markeredgewidth=0,
                             label=leg)
                 ax.errorbar(depo_profile_avg,
                             df.data['range'][mask_range_plot_avg],
@@ -118,11 +118,21 @@ for ax, var, lab in zip(axes.flatten(), ['depo_raw', 'co_signal', 'beta_raw'],
             # ax.plot(depo_profile_plot, df.data['range'][h], '.', label=leg)
 
         elif lab == r'$SNR_{co}$':
-            ax.plot(df.data[var][mask_time_plot, h] - 1,
-                    df.data['range'][h], '.', label=leg)
+            if leg == 'Aerosol':
+                ax.plot(df.data[var][mask_time_plot, h] - 1,
+                        df.data['range'][h], '.', label=leg,
+                        alpha=0.3, markeredgewidth=0, ms=8)
+            else:
+                ax.plot(df.data[var][mask_time_plot, h] - 1,
+                        df.data['range'][h], '.', label=leg)
         else:
-            ax.plot(df.data[var][mask_time_plot, h],
-                    df.data['range'][h], '.', label=leg)
+            if leg == 'Aerosol':
+                ax.plot(df.data[var][mask_time_plot, h],
+                        df.data['range'][h], '.', label=leg,
+                        alpha=0.3, markeredgewidth=0, ms=8)
+            else:
+                ax.plot(df.data[var][mask_time_plot, h],
+                        df.data['range'][h], '.', label=leg)
     ax.grid()
     # ax.axhline(y=cloud_base_height, linestyle='--', color='grey')
     ax.set_xlabel(lab)
