@@ -530,7 +530,7 @@ c = ax[0, 0].pcolormesh(time_plot.values, df['range'],
                         beta, norm=LogNorm(vmin=1e-8, vmax=1e-4), cmap='jet', zorder=10)
 cbar = fig.colorbar(c, ax=ax[0, 0])
 
-cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}sr^{-1}]$', rotation=90)
+cbar.ax.set_ylabel(r'$\beta\quad[m^{-1}sr^{-1}]$', rotation=90)
 
 c = ax[0, 1].pcolormesh(df_profiles_all['time'].unique(),
                         df_profiles_all['range'].unique(),
@@ -576,7 +576,7 @@ ax[1, 1].grid()
 ax[1, 0].set_ylabel('Height a.g.l [km]')
 ax[1, 0].set_ylim([0, 4000])
 
-ax[1, 0].set_xlabel(r"$\beta'\quad[Mm^{-1}sr^{-1}]$")
+ax[1, 0].set_xlabel(r"$\beta'\quad[m^{-1}sr^{-1}]$")
 ax[1, 1].set_xlabel(r'$\delta$')
 for n, ax_ in enumerate(ax.flatten()):
     ax_.text(-0.0, 1.05, '(' + string.ascii_lowercase[n] + ')',
