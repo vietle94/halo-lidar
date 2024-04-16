@@ -1089,7 +1089,7 @@ def bleed_through(df):
 
 def background_detection(x, threshold, wavelet='bior2.6'):
     coeff = pywt.swt(np.pad(x-1, (0, (len(x) // 2**5 + 3) * 2**5 - len(x)), 'constant', constant_values=(0, 0)),
-                     wavelet, level=5)
+                     wavelet, level=5, trim_approx=True)
     uthresh = np.median(np.abs(coeff[1]))/0.6745 * np.sqrt(2 * np.log(len(coeff[1])))
     coeff[1:] = (pywt.threshold(i, value=uthresh, mode='hard') for i in coeff[1:])
     filtered = pywt.iswt(coeff, wavelet) + 1
